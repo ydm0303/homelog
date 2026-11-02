@@ -1,0 +1,30 @@
+# ============================================================================
+# 开发环境专用配置
+# ============================================================================
+
+spring:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+
+  # 开发环境邮件可用测试账号或 Mock
+  mail:
+    username: test@qq.com
+    password: test-auth-code
+
+# JWT 开发环境密钥
+homelog:
+  jwt:
+    secret: homelog-dev-secret-key-change-in-production
+
+# 前端开发地址
+  frontend:
+    base-url: http://localhost:5173
+
+# 日志级别更详细
+logging:
+  level:
+    com.homelog: debug
+    org.springframework.web: debug
+    org.hibernate.SQL: debug
