@@ -1,0 +1,54 @@
+package com.homelog.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springdoc.core.GroupedOpenApi;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * SpringDoc OpenAPI 3 配置
+ * 替代 Springfox Swagger 2
+ */
+@Configuration
+public class OpenApiConfig {
+
+        private static final String SECURITY_SCHEME_NAME = "bearerAuth";
+
+        @Bean
+        public OpenAPI openAPI() {
+                return new OpenAPI()
+                                .info(apiInfo())
+                                .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
+                                .components(new Components()
+                                                .addSecuritySchemes(SECURITY_SCHEME_NAME,
+                                                                new SecurityScheme()
+                                                                                .name(SECURITY_SCHEME_NAME)
+                                                                                .type(SecurityScheme.Type.HTTP)
+                                                                                .scheme("bearer")
+                                                                                .bearerFormat("JWT")));
+        }
+
+        @Bean
+        public GroupedOpenApi publicApi() {
+                return GroupedOpenApi.builder()
+                                .group("homelog-api")
+                                .pathsToMatch("/api/**")
+                                .build();
+        }
+
+        private Info apiInfo() {
+                return new Info()
+                                .title("家记 - 家庭记录 PWA 平台 API")
+                                .description("私有模块化家庭记录系统后端接口文档 (OpenAPI 3.0)")
+                                .version("1.0.0")
+                                .contact(new Contact()
+                                                .name("HomeLog Team")
+                                                .email("")
+                                                .url(""));
+        }
+}
