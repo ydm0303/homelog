@@ -135,12 +135,26 @@
     </el-select>
 
     <!-- 标签输入 -->
-    <el-tag-input
-      v-else-if="field.fieldType === 'tag'"
-      v-model="localValue"
-      :placeholder="`输入标签，回车确认`"
-      @change="emitUpdate"
-    />
+    <div v-else-if="field.fieldType === 'tag'" class="tag-input-wrapper">
+      <div class="tag-list">
+        <el-tag
+          v-for="(tag, index) in tagArray"
+          :key="index"
+          closable
+          @close="removeTag(index)"
+          size="small"
+        >
+          {{ tag }}
+        </el-tag>
+      </div>
+      <el-input
+        v-model="tagInputValue"
+        :placeholder="`输入标签，回车确认`"
+        size="small"
+        @keyup.enter="addTag"
+        style="width: 200px"
+      />
+    </div>
 
     <!-- 布尔值 -->
     <el-switch
@@ -217,6 +231,15 @@ const parsedOptions = computed<Option[]>(() => {
   }
 })
 
+// 标签输入相关
+const tagArray = computed<string[]>({
+  get: () => Array.isArray(localValue.value) ? localValue.value : [],
+  set: (val) => {
+    localValue.value = val
+  }
+})
+const tagInputValue = ref('')
+
 // 空间成员
 const spaceMembers = ref<Member[]>([])
 
@@ -225,9 +248,20 @@ const isMobile = ref(false)
 const checkMobile = () => { isMobile.value = window.innerWidth < 768 }
 onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
 
-// 图片上传相关
-const imageList = ref<any[]>([])
+// 标签输入处理
+function addTag() {
+  const tag = tagInputValue.value.trim()
+  if (tag && !tagArray.value.includes(tag)) {
+    tagArray.value = [...tagArray.value, tag]
+    tagInputValue.value = ''
+  }
+}
 
+function removeTag(index: number) {
+  tagArray.value = tagArray.value.filter((_, i) => i !== index)
+}
+
+// 监听 props.value 变化同步 tagArray
 watch(() => props.value, (val) => {
   localValue.value = val
   if (props.field.fieldType === 'image' && Array.isArray(val)) {
@@ -412,12 +446,22 @@ import { ElMessage } from 'element-plus'
   }
 }
 
-// 标签输入组件样式补充
-:deep(.el-tag-input) {
-  width: 100%;
+// 标签输入样式
+.tag-input-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
 
-  :deep(.el-tag-input__tags) {
-    min-height: 40px;
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  :deep(.el-input) {
+    width: 200px;
   }
 }
 

@@ -27,12 +27,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
+    const authStore = useAuthStore()
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
-        const authStore = useAuthStore()
         await authStore.refreshAccessToken()
 
         if (originalRequest.headers) {
@@ -197,4 +197,38 @@ export const fileApi = {
     api.post('/files/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
+}
+
+// ============ 消息中心 API ============
+export const messageApi = {
+  /** 消息列表 GET /api/messages?page=1&size=20&isRead= */
+  list: (params: { page?: number; size?: number; isRead?: number }) =>
+    api.get('/messages', { params }),
+
+  /** 标记单条已读 PUT /api/messages/:id/read */
+  markRead: (id: number) =>
+    api.put(`/messages/${id}/read`),
+
+  /** 标记全部已读 PUT /api/messages/read-all */
+  markAllRead: () =>
+    api.put('/messages/read-all'),
+
+  /** 获取未读数量 GET /api/messages/unread-count */
+  getUnreadCount: () =>
+    api.get('/messages/unread-count')
+}
+
+// ============ 全局搜索 API ============
+export const searchApi = {
+  /** 全局搜索 GET /api/search?q=xxx&moduleId=&tag=&page=1&size=20 */
+  global: (params: {
+    q: string
+    moduleId?: number
+    tag?: string
+    page?: number
+    size?: number
+    startDate?: string
+    endDate?: string
+  }) =>
+    api.get('/search', { params })
 }

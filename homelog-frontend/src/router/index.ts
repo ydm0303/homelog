@@ -8,6 +8,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '登录', requiresAuth: false }
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/Register.vue'),
+    meta: { title: '注册', requiresAuth: false }
+  },
+  {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
     meta: { requiresAuth: true },
@@ -47,6 +53,18 @@ const routes: RouteRecordRaw[] = [
         name: 'Settings',
         component: () => import('@/views/Settings.vue'),
         meta: { title: '设置中心', requiresAdmin: true }
+      },
+      {
+        path: 'messages',
+        name: 'Messages',
+        component: () => import('@/views/MessageCenter.vue'),
+        meta: { title: '消息中心' }
+      },
+      {
+        path: 'search',
+        name: 'GlobalSearch',
+        component: () => import('@/views/GlobalSearch.vue'),
+        meta: { title: '全局搜索' }
       }
     ]
   },
@@ -62,7 +80,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
 
   // 设置页面标题

@@ -43,6 +43,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         web.ignoring().antMatchers(
                 "/api/auth/**",
                 "/api/public/**",
+                "/api/messages/unread-count",  // 未读数（顶部栏徽标）
                 "/swagger-ui/**",
                 "/v2/api-docs",
                 "/swagger-resources/**",
