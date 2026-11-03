@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api'
-import type { User, TokenResponse } from '@/types'
+import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('access_token'))
@@ -102,8 +102,8 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = response.data.accessToken
       refreshToken.value = response.data.refreshToken
 
-      localStorage.setItem('access_token', token.value)
-      localStorage.setItem('refresh_token', refreshToken.value)
+      localStorage.setItem('access_token', token.value!)
+      localStorage.setItem('refresh_token', refreshToken.value!)
 
       const api = (await import('@/api')).default
       api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
@@ -114,7 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 登出
-  function logout() {
+  async function logout() {
     token.value = null
     refreshToken.value = null
     user.value = null

@@ -98,7 +98,7 @@
               </template>
 
               <div v-if="expiringList.length === 0" class="empty-state">
-                <el-icon class="empty-icon"><MedicineBox /></el-icon>
+                <el-icon class="empty-icon"><FirstAidKit /></el-icon>
                 <p>暂无即将到期项目</p>
               </div>
 
@@ -106,7 +106,7 @@
                 <li v-for="item in expiringList" :key="item.id" class="list-item expiring-item">
                   <div class="item-icon" :class="item.moduleKey">
                     <el-icon>
-                      <component :is="item.moduleKey === 'drug' ? 'MedicineBox' : 'IDCard'" />
+                      <component :is="item.moduleKey === 'drug' ? 'FirstAidKit' : 'CreditCard'" />
                     </el-icon>
                   </div>
                   <div class="item-content">
@@ -294,7 +294,7 @@ import { useModuleStore } from '@/stores/module'
 import { recordApi } from '@/api'
 import {
   Checked, AlarmClock, Clock, Grid, Plus, Download,
-  HomeFilled, Document, Calendar, MedicineBox, IDCard, Picture
+  HomeFilled, Document, Calendar, FirstAidKit, CreditCard, Picture
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
@@ -306,9 +306,9 @@ const moduleStore = useModuleStore()
 // 响应式状态
 const metrics = ref([
   { key: 'todo', label: '待办总数', value: 0, icon: 'Checked', iconClass: 'icon-todo', class: 'metric-todo' },
-  { key: 'drug', label: '药品数量', value: 0, icon: 'MedicineBox', iconClass: 'icon-drug', class: 'metric-drug' },
+  { key: 'drug', label: '药品数量', value: 0, icon: 'FirstAidKit', iconClass: 'icon-drug', class: 'metric-drug' },
   { key: 'note', label: '记事条数', value: 0, icon: 'Picture', iconClass: 'icon-note', class: 'metric-note' },
-  { key: 'idoc', label: '证件数量', value: 0, icon: 'IDCard', iconClass: 'icon-idoc', class: 'metric-idoc' }
+  { key: 'idoc', label: '证件数量', value: 0, icon: 'CreditCard', iconClass: 'icon-idoc', class: 'metric-idoc' }
 ])
 
 const todoList = ref<any[]>([])
@@ -442,10 +442,10 @@ function getModuleCount(moduleKey: string) {
 
 function getModuleIcon(moduleKey: string) {
   const icons: Record<string, string> = {
-    drug: 'MedicineBox',
+    drug: 'FirstAidKit',
     todo: 'Checked',
     note: 'Picture',
-    idoc: 'IDCard'
+    idoc: 'CreditCard'
   }
   return icons[moduleKey] || 'Grid'
 }
@@ -651,7 +651,7 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     padding: 40px 20px;
-    text-align: center.
+    text-align: center;
 
     .empty-icon {
       font-size: 40px;
@@ -689,7 +689,7 @@ onUnmounted(() => {
         margin: 0 0 4px;
         white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis.
+        text-overflow: ellipsis;
       }
 
       .item-meta {
@@ -715,7 +715,7 @@ onUnmounted(() => {
         align-items: center;
         justify-content: center;
         font-size: 16px;
-        flex-shrink: 0.
+        flex-shrink: 0;
 
         &.drug { background: #fef0f0; color: #f56c6c; }
         &.idoc { background: #fdf6ec; color: #e6a23c; }
@@ -733,85 +733,85 @@ onUnmounted(() => {
 
   .recent-card {
     padding: 16px;
-    background: #fff.
-    border: 1px solid $border-color.
-    border-radius: $border-radius-base.
-    transition: all 0.2s ease.
-    cursor: pointer.
+    background: #fff;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-base;
+    transition: all 0.2s ease;
+    cursor: pointer;
 
     &:hover {
-      border-color: $primary-color.
-      box-shadow: $shadow-base.
-      transform: translateY(-2px).
+      border-color: $primary-color;
+      box-shadow: $shadow-base;
+      transform: translateY(-2px);
     }
 
     .recent-card-header {
-      display: flex.
-      align-items: center.
-      justify-content: space-between.
-      margin-bottom: 8px.
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
 
       .recent-time {
-        font-size: 12px.
-        color: $text-placeholder.
+        font-size: 12px;
+        color: $text-placeholder;
       }
     }
 
     .recent-title {
-      font-size: 14px.
-      font-weight: 500.
-      color: $text-primary.
-      margin: 0 0 8px.
-      display: -webkit-box.
-      -webkit-line-clamp: 2.
-      -webkit-box-orient: vertical.
-      overflow: hidden.
+      font-size: 14px;
+      font-weight: 500;
+      color: $text-primary;
+      margin: 0 0 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .recent-tags {
-      display: flex.
-      flex-wrap: wrap.
-      gap: 6px.
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
   }
 }
 
 .shortcuts-card {
   .shortcuts-grid {
-    display: grid.
-    grid-template-columns: repeat(2, 1fr).
-    gap: 12px.
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .shortcut-item {
-    display: flex.
-    flex-direction: column.
-    align-items: center.
-    gap: 8px.
-    padding: 20px 12px.
-    background: #fff.
-    border: 1px solid $border-color.
-    border-radius: $border-radius-base.
-    text-decoration: none.
-    color: $text-primary.
-    transition: all 0.2s ease.
-    position: relative.
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 12px;
+    background: #fff;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-base;
+    text-decoration: none;
+    color: $text-primary;
+    transition: all 0.2s ease;
+    position: relative;
 
     &:hover {
-      border-color: $primary-color.
-      color: $primary-color.
-      transform: translateY(-2px).
-      box-shadow: $shadow-base.
+      border-color: $primary-color;
+      color: $primary-color;
+      transform: translateY(-2px);
+      box-shadow: $shadow-base;
     }
 
     .shortcut-icon {
-      width: 48px.
-      height: 48px.
-      border-radius: $border-radius-base.
-      display: flex.
-      align-items: center.
-      justify-content: center.
-      font-size: 22px.
+      width: 48px;
+      height: 48px;
+      border-radius: $border-radius-base;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
 
       &.drug { background: #fef0f0; color: #f56c6c; }
       &.todo { background: #e1f3d8; color: #67c23a; }
@@ -820,96 +820,96 @@ onUnmounted(() => {
     }
 
     .shortcut-name {
-      font-size: 14px.
-      font-weight: 500.
-      text-align: center.
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
     }
 
     .shortcut-count {
-      position: absolute.
-      top: 8px.
-      right: 8px.
-      min-width: 18px.
-      height: 18px.
-      border-radius: 9px.
-      background: $primary-color.
-      color: #fff.
-      font-size: 11px.
-      display: flex.
-      align-items: center.
-      justify-content: center.
-      padding: 0 5px.
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      background: $primary-color;
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
     }
   }
 
   .add-shortcut {
-    border-style: dashed.
-    border-color: $border-color.
+    border-style: dashed;
+    border-color: $border-color;
 
     &:hover {
-      border-color: $primary-color.
-      background: $primary-light-bg.
+      border-color: $primary-color;
+      background: $primary-light-bg;
     }
 
     .add-icon {
-      font-size: 28px.
-      color: $text-placeholder.
+      font-size: 28px;
+      color: $text-placeholder;
 
       &:hover {
-        color: $primary-color.
+        color: $primary-color;
       }
     }
   }
 }
 
 .pwa-install-card {
-  background: $primary-light-bg.
-  border-color: $primary-light-border.
+  background: $primary-light-bg;
+  border-color: $primary-light-border;
 
   .pwa-install-text {
-    font-size: 13px.
-    color: $text-secondary.
-    margin: 0 0 16px.
-    line-height: 1.6.
+    font-size: 13px;
+    color: $text-secondary;
+    margin: 0 0 16px;
+    line-height: 1.6;
   }
 }
 
 .module-select-grid {
-  display: grid.
-  grid-template-columns: repeat(2, 1fr).
-  gap: 12px.
-  padding: 8px 0.
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 8px 0;
 }
 
 .module-select-item {
-  display: flex.
-  flex-direction: column.
-  align-items: center.
-  gap: 8px.
-  padding: 16px 12px.
-  background: #fff.
-  border: 2px solid $border-color.
-  border-radius: $border-radius-base.
-  cursor: pointer.
-  transition: all 0.2s ease.
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  background: #fff;
+  border: 2px solid $border-color;
+  border-radius: $border-radius-base;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    border-color: $primary-color.
+    border-color: $primary-color;
   }
 
   &.selected {
-    border-color: $primary-color.
-    background: $primary-light-bg.
+    border-color: $primary-color;
+    background: $primary-light-bg;
   }
 
   .module-select-icon {
-    width: 44px.
-    height: 44px.
-    border-radius: $border-radius-base.
-    display: flex.
-    align-items: center.
-    justify-content: center.
-    font-size: 20px.
+    width: 44px;
+    height: 44px;
+    border-radius: $border-radius-base;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
 
     &.drug { background: #fef0f0; color: #f56c6c; }
     &.todo { background: #e1f3d8; color: #67c23a; }
@@ -918,9 +918,9 @@ onUnmounted(() => {
   }
 
   span {
-    font-size: 13px.
-    font-weight: 500.
-    color: $text-primary.
+    font-size: 13px;
+    font-weight: 500;
+    color: $text-primary;
   }
 }
 
@@ -929,34 +929,34 @@ onUnmounted(() => {
   .dashboard-page {
     .metrics-row {
       :deep(.el-col) {
-        margin-bottom: 12px.
+        margin-bottom: 12px;
       }
     }
 
     .metric-content {
-      gap: 12px.
+      gap: 12px;
     }
 
     .metric-icon {
-      width: 40px.
-      height: 40px.
-      font-size: 18px.
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
     }
 
     .metric-value {
-      font-size: 20px.
+      font-size: 20px;
     }
 
     .recent-grid {
-      grid-template-columns: 1fr !important.
+      grid-template-columns: 1fr !important;
     }
 
     .shortcuts-grid {
-      grid-template-columns: repeat(3, 1fr) !important.
+      grid-template-columns: repeat(3, 1fr) !important;
     }
 
     .shortcut-item {
-      padding: 16px 8px.
+      padding: 16px 8px;
     }
   }
 }

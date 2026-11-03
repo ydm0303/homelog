@@ -4,7 +4,7 @@
 
 - **Java 8** (已安装：`java version "1.8.0_281"`)
 - **Maven 3.6+** (已安装)
-- **MySQL 8.0** (已运行，已执行 `V1__init.sql`)
+- **MySQL 8.0** (已运行，已执行 `db/migration/V1__init.sql`)
 - **Node.js 18+** (需安装)
 - **npm/pnpm** (随 Node.js 安装)
 
@@ -14,7 +14,7 @@
 
 ### 1. 进入后端目录
 ```bash
-cd d:/CodexWork/HomeLog/jiaji-backend
+cd d:/CodexWork/HomeLog/homelog-backend
 ```
 
 ### 2. 修改配置 (如需)
@@ -22,18 +22,21 @@ cd d:/CodexWork/HomeLog/jiaji-backend
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/jiaji?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/homelog?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: root
-    password: ling3.41592654
+    password: ling3.141592654
 
-jiaji:
+homelog:
   jwt:
-    secret: jiaji-dev-secret-key-change-in-production
-  mail:
-    username: your-qq@qq.com
-    password: your-16-char-auth-code
+    secret: homelog-dev-secret-key-change-in-production
+  remind:
+    from: your-qq@qq.com
   frontend:
     base-url: http://localhost:5173
+  storage:
+    local:
+      base-path: ./uploads
+      base-url: /api/files
 ```
 
 ### 3. 编译并运行
@@ -59,7 +62,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
 ### 2. 进入前端目录
 ```bash
-cd d:/CodexWork/HomeLog/jiaji-frontend
+cd d:/CodexWork/HomeLog/homelog-frontend
 ```
 
 ### 3. 安装依赖
@@ -93,10 +96,7 @@ mvn test
 mvn package -DskipTests
 
 # Flyway 迁移
-mvn flyway:migrate -Dflyway.url=jdbc:mysql://localhost:3306/jiaji -Dflyway.user=root -Dflyway.password=ling3.41592654
-
-# 代码格式化
-mvn spotless:apply
+mvn flyway:migrate -Dflyway.url=jdbc:mysql://localhost:3306/homelog -Dflyway.user=root -Dflyway.password=ling3.141592654
 ```
 
 ### 前端
@@ -124,12 +124,12 @@ npm run preview
 ### 构建镜像
 ```bash
 # 后端
-cd jiaji-backend
-docker build -t jiaji-backend .
+cd homelog-backend
+docker build -t homelog-backend .
 
 # 前端
-cd jiaji-frontend
-docker build -t jiaji-frontend .
+cd homelog-frontend
+docker build -t homelog-frontend .
 ```
 
 ### 使用 Docker Compose (需创建 docker-compose.yml)
@@ -139,27 +139,27 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: ling3.41592654
-      MYSQL_DATABASE: jiaji
+      MYSQL_ROOT_PASSWORD: ling3.141592654
+      MYSQL_DATABASE: homelog
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
       - "3306:3306"
 
   backend:
-    build: ./jiaji-backend
+    build: ./homelog-backend
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/jiaji
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/homelog
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ling3.41592654
+      SPRING_DATASOURCE_PASSWORD: ling3.141592654
     depends_on:
       - mysql
 
   frontend:
-    build: ./jiaji-frontend
+    build: ./homelog-frontend
     ports:
       - "80:80"
     depends_on:
@@ -186,7 +186,11 @@ docker-compose up -d
 - [ ] 点击任意模块进入列表页
 - [ ] 新增记录、编辑、删除功能正常
 - [ ] 详情页显示字段、图片、标签
-- [ ] 设置中心：成员管理、模块管理、导出导入、适老化设置
+- [ ] **消息中心**：顶部铃铛图标显示未读数，点击进入列表页可标记已读、跳转详情
+- [ ] **全局搜索**：顶部搜索框/移动端抽屉，跨模块搜索、筛选、高亮、分页
+- [ ] 设置中心：成员管理、模块管理、**导出导入**、适老化设置
+- [ ] **药品 CSV 导入**：预检模式返回错误详情、正式导入入库、错误 CSV 下载
+- [ ] **数据导出**：单模块 Excel、全空间 ZIP (Excel+图片)、流式下载
 - [ ] 长辈模式切换生效 (字号变大、按钮变大)
 - [ ] PWA: 移动端浏览器可"添加到主屏幕"
 
@@ -197,7 +201,7 @@ docker-compose up -d
 ### MySQL 连接失败
 - 检查 MySQL 服务是否运行: `net start mysql80`
 - 检查端口 3306 是否被占用
-- 确认密码 `ling3.41592654` 正确
+- 确认密码 `ling3.141592654` 正确
 
 ### Maven 编译慢
 - 使用阿里云镜像源 (在 `~/.m2/settings.xml` 配置)
@@ -218,20 +222,20 @@ docker-compose up -d
 ```
 HomeLog/
 ├── db/migration/V1__init.sql          # 数据库初始化脚本
-├── jiaji-backend/                     # Spring Boot 2.7 后端
-│   ├── src/main/java/com/jiaji/       # Java 源码
+├── homelog-backend/                   # Spring Boot 2.7.18 后端
+│   ├── src/main/java/com/homelog/     # Java 源码
 │   ├── src/main/resources/            # 配置文件
 │   ├── pom.xml                        # Maven 配置
 │   └── Dockerfile                     # 后端镜像
-├── jiaji-frontend/                    # Vue 3 前端
+├── homelog-frontend/                  # Vue 3 前端
 │   ├── src/                           # 源码
 │   ├── public/                        # 静态资源
 │   ├── package.json                   # 依赖配置
 │   ├── vite.config.ts                 # Vite 配置
 │   ├── Dockerfile                     # 前端镜像
 │   └── nginx.conf                     # Nginx 配置
-├── docs/ux/                           # UX 设计文档
-├── .github/workflows/ci-cd.yml        # CI/CD 流水线
+├── docs/                              # 文档
+├── .github/workflows/                 # CI/CD 流水线
 └── CLAUDE.md                          # 项目记忆
 ```
 
@@ -244,17 +248,33 @@ HomeLog/
 | 登录 | `/api/auth/login` | POST |
 | 注册 | `/api/auth/register` | POST |
 | 刷新 Token | `/api/auth/refresh` | POST |
-| 获取用户信息 | `/api/auth/me` | GET |
-| 获取模块列表 | `/api/meta/modules` | GET |
+| 获取用户信息 | `/api/auth/detail` | GET |
+| 修改密码 | `/api/auth/password/update` | POST |
+| 获取启用模块 | `/api/meta/modules/list` | GET |
 | 获取所有模块 | `/api/meta/modules/all` | GET |
-| 记录列表 | `/api/records` | GET |
-| 记录详情 | `/api/records/{id}` | GET |
-| 创建记录 | `/api/records` | POST |
-| 更新记录 | `/api/records/{id}` | PUT |
-| 删除记录 | `/api/records/{id}` | DELETE |
-| 导出数据 | `/api/export/all` | GET |
-| 药品导入 | `/api/import/drug/csv` | POST |
+| 更新模块 | `/api/meta/modules/update` | POST |
+| 创建模块 | `/api/meta/modules/create` | POST |
+| 删除模块 | `/api/meta/modules/delete` | POST |
+| 记录列表 | `/api/records/list` | GET |
+| 记录详情 | `/api/records/detail` | GET |
+| 创建记录 | `/api/records/create` | POST |
+| 更新记录 | `/api/records/update` | POST |
+| 删除记录 | `/api/records/delete` | POST |
+| **消息列表** | `/api/messages` | GET |
+| **未读数** | `/api/messages/unread-count` | GET |
+| **标记已读** | `/api/messages/{id}/read` | PUT |
+| **全部已读** | `/api/messages/read-all` | PUT |
+| **全局搜索** | `/api/search` | GET |
+| **文件上传** | `/api/files/upload` | POST |
+| **导出数据** | `/api/export` | GET |
+| **下载导出** | `/api/export/download/{filename}` | GET |
+| **药品预检** | `/api/import/drug/csv/preview` | POST |
+| **药品导入** | `/api/import/drug/csv` | POST |
+| 成员列表 | `/api/space/members/list` | GET |
+| 添加成员 | `/api/space/members/create` | POST |
+| 更新成员 | `/api/space/members/update` | POST |
+| 删除成员 | `/api/space/members/delete` | POST |
 
 ---
 
-*文档版本：v1.0 | 更新日期：2026-11-02*
+*文档版本：v1.0 | 更新日期：2026-11-03*

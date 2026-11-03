@@ -579,10 +579,10 @@ function getTimelineType(moduleKey: string) {
 
 function getTimelineIcon(moduleKey: string) {
   const icons: Record<string, string> = {
-    drug: 'MedicineBox',
+    drug: 'FirstAidKit',
     todo: 'Checked',
     note: 'Picture',
-    idoc: 'IDCard'
+    idoc: 'CreditCard'
   }
   return icons[moduleKey] || 'Document'
 }

@@ -110,14 +110,14 @@
     </el-form>
 
     <!-- 草稿保存提示 -->
-    <el-toast
-      v-model="showDraftSaved"
-      position="bottom-right"
-      :duration="2000"
-      icon="Check"
+    <el-tooltip
+      v-if="showDraftSaved"
+      content="草稿已自动保存"
+      placement="top"
+      class="draft-tooltip"
     >
-      草稿已自动保存
-    </el-toast>
+      <el-icon class="draft-saved-icon"><Check /></el-icon>
+    </el-tooltip>
   </div>
 
   <!-- 加载中 -->
@@ -137,7 +137,7 @@ import dayjs from 'dayjs'
 import DynamicFieldRenderer from '@/components/DynamicFieldRenderer.vue'
 import {
   ArrowLeft, Delete, Check, User, Calendar, Picture,
-  MedicineBox, IDCard, Picture as PictureIcon, Checked
+  FirstAidKit, CreditCard, Picture as PictureIcon, Checked
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -363,6 +363,10 @@ function saveDraft() {
   }
   localStorage.setItem(draftKey, JSON.stringify(draft))
   showDraftSaved.value = true
+  // 2秒后自动隐藏
+  setTimeout(() => {
+    showDraftSaved.value = false
+  }, 2000)
 }
 
 // 恢复草稿
@@ -484,5 +488,31 @@ function getModuleTagType(moduleKey: string) {
   :deep(el-date-picker) { font-size: 16px !important; }
   :deep(.el-form-item__error) { font-size: 14px !important; }
   .edit-actions :deep(.el-button) { padding: 14px 28px !important; font-size: 16px !important; height: auto !important; }
+}
+
+// 草稿保存提示样式
+.draft-tooltip :deep(.el-tooltip__content) {
+  background: #67c23a;
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: $border-radius-base;
+
+  .el-tooltip__arrow {
+    &::after {
+      border-top-color: #67c23a;
+    }
+  }
+}
+
+.draft-saved-icon {
+  font-size: 20px;
+  color: #67c23a;
+  animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 </style>

@@ -147,7 +147,32 @@
           <h1 class="page-title">{{ pageTitle }}</h1>
         </div>
 
+        <div class="top-bar-center" v-show="!isMobile">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索记录、标签、内容..."
+            :prefix-icon="Search"
+            clearable
+            size="small"
+            class="top-search-input"
+            @keyup.enter="handleSearch"
+            @focus="showSearchDrawer = true"
+            @blur="setTimeout(() => showSearchDrawer = false, 200)"
+          />
+        </div>
+
         <div class="top-bar-right">
+          <!-- 移动端搜索按钮 -->
+          <el-button
+            v-if="isMobile"
+            class="search-btn"
+            @click="showSearchDrawer = true"
+            circle
+            size="small"
+          >
+            <el-icon><Search /></el-icon>
+          </el-button>
+
           <!-- 消息中心入口 -->
           <el-dropdown>
             <span class="dropdown-link">
@@ -191,6 +216,30 @@
         </div>
       </header>
 
+      <!-- 移动端搜索抽屉 -->
+      <el-drawer
+        v-model="showSearchDrawer"
+        direction="rtl"
+        size="60%"
+        title="全局搜索"
+        :before-close="handleDrawerClose"
+      >
+        <el-input
+          v-model="searchKeyword"
+          placeholder="输入关键词搜索..."
+          :prefix-icon="Search"
+          clearable
+          size="large"
+          autofocus
+          @keyup.enter="handleSearch"
+          class="drawer-search-input"
+        >
+          <template #append>
+            <el-button type="primary" @click="handleSearch">搜索</el-button>
+          </template>
+        </el-input>
+      </el-drawer>
+
       <!-- 面包屑 -->
       <el-breadcrumb class="breadcrumb" separator="/">
         <el-breadcrumb-item :to="{ name: 'Dashboard' }">首页</el-breadcrumb-item>
@@ -208,14 +257,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, User, Avatar
+  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, User, Avatar,
+  Search, Refresh, Fold as FoldIcon
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
+import { messageApi } from '@/api'
 import { registerSW } from 'virtual:pwa-register'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -228,6 +280,8 @@ const mobileDrawer = ref(false)
 const elderlyMode = ref(false)
 const showInstallPrompt = ref(false)
 const unreadCount = ref(0)
+const showSearchDrawer = ref(false)
+const searchKeyword = ref('')
 
 // 断点检测
 const isMobile = ref(false)
@@ -258,7 +312,32 @@ onMounted(() => {
     elderlyMode.value = true
     document.body.classList.add('elderly-mode')
   }
+
+  // 获取初始未读数
+  fetchUnreadCount()
+
+  // 启动未读数轮询
+  startUnreadPolling()
 })
+
+function startUnreadPolling() {
+  const timer = setInterval(async () => {
+    if (!document.hidden) {
+      await fetchUnreadCount()
+    }
+  }, 30000)
+
+  onUnmounted(() => clearInterval(timer))
+}
+
+async function fetchUnreadCount() {
+  try {
+    const response = await messageApi.getUnreadCount()
+    unreadCount.value = response.data?.count || 0
+  } catch (e) {
+    console.error('Failed to fetch unread count:', e)
+  }
+}
 
 // 页面标题
 const pageTitle = computed(() => {
@@ -268,7 +347,9 @@ const pageTitle = computed(() => {
     RecordCreate: '新增记录',
     RecordDetail: '记录详情',
     RecordEdit: '编辑记录',
-    Settings: '设置中心'
+    Settings: '设置中心',
+    Messages: '消息中心',
+    GlobalSearch: '全局搜索'
   }
   return titles[route.name as string] || '家记'
 })
@@ -300,10 +381,10 @@ const isAdmin = computed(() => authStore.isAdmin)
 // 模块图标映射
 function getModuleIcon(moduleKey: string) {
   const icons: Record<string, string> = {
-    drug: 'MedicineBox',
+    drug: 'FirstAidKit',
     todo: 'Checked',
     note: 'Picture',
-    idoc: 'IDCard'
+    idoc: 'CreditCard'
   }
   return icons[moduleKey] || 'Grid'
 }
@@ -338,8 +419,6 @@ function toggleElderlyMode() {
 
 // 处理安装
 function handleInstall() {
-  // 这里需要调用 PWA 的 install 方法
-  // 简化处理：刷新页面
   location.reload()
 }
 
@@ -356,8 +435,22 @@ function handleLogout() {
 
 // 跳转消息中心
 function goToMessages() {
-  // TODO: 实现消息中心页面
-  ElMessage.info('消息中心开发中...')
+  router.push('/messages')
+}
+
+// 搜索处理
+function handleSearch() {
+  if (searchKeyword.value.trim()) {
+    router.push({ path: '/search', query: { q: searchKeyword.value.trim() } })
+    searchKeyword.value = ''
+    showSearchDrawer.value = false
+  }
+}
+
+function handleSearchKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    handleSearch()
+  }
 }
 </script>
 
@@ -519,6 +612,43 @@ function goToMessages() {
     }
   }
 
+  .top-bar-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    max-width: 600px;
+    margin: 0 24px;
+
+    .top-search-input {
+      width: 100%;
+      max-width: 480px;
+
+      :deep(.el-input__inner) {
+        height: 36px;
+        padding: 0 12px 0 36px;
+        font-size: 14px;
+
+        &:hover {
+          border-color: $primary-color;
+        }
+
+        &:focus {
+          border-color: $primary-color;
+          box-shadow: 0 0 0 2px $primary-light-bg;
+        }
+      }
+
+      :deep(.el-input__prefix) {
+        color: $text-placeholder;
+        font-size: 16px;
+      }
+
+      :deep(.el-input__suffix) {
+        color: $text-placeholder;
+      }
+    }
+  }
+
   .top-bar-right {
     display: flex;
     align-items: center;
@@ -526,7 +656,8 @@ function goToMessages() {
   }
 
   .toggle-btn,
-  .menu-btn {
+  .menu-btn,
+  .search-btn {
     color: $text-secondary;
   }
 
@@ -686,12 +817,26 @@ function goToMessages() {
     padding: 0 16px;
   }
 
+  .top-bar-center {
+    display: none !important;
+  }
+
   .breadcrumb {
     padding: 8px 16px;
   }
 
   .page-content {
     padding: 16px;
+  }
+
+  .search-btn {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .search-btn {
+    display: none;
   }
 }
 </style>
