@@ -14,10 +14,10 @@ import java.util.List;
 public interface SpaceMemberMapper extends BaseMapper<SpaceMember> {
 
     @Select("SELECT * FROM jj_space_member WHERE space_id = #{spaceId} AND user_id = #{userId}")
-    SpaceMember selectBySpaceIdAndUserId(Long spaceId, Long userId);
+    SpaceMember selectBySpaceAndUser(Long spaceId, Long userId);
 
     @Select("SELECT * FROM jj_space_member WHERE space_id = #{spaceId} AND user_id = #{userId}")
-    SpaceMember selectBySpaceAndUser(Long spaceId, Long userId);
+    SpaceMember selectBySpaceIdAndUserId(Long spaceId, Long userId);
 
     @Select("SELECT * FROM jj_space_member WHERE space_id = #{spaceId}")
     List<SpaceMember> selectBySpaceId(Long spaceId);

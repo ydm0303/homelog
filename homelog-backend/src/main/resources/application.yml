@@ -3,10 +3,11 @@
 # ============================================================================
 
 # 服务端口
+# 注意：不要设置 context-path。所有 Controller 已自带 /api 前缀，
+# 前端 baseURL 也是 /api，再加 context-path 会导致 /api/api/... 双重前缀 404。
 server:
   port: 8080
   servlet:
-    context-path: /api
     encoding:
       charset: UTF-8
       force: true

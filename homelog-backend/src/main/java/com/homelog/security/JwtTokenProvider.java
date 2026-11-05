@@ -66,7 +66,7 @@ public class JwtTokenProvider {
                 .claim("type", "access")
                 .setIssuedAt(new Date(now))
                 .setExpiration(validity)
-                .signWith(key, SignatureAlgorithm.HS512)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -82,7 +82,7 @@ public class JwtTokenProvider {
                 .claim("type", "refresh")
                 .setIssuedAt(new Date(now))
                 .setExpiration(validity)
-                .signWith(key, SignatureAlgorithm.HS512)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 

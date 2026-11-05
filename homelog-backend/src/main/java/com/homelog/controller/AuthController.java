@@ -18,13 +18,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.time.LocalDateTime;
-import java.util.Collections;
 
 /**
  * 认证控制器
@@ -40,6 +42,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final UserDetailsService userDetailsService;
     private final UserMapper userMapper;
     private final SpaceMapper spaceMapper;
     private final SpaceMemberMapper spaceMemberMapper;
@@ -141,8 +144,16 @@ public class AuthController {
         }
 
         String username = jwtTokenProvider.getUsername(refreshToken);
+
+        // 重新加载完整用户信息（含权限），避免用 String 作为 principal 导致 generateAccessToken 强转 UserDetails 失败
+        UserDetails userDetails;
+        try {
+            userDetails = userDetailsService.loadUserByUsername(username);
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(401).build();
+        }
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                username, null, Collections.emptyList()
+                userDetails, null, userDetails.getAuthorities()
         );
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(authentication);

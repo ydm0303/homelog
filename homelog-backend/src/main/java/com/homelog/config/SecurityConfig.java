@@ -2,6 +2,7 @@ package com.homelog.config;
 
 import com.homelog.security.JwtAuthenticationFilter;
 import com.homelog.security.JwtTokenProvider;
+import com.homelog.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,13 +30,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final UserDetailsServiceImpl userDetailsService;
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(username -> {
-            // 这里只是占位，实际认证在 AuthController 中处理
-            throw new RuntimeException("Use JWT authentication");
-        }).passwordEncoder(passwordEncoder());
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
     }
 
     @Override
