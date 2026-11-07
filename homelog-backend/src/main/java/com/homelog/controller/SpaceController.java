@@ -85,21 +85,25 @@ public class SpaceController {
     public SpaceMemberVO createMember(@RequestBody SpaceMemberCreateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Add space member: spaceId={}, email={}, role={}", spaceId, request.getEmail(), request.getRole());
 
         // 只有管理员可添加成员
         if (role != 1) {
+            log.warn("Add member denied, not an admin: spaceId={}, role={}", spaceId, role);
             throw new RuntimeException("权限不足，仅管理员可添加成员");
         }
 
         // 检查用户是否存在
         var user = userMapper.selectByEmail(request.getEmail());
         if (user == null) {
+            log.warn("Add member failed, user not found: email={}", request.getEmail());
             throw new RuntimeException("用户不存在");
         }
 
         // 检查是否已经是成员
         SpaceMember existing = spaceMemberMapper.selectBySpaceIdAndUserId(spaceId, user.getId());
         if (existing != null) {
+            log.warn("Add member failed, already a member: spaceId={}, userId={}", spaceId, user.getId());
             throw new RuntimeException("该用户已经是成员");
         }
 
@@ -111,6 +115,7 @@ public class SpaceController {
                 .setCreatedAt(java.time.LocalDateTime.now());
 
         spaceMemberMapper.insert(member);
+        log.info("Space member added: spaceId={}, userId={}, role={}", spaceId, user.getId(), request.getRole());
 
         return SpaceMemberVO.from(member, user);
     }
@@ -123,14 +128,17 @@ public class SpaceController {
     public SpaceMemberVO updateMember(@RequestBody SpaceMemberUpdateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Update space member: spaceId={}, userId={}, role={}", spaceId, request.getUserId(), request.getRole());
 
         // 只有管理员可更新成员
         if (role != 1) {
+            log.warn("Update member denied, not an admin: spaceId={}, role={}", spaceId, role);
             throw new RuntimeException("权限不足，仅管理员可更新成员");
         }
 
         SpaceMember member = spaceMemberMapper.selectBySpaceIdAndUserId(spaceId, request.getUserId());
         if (member == null) {
+            log.warn("Update member failed, member not found: spaceId={}, userId={}", spaceId, request.getUserId());
             throw new RuntimeException("成员不存在");
         }
 
@@ -138,6 +146,7 @@ public class SpaceController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName().equals(userMapper.selectById(request.getUserId()).getUsername())) {
             if (request.getRole() != null && !request.getRole().equals(member.getRole())) {
+                log.warn("Update member denied, cannot change own role: spaceId={}, userId={}", spaceId, request.getUserId());
                 throw new RuntimeException("不能修改自己的角色");
             }
         }
@@ -148,6 +157,7 @@ public class SpaceController {
         spaceMemberMapper.updateById(member);
 
         var user = userMapper.selectById(request.getUserId());
+        log.info("Space member updated: spaceId={}, userId={}", spaceId, request.getUserId());
         return SpaceMemberVO.from(member, user);
     }
 
@@ -159,23 +169,28 @@ public class SpaceController {
     public void deleteMember(@RequestBody SpaceMemberDeleteRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Delete space member: spaceId={}, userId={}", spaceId, request.getUserId());
 
         // 只有管理员可删除成员
         if (role != 1) {
+            log.warn("Delete member denied, not an admin: spaceId={}, role={}", spaceId, role);
             throw new RuntimeException("权限不足，仅管理员可删除成员");
         }
 
         SpaceMember member = spaceMemberMapper.selectBySpaceIdAndUserId(spaceId, request.getUserId());
         if (member == null) {
+            log.warn("Delete member failed, member not found: spaceId={}, userId={}", spaceId, request.getUserId());
             throw new RuntimeException("成员不存在");
         }
 
         // 不能删除自己
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName().equals(userMapper.selectById(request.getUserId()).getUsername())) {
+            log.warn("Delete member denied, cannot delete self: spaceId={}, userId={}", spaceId, request.getUserId());
             throw new RuntimeException("不能删除自己");
         }
 
         spaceMemberMapper.deleteById(member.getId());
+        log.info("Space member deleted: spaceId={}, userId={}", spaceId, request.getUserId());
     }
 }

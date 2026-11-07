@@ -91,7 +91,7 @@
               />
             </el-form-item>
 
-            <el-form-item>
+            <el-form-item prop="agreeTerms">
               <el-checkbox v-model="registerForm.agreeTerms">
                 我已阅读并同意<a href="javascript:void(0)" @click="showTerms = true">《用户协议与隐私政策》</a>
               </el-checkbox>
@@ -172,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Message, Lock, UserFilled, Download, House } from '@element-plus/icons-vue'
@@ -225,7 +225,15 @@ const registerRules = {
     }
   ],
   agreeTerms: [
-    { required: true, message: '请阅读并同意用户协议', trigger: 'change' }
+    // required 对 boolean 的 false 不生效，必须显式校验
+    { validator: (rule: any, value: boolean, callback: any) => {
+        if (!value) {
+          callback(new Error('请阅读并同意用户协议'))
+        } else {
+          callback()
+        }
+      }, trigger: 'change'
+    }
   ]
 }
 
@@ -242,6 +250,8 @@ onMounted(() => {
 function checkMobile() {
   isMobile.value = window.innerWidth < 768
 }
+
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
 async function handleRegister() {
   if (!registerFormRef.value) return

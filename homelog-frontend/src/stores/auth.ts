@@ -33,12 +33,12 @@ export const useAuthStore = defineStore('auth', () => {
       const api = (await import('@/api')).default
       api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
 
-      // 验证 token 有效性
+      // 验证 token 有效性；401 由 axios 拦截器自动刷新并重试
       try {
         await fetchMe()
       } catch {
-        // token 无效，尝试刷新
-        await refreshAccessToken()
+        // 走到这里说明刷新也已失败，清理登录态
+        await logout()
       }
     }
   }

@@ -43,6 +43,7 @@ public class MessageController {
         response.put("page", request.getPage());
         response.put("size", request.getSize());
 
+        log.info("Message list result: total={}, returned={}", total, messages.size());
         return ResponseEntity.ok(response);
     }
 
@@ -55,6 +56,7 @@ public class MessageController {
         int count = messageService.getUnreadCount();
         Map<String, Integer> response = new HashMap<>();
         response.put("count", count);
+        log.debug("Unread message count: {}", count);
         return ResponseEntity.ok(response);
     }
 

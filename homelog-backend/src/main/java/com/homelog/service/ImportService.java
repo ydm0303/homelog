@@ -92,6 +92,8 @@ public class ImportService {
         int successCount = 0;
         int totalRows = 0;
 
+        log.info("Start CSV import processing: previewOnly={}", previewOnly);
+
         // 获取药品模块
         Long spaceId = 1L;
         Module drugModule = moduleMapper.selectBySpaceAndKey(spaceId, "drug");
@@ -134,6 +136,7 @@ public class ImportService {
                     Map<String, Object> dataJson = parseRow(record, fieldMap, emailToUserId, errors, rowNum);
 
                     if (errors.stream().anyMatch(e -> e.getRowNum() == rowNum)) {
+                        log.warn("CSV import row {} skipped due to validation errors", rowNum);
                         continue; // 该行有错误，跳过
                     }
 
@@ -144,6 +147,7 @@ public class ImportService {
                     successCount++;
 
                 } catch (Exception e) {
+                    log.warn("CSV import row {} failed: {}", rowNum, e.getMessage());
                     errors.add(new ImportErrorVO()
                             .setRowNum(rowNum)
                             .setRowData(DRUG_CSV_HEADERS) // 简化：记录列头

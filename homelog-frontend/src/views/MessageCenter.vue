@@ -64,7 +64,7 @@
 
       <div v-else-if="messages.length === 0" class="empty-state">
         <el-icon class="empty-icon"><Bell /></el-icon>
-        <p v-if="filterStatus === 0 || !filterStatus">暂无未读消息</p>
+        <p v-if="filterStatus === '0'">暂无未读消息</p>
         <p v-else>暂无消息记录</p>
       </div>
 
@@ -199,20 +199,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { messageApi } from '@/api'
-import {
-  Search, Bell, Check, Delete, AlarmClock,
-  Checked, Picture, Document
-} from '@element-plus/icons-vue'
+import { Search, Bell, Check, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 
 // 响应式状态
 const messages = ref<any[]>([])
@@ -268,8 +263,10 @@ async function fetchMessages() {
     }
 
     const response = await messageApi.list(params)
-    messages.value = response.data
-    total.value = response.total || response.data.length
+    // 后端返回 { data, total, page, size }，不是裸数组
+    const body = response.data
+    messages.value = Array.isArray(body?.data) ? body.data : []
+    total.value = body?.total ?? messages.value.length
   } catch (error) {
     console.error('Failed to fetch messages:', error)
     ElMessage.error('获取消息列表失败')
@@ -394,9 +391,9 @@ function getTypeLabel(type: string) {
 
 function highlightKeyword(content: string) {
   if (!filterKeyword.value) return escapeHtml(content)
-  const escaped = escapeHtml(content)
-  const keyword = escapeHtml(filterKeyword.value)
-  return escaped.replace(
+  // 用户输入需先转义正则元字符（如 ( [ + \），否则 new RegExp 会抛语法错误导致渲染中断
+  const keyword = escapeHtml(filterKeyword.value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return escapeHtml(content).replace(
     new RegExp(`(${keyword})`, 'gi'),
     '<mark class="highlight">$1</mark>'
   )

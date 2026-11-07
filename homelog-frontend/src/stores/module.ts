@@ -66,7 +66,8 @@ export const useModuleStore = defineStore('module', () => {
 
   // 删除自定义模块（仅管理员）
   async function deleteModule(moduleId: number) {
-    await api.post('/meta/modules/delete', { moduleId })
+    // 后端用 @RequestParam 接收 moduleId，只能走 query，放在 body 里会 400
+    await api.post('/meta/modules/delete', null, { params: { moduleId } })
     // 更新本地缓存
     const index = modules.value.findIndex(m => m.id === moduleId)
     if (index !== -1) modules.value.splice(index, 1)

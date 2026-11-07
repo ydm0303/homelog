@@ -43,6 +43,7 @@ public class SearchController {
         response.put("page", request.getPage());
         response.put("size", request.getSize());
 
+        log.info("Global search result: total={}, returned={}", total, results.size());
         return ResponseEntity.ok(response);
     }
 }

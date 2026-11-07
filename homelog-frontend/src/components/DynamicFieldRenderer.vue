@@ -88,15 +88,15 @@
     <!-- 图片上传 -->
     <div v-else-if="field.fieldType === 'image'" class="image-uploader">
       <el-upload
+        v-model:file-list="imageList"
         class="upload-component"
         action="#"
-        :auto-upload="true"
+        :http-request="handleUploadRequest"
         :on-preview="handlePreview"
         :on-remove="handleRemove"
         :on-success="handleSuccess"
         :on-error="handleError"
         :before-upload="beforeUpload"
-        :file-list="imageList"
         :limit="9"
         :on-exceed="handleExceed"
         list-type="picture-card"
@@ -163,8 +163,8 @@
       :active-value="true"
       :inactive-value="false"
       :inline-prompt="true"
-      :active-text="是"
-      :inactive-text="否"
+      active-text="是"
+      inactive-text="否"
       @change="emitUpdate"
     />
 
@@ -179,10 +179,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { Plus, Camera, Picture } from '@element-plus/icons-vue'
-import { useAuthStore } from '@/stores/auth'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Plus, Camera } from '@element-plus/icons-vue'
 import { spaceApi, fileApi } from '@/api'
+import { ElMessage } from 'element-plus'
 
 interface Field {
   id: number
@@ -210,16 +210,21 @@ const props = defineProps<{
   field: Field
   value: any
   disabled?: boolean
+  moduleKey?: string
 }>()
 
 const emit = defineEmits<{
   'update:value': [value: any]
 }>()
 
-const authStore = useAuthStore()
-
 // 本地值
 const localValue = ref(props.value)
+
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+
+// el-upload 的文件列表，通过 v-model:file-list 与组件保持双向同步
+// 每个文件上额外挂 serverPath（服务端相对路径）：file.url 是 blob 预览地址，移除时需要它回写
+const imageList = ref<any[]>([])
 
 // 解析选项
 const parsedOptions = computed<Option[]>(() => {
@@ -247,6 +252,7 @@ const spaceMembers = ref<Member[]>([])
 const isMobile = ref(false)
 const checkMobile = () => { isMobile.value = window.innerWidth < 768 }
 onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
 // 标签输入处理
 function addTag() {
@@ -268,7 +274,8 @@ watch(() => props.value, (val) => {
     imageList.value = val.map((url: string, idx: number) => ({
       uid: `img-${idx}`,
       name: `image-${idx}.jpg`,
-      url: url.startsWith('http') ? url : `${import.meta.env.VITE_API_BASE_URL || '/api'}/files${url}`,
+      url: url.startsWith('http') ? url : `${apiBase}/files${url}`,
+      serverPath: url,
       status: 'success'
     }))
   }
@@ -294,80 +301,97 @@ onMounted(() => {
 // 图片上传处理
 function beforeUpload(file: File) {
   const isImage = file.type.startsWith('image/')
-  const isLt2M = file.size / 1024 / 1024 < 5
+  const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isImage) {
     ElMessage.error('只能上传图片文件')
     return false
   }
-  if (!isLt2M) {
+  if (!isLt5M) {
     ElMessage.error('图片大小不能超过 5MB')
     return false
   }
   return true
 }
 
-function handleSuccess(response: any, file: any, fileList: any[]) {
-  if (response.code === 200 && response.data?.url) {
-    const newUrl = response.data.url
-    const currentUrls = localValue.value || []
-    if (!Array.isArray(currentUrls)) {
-      localValue.value = [newUrl]
-    } else {
-      localValue.value = [...currentUrls, newUrl]
-    }
-  } else {
-    ElMessage.error(response.message || '上传失败')
+// 用项目统一的 axios 实例上传，才会带上 JWT；el-upload 默认的 action 提交是裸 XHR
+async function handleUploadRequest(options: any) {
+  try {
+    const response = await uploadImage(options.file)
+    options.onSuccess(response)
+  } catch (error) {
+    options.onError(error as any)
   }
 }
 
-function handleError(err: any, file: any, fileList: any[]) {
+/** 上传图片，返回服务端相对路径 */
+async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('moduleKey', props.moduleKey || '')
+
+  const response = await fileApi.upload(formData)
+  const url = response.data?.url
+  if (!url) throw new Error('上传响应缺少 url')
+  return url
+}
+
+function handleSuccess(response: any, file: any) {
+  if (!response?.url) {
+    ElMessage.error('上传失败：响应缺少 url')
+    return
+  }
+  // 记在文件对象上，移除时用它回写（file.url 是 el-upload 生成的 blob 预览地址）
+  file.serverPath = response.url
+  const currentUrls = Array.isArray(localValue.value) ? localValue.value : []
+  localValue.value = [...currentUrls, response.url]
+}
+
+function handleError() {
   ElMessage.error('上传失败')
 }
 
-function handleRemove(file: any, fileList: any[]) {
-  const urls = (localValue.value || []).filter((u: string) => u !== file.url)
-  localValue.value = urls
+function handleRemove(_file: any, fileList: any[]) {
+  localValue.value = fileList
+    .map((f: any) => f.serverPath)
+    .filter((url: any): url is string => !!url)
 }
 
 function handlePreview(file: any) {
   // 预览由组件自动处理
 }
 
-function handleExceed(files: any[], fileList: any[]) {
-  ElMessage.warning(`最多只能上传 9 张图片，已忽略多余文件`)
+function handleExceed() {
+  ElMessage.warning('最多只能上传 9 张图片，已忽略多余文件')
 }
 
 // 移动端拍照
-function handleCameraCapture(event: Event) {
+async function handleCameraCapture(event: Event) {
   const target = event.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    const file = target.files[0]
-    uploadFile(file)
-  }
-}
-
-async function uploadFile(file: File) {
-  const formData = new FormData()
-  formData.append('file', file)
+  const file = target.files?.[0]
+  if (!file) return
 
   try {
-    const response = await fileApi.upload(formData)
-    if (response.code === 200 && response.data?.url) {
-      const currentUrls = localValue.value || []
-      if (!Array.isArray(currentUrls)) {
-        localValue.value = [response.data.url]
-      } else {
-        localValue.value = [...currentUrls, response.data.url]
+    const url = await uploadImage(file)
+    const currentUrls = Array.isArray(localValue.value) ? localValue.value : []
+    localValue.value = [...currentUrls, url]
+    imageList.value = [
+      ...imageList.value,
+      {
+        uid: `camera-${Date.now()}`,
+        name: file.name,
+        url: `${apiBase}/files${url}`,
+        serverPath: url,
+        status: 'success'
       }
-    }
-  } catch (e) {
+    ]
+  } catch {
     ElMessage.error('上传失败')
+  } finally {
+    // 允许重复选择同一张照片
+    target.value = ''
   }
 }
-
-// 需要导入 ElMessage
-import { ElMessage } from 'element-plus'
 </script>
 
 <style lang="scss" scoped>

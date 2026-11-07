@@ -164,11 +164,13 @@ public class RecordService {
 
         Module module = moduleMapper.selectById(request.getModuleId());
         if (module == null || !module.getSpaceId().equals(spaceId)) {
+            log.warn("Create record failed, module not found: moduleId={}, spaceId={}", request.getModuleId(), spaceId);
             throw new RuntimeException("模块不存在");
         }
 
         // 权限检查：只读不能创建
         if (role == 3) {
+            log.warn("Create record denied, read-only role: moduleId={}, userId={}", module.getId(), currentUserId);
             throw new RuntimeException("只读权限，无法创建记录");
         }
 
@@ -191,11 +193,12 @@ public class RecordService {
                 .setTags(request.getTags())
                 .setRemindDate(remindDate)
                 .setDataJson(toJsonString(request.getDataJson()))
-                .setImagesJson(toJsonString(request.getImagesJson()))
+                .setImagesJson(toJsonArrayString(request.getImagesJson()))
                 .setCreatedAt(LocalDateTime.now())
                 .setUpdatedAt(LocalDateTime.now());
 
         recordMapper.insert(record);
+        log.info("Record created: recordId={}, moduleId={}, creatorId={}", record.getId(), module.getId(), currentUserId);
 
         return RecordVO.from(record, module.getModuleKey(), module.getName(), "用户");
     }
@@ -211,19 +214,24 @@ public class RecordService {
 
         Module module = moduleMapper.selectById(moduleId);
         if (module == null || !module.getSpaceId().equals(spaceId)) {
+            log.warn("Update record failed, module not found: moduleId={}, spaceId={}", moduleId, spaceId);
             throw new RuntimeException("模块不存在");
         }
 
         Record record = recordMapper.selectByIdAndSpaceAndModule(spaceId, moduleId, recordId);
         if (record == null) {
+            log.warn("Update record failed, record not found: moduleId={}, recordId={}", moduleId, recordId);
             throw new RuntimeException("记录不存在");
         }
 
         // 权限检查：只读不能修改；编辑只能改自己的
         if (role == 3) {
+            log.warn("Update record denied, read-only role: recordId={}, userId={}", recordId, currentUserId);
             throw new RuntimeException("只读权限，无法修改记录");
         }
         if (role == 2 && !record.getCreatorId().equals(currentUserId)) {
+            log.warn("Update record denied, not the creator: recordId={}, userId={}, creatorId={}",
+                    recordId, currentUserId, record.getCreatorId());
             throw new RuntimeException("只能修改自己创建的记录");
         }
 
@@ -240,12 +248,17 @@ public class RecordService {
 
         record.setTitle(request.getTitle() != null ? request.getTitle() : record.getTitle())
                 .setDataJson(toJsonString(dataJson))
-                .setImagesJson(toJsonString(request.getImagesJson()))
                 .setTags(request.getTags() != null ? request.getTags() : record.getTags())
                 .setRemindDate(remindDate)
                 .setUpdatedAt(LocalDateTime.now());
 
+        // 仅在请求显式携带图片列表时才更新，避免未传 imagesJson 时把已有图片覆盖掉
+        if (request.getImagesJson() != null) {
+            record.setImagesJson(toJsonArrayString(request.getImagesJson()));
+        }
+
         recordMapper.updateById(record);
+        log.info("Record updated: recordId={}, moduleId={}, userId={}", recordId, moduleId, currentUserId);
 
         return RecordVO.from(record, module.getModuleKey(), module.getName(), "用户");
     }
@@ -261,20 +274,24 @@ public class RecordService {
 
         Module module = moduleMapper.selectById(moduleId);
         if (module == null || !module.getSpaceId().equals(spaceId)) {
+            log.warn("Delete record failed, module not found: moduleId={}, spaceId={}", moduleId, spaceId);
             throw new RuntimeException("模块不存在");
         }
 
         Record record = recordMapper.selectByIdAndSpaceAndModule(spaceId, moduleId, recordId);
         if (record == null) {
+            log.warn("Delete record failed, record not found: moduleId={}, recordId={}", moduleId, recordId);
             throw new RuntimeException("记录不存在");
         }
 
         // 权限检查：只读/编辑不能删除（仅管理员可删）
         if (role != 1) {
+            log.warn("Delete record denied, not an admin: recordId={}, role={}, userId={}", recordId, role, currentUserId);
             throw new RuntimeException("仅管理员可删除记录");
         }
 
         recordMapper.deleteById(recordId);
+        log.info("Record deleted: recordId={}, moduleId={}, userId={}", recordId, moduleId, currentUserId);
     }
 
     /**
@@ -325,6 +342,18 @@ public class RecordService {
             return objectMapper.writeValueAsString(obj);
         } catch (Exception e) {
             return "{}";
+        }
+    }
+
+    /**
+     * 序列化列表为 JSON 数组字符串；为空时返回 "[]"（而非 "{}"，保持与 images_json 列语义一致）
+     */
+    private String toJsonArrayString(Object obj) {
+        if (obj == null) return "[]";
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "[]";
         }
     }
 

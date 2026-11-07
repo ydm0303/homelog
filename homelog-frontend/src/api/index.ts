@@ -14,7 +14,8 @@ const api = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const authStore = useAuthStore()
-    if (authStore.token && config.headers) {
+    // 刷新接口会自带 refresh token，此处不能再用 access token 覆盖
+    if (authStore.token && config.headers && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
     return config
@@ -26,10 +27,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
+    const originalRequest = error.config as AxiosRequestConfig & {
+      _retry?: boolean
+      _skipAuthRefresh?: boolean
+      _skipErrorToast?: boolean
+    }
     const authStore = useAuthStore()
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 刷新接口自身的 401 不能再触发刷新，否则会无限递归
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._skipAuthRefresh &&
+      !originalRequest._retry
+    ) {
       originalRequest._retry = true
 
       try {
@@ -49,7 +59,7 @@ api.interceptors.response.use(
 
     // 统一错误提示
     const message = (error.response?.data as any)?.message || error.message || '请求失败'
-    if (error.response?.status !== 401) {
+    if (error.response?.status !== 401 && !originalRequest._skipErrorToast) {
       ElMessage.error(message)
     }
 
@@ -61,17 +71,26 @@ export default api
 
 // ============ 认证相关 API ============
 export const authApi = {
-  /** 登录 POST /api/auth/login */
-  login: (username: string, password: string) =>
-    api.post('/auth/login', { username, password }),
+  /** 登录 POST /api/auth/login（错误提示由登录页统一处理，跳过拦截器提示） */
+  login: (username: string, password: string) => {
+    const config = { _skipErrorToast: true }
+    return api.post('/auth/login', { username, password }, config)
+  },
 
-  /** 注册 POST /api/auth/register */
-  register: (data: { username: string; password: string; email: string; nickName?: string }) =>
-    api.post('/auth/register', data),
+  /** 注册 POST /api/auth/register（错误提示由注册页统一处理，跳过拦截器提示） */
+  register: (data: { username: string; password: string; email: string; nickName?: string }) => {
+    const config = { _skipErrorToast: true }
+    return api.post('/auth/register', data, config)
+  },
 
-  /** 刷新 Token POST /api/auth/refresh */
-  refresh: () =>
-    api.post('/auth/refresh'),
+  /** 刷新 Token POST /api/auth/refresh（后端从 Authorization 头读取 refresh token） */
+  refresh: () => {
+    const config = {
+      headers: { Authorization: `Bearer ${localStorage.getItem('refresh_token') || ''}` },
+      _skipAuthRefresh: true
+    }
+    return api.post('/auth/refresh', null, config)
+  },
 
   /** 获取当前用户 GET /api/auth/detail */
   detail: () =>
@@ -153,9 +172,9 @@ export const metaApi = {
   createModule: (data: { name: string; moduleKey: string; sortOrder?: number }) =>
     api.post('/meta/modules/create', data),
 
-  /** 删除自定义模块 POST /api/meta/modules/delete */
+  /** 删除自定义模块 POST /api/meta/modules/delete?moduleId=xxx */
   deleteModule: (moduleId: number) =>
-    api.post('/meta/modules/delete', { moduleId })
+    api.post('/meta/modules/delete', null, { params: { moduleId } })
 }
 
 // ============ 空间/成员相关 API ============

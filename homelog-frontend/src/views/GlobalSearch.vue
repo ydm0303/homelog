@@ -8,15 +8,14 @@
         :prefix-icon="Search"
         clearable
         size="large"
-        @keyup.enter="handleSearch"
-        @blur="handleSearch"
+        @keyup.enter="handleKeywordSearch"
         class="search-input"
       >
         <template #append>
           <el-button
             type="primary"
             :loading="loading"
-            @click="handleSearch"
+            @click="handleKeywordSearch"
           >
             搜索
           </el-button>
@@ -34,7 +33,7 @@
             placeholder="全部模块"
             size="small"
             style="width: 160px"
-            @change="handleSearch"
+            @change="handleFilterChange"
           >
             <el-option label="全部模块" value="" />
             <el-option
@@ -54,7 +53,7 @@
             size="small"
             style="width: 160px"
             filterable
-            @change="handleSearch"
+            @change="handleFilterChange"
           >
             <el-option label="全部标签" value="" />
             <el-option
@@ -76,7 +75,7 @@
             end-placeholder="结束"
             size="small"
             style="width: 260px"
-            @change="handleSearch"
+            @change="handleFilterChange"
             value-format="YYYY-MM-DD"
           />
         </div>
@@ -144,22 +143,22 @@
           <!-- 标题/核心内容 -->
           <h3 class="result-title" v-html="highlightKeyword(record.title || getFirstFieldValue(record))" />
 
-          <!-- 高亮片段 -->
+          <!-- 高亮片段（后端返回纯文本，需转义后再高亮，不能直接 v-html） -->
           <div
             v-if="record.highlightSnippet"
             class="result-snippet"
-            v-html="record.highlightSnippet"
+            v-html="highlightKeyword(record.highlightSnippet)"
           />
 
           <!-- 字段预览 -->
-          <div class="result-fields" v-if="Object.keys(record.dataJson).length > 0">
+          <div class="result-fields" v-if="Object.keys(getDisplayFields(record)).length > 0">
             <span
               v-for="(value, key) in getDisplayFields(record)"
               :key="key"
               class="field-chip"
             >
-              <span class="field-label">{{ escapeHtml(key) }}：</span>
-              <span class="field-value" v-html="highlightKeyword(escapeHtml(String(value)))"/>
+              <span class="field-label">{{ key }}：</span>
+              <span class="field-value" v-html="highlightKeyword(String(value))"/>
             </span>
           </div>
 
@@ -203,14 +202,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useModuleStore } from '@/stores/module'
 import { searchApi } from '@/api'
-import {
-  Search, Refresh, Clock, Document, Checked, FirstAidKit,
-  CreditCard, Picture, ArrowRight
-} from '@element-plus/icons-vue'
+import { Search, Refresh, Clock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 
@@ -275,7 +271,9 @@ async function fetchAllTags() {
           page: 1,
           size: 200
         })
-        response.data.forEach((r: any) => {
+        const body = response.data
+        const list = Array.isArray(body?.data) ? body.data : []
+        list.forEach((r: any) => {
           r.tags?.split(',').forEach((t: string) => t.trim() && tagSet.add(t.trim()))
         })
       } catch (e) {
@@ -313,8 +311,10 @@ async function handleSearch() {
     }
 
     const response = await searchApi.global(params)
-    results.value = response.data
-    total.value = response.total || response.data.length
+    // 后端返回 { data, total, page, size }，不是裸数组
+    const body = response.data
+    results.value = Array.isArray(body?.data) ? body.data : []
+    total.value = body?.total ?? results.value.length
     searchTime.value = Date.now() - searchStartTime.value
 
     // 更新 URL 不刷新页面
@@ -331,6 +331,17 @@ async function handleSearch() {
   } finally {
     loading.value = false
   }
+}
+
+// 新条件必须回到第一页，否则会停在旧页码上出现空结果
+function handleFilterChange() {
+  page.value = 1
+  handleSearch()
+}
+
+function handleKeywordSearch() {
+  page.value = 1
+  handleSearch()
 }
 
 function handlePageChange(newPage: number) {
@@ -356,19 +367,32 @@ function goToDetail(record: any) {
   router.push(`/module/${record.moduleKey}/${record.id}`)
 }
 
+// 搜索结果接口返回的 dataJson 是 JSON 字符串（RecordVO 才是对象），统一解析后再使用
+function parseDataJson(record: any): Record<string, any> {
+  const raw = record?.dataJson
+  if (!raw) return {}
+  if (typeof raw === 'object') return raw
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 function getFirstFieldValue(record: any): string {
-  if (!record.dataJson) return '无标题记录'
-  const keys = Object.keys(record.dataJson)
+  const dataJson = parseDataJson(record)
+  const keys = Object.keys(dataJson)
   if (keys.length === 0) return '无标题记录'
-  const val = record.dataJson[keys[0]]
+  const val = dataJson[keys[0]]
   return typeof val === 'string' ? val.substring(0, 50) : String(val).substring(0, 50)
 }
 
 function getDisplayFields(record: any): Record<string, any> {
-  if (!record.dataJson) return {}
+  const dataJson = parseDataJson(record)
   const result: Record<string, any> = {}
   let count = 0
-  for (const [key, val] of Object.entries(record.dataJson)) {
+  for (const [key, val] of Object.entries(dataJson)) {
     if (!['is_private'].includes(key) && count < 4) {
       result[key] = typeof val === 'string' ? val.substring(0, 40) : String(val).substring(0, 40)
       count++
@@ -396,10 +420,10 @@ function getRemindClass(remindDate: string) {
 
 function highlightKeyword(text: string) {
   if (!searchKeyword.value.trim()) return escapeHtml(text)
-  const keyword = escapeHtml(searchKeyword.value.trim())
-  const escapedText = escapeHtml(text)
-  return escapedText.replace(
-    new RegExp(`(${keyword})`, 'gi'),
+  // 用户输入需先转义正则元字符（如 ( [ + \），否则 new RegExp 会抛语法错误导致渲染中断
+  const pattern = escapeHtml(searchKeyword.value.trim()).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return escapeHtml(text).replace(
+    new RegExp(`(${pattern})`, 'gi'),
     '<mark class="highlight">$1</mark>'
   )
 }

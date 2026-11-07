@@ -258,9 +258,14 @@ onMounted(async () => {
 async function fetchRecord() {
   loading.value = true
   try {
-    const response = await api.get('/api/records/detail', {
-      params: { recordId: Number(recordId), moduleId: currentModule.value?.id }
-    })
+    const moduleId = currentModule.value?.id
+    if (!moduleId) {
+      ElMessage.error('模块不存在或已禁用')
+      router.push('/')
+      return
+    }
+
+    const response = await recordApi.detail(Number(recordId), moduleId)
     record.value = response.data
   } catch (error) {
     console.error('Failed to fetch record:', error)
@@ -280,6 +285,9 @@ function goToEdit() {
 }
 
 async function handleDelete() {
+  const moduleId = currentModule.value?.id
+  if (!moduleId) return
+
   try {
     await ElMessageBox.confirm('确定要删除这条记录吗？删除后不可恢复', '确认删除', {
       confirmButtonText: '删除',
@@ -287,7 +295,7 @@ async function handleDelete() {
       type: 'warning',
       confirmButtonClass: 'el-button--danger'
     })
-    await recordApi.delete(Number(recordId), currentModule.value?.id)
+    await recordApi.delete(Number(recordId), moduleId)
     ElMessage.success('删除成功')
     router.push(`/module/${moduleKey}`)
   } catch (e: any) {
@@ -296,10 +304,13 @@ async function handleDelete() {
 }
 
 async function togglePrivate(isPrivate: boolean) {
+  const moduleId = currentModule.value?.id
+  if (!moduleId) return
+
   try {
     await recordApi.update({
       recordId: Number(recordId),
-      moduleId: currentModule.value?.id,
+      moduleId,
       dataJson: { ...record.value.dataJson, is_private: isPrivate }
     })
     ElMessage.success(isPrivate ? '已设为私密' : '已取消私密')
@@ -333,13 +344,13 @@ function formatFieldValue(field: any, value: any): string {
     case 'image':
       if (Array.isArray(value)) {
         return value.map((v: string) =>
-          `<img src="${getImageUrl(v)}" alt="" class="inline-image" />`
+          `<img src="${escapeHtml(getImageUrl(v))}" alt="" class="inline-image" />`
         ).join('')
       }
-      return `<img src="${getImageUrl(value)}" alt="" class="inline-image" />`
+      return `<img src="${escapeHtml(getImageUrl(value))}" alt="" class="inline-image" />`
 
     case 'member':
-      return `<el-tag effect="plain" size="small">成员 ID: ${value}</el-tag>`
+      return `<el-tag effect="plain" size="small">成员 ID: ${escapeHtml(String(value))}</el-tag>`
 
     case 'select':
     case 'multi_select':
@@ -349,25 +360,25 @@ function formatFieldValue(field: any, value: any): string {
           if (Array.isArray(value)) {
             return value.map((v: string) => {
               const opt = options.find((o: any) => o.value === v)
-              return `<el-tag effect="plain" size="small">${opt?.label || v}</el-tag>`
+              return `<el-tag effect="plain" size="small">${escapeHtml(String(opt?.label || v))}</el-tag>`
             }).join(' ')
           }
           const opt = options.find((o: any) => o.value === value)
-          return `<el-tag effect="plain" size="small">${opt?.label || value}</el-tag>`
+          return `<el-tag effect="plain" size="small">${escapeHtml(String(opt?.label || value))}</el-tag>`
         } catch {
-          return String(value)
+          return escapeHtml(String(value))
         }
       }
-      return String(value)
+      return escapeHtml(String(value))
 
     case 'boolean':
       return value ? '<el-tag type="success" size="small">是</el-tag>' : '<el-tag type="info" size="small">否</el-tag>'
 
     case 'date':
-      return dayjs(value).format('YYYY-MM-DD')
+      return escapeHtml(dayjs(value).format('YYYY-MM-DD'))
 
     case 'number':
-      return `<span class="number-value">${value}</span>`
+      return `<span class="number-value">${escapeHtml(String(value))}</span>`
 
     case 'textarea':
       return `<pre class="textarea-value">${escapeHtml(String(value))}</pre>`

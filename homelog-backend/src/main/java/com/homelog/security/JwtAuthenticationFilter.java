@@ -34,7 +34,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (!jwtTokenProvider.isRefreshToken(token)) {
                 Authentication auth = jwtTokenProvider.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                log.debug("JWT authenticated: username={}, uri={}", auth.getName(), request.getRequestURI());
+            } else {
+                log.debug("Refresh token presented, skipping authentication: uri={}", request.getRequestURI());
             }
+        } else if (StringUtils.hasText(token)) {
+            log.debug("JWT token invalid or expired: uri={}", request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);

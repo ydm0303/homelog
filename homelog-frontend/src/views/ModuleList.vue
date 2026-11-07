@@ -356,7 +356,7 @@ const authStore = useAuthStore()
 const moduleStore = useModuleStore()
 
 // 路由参数
-const currentModuleKey = route.params.moduleKey as string
+const currentModuleKey = computed(() => route.params.moduleKey as string)
 
 // 响应式状态
 const records = ref<any[]>([])
@@ -373,7 +373,7 @@ const filterCreator = ref('')
 const showPrivateOnly = ref(false)
 const allTags = ref<string[]>([])
 
-const currentModule = computed(() => moduleStore.getModuleByKey(currentModuleKey))
+const currentModule = computed(() => moduleStore.getModuleByKey(currentModuleKey.value))
 const currentModuleName = computed(() => currentModule.value?.name || '')
 const currentModuleId = computed(() => currentModule.value?.id)
 const fields = computed(() => currentModule.value?.fields || [])
@@ -383,15 +383,28 @@ const isEditor = computed(() => authStore.isEditor)
 const isReadonly = computed(() => authStore.isReadonly)
 
 onMounted(async () => {
+  // 必须先加载模块列表，否则刷新页面时 currentModuleId 仍为空会被误判为模块不存在
+  await moduleStore.fetchModules()
+  await loadModule()
+})
+
+// 同一组件在 /module/a 与 /module/b 之间切换时路由不会重建组件，需手动重新加载
+watch(currentModuleKey, (key) => {
+  if (!key) return
+  clearFilterState()
+  loadModule()
+})
+
+async function loadModule() {
   if (!currentModuleId.value) {
+    ElMessage.error('模块不存在或已禁用')
     router.push('/')
     return
   }
 
-  await moduleStore.fetchModules()
   await fetchRecords()
   await fetchAllTags()
-})
+}
 
 async function fetchRecords() {
   if (!currentModuleId.value) return
@@ -404,18 +417,13 @@ async function fetchRecords() {
       size: pageSize.value
     }
 
-    if (searchKeyword.value) params.q = searchKeyword.value
+    if (searchKeyword.value) params.keyword = searchKeyword.value
     if (selectedTag.value) params.tag = selectedTag.value
-    if (filterDateRange.value) {
-      params.startDate = filterDateRange.value[0]
-      params.endDate = filterDateRange.value[1]
-    }
-    if (filterCreator.value) params.creator = filterCreator.value
 
-    const response = await api.get('/records/list', { params })
-    records.value = response.data
-    // 后端暂不支持总数，用当前页长度估算
-    total.value = response.data.length + (page.value - 1) * pageSize.value
+    const response = await recordApi.list(params)
+    records.value = applyLocalFilters(response.data)
+    // 后端 list 接口不返回总数，用当前页长度估算
+    total.value = records.value.length + (page.value - 1) * pageSize.value
   } catch (error) {
     console.error('Failed to fetch records:', error)
     ElMessage.error('获取列表失败')
@@ -424,11 +432,39 @@ async function fetchRecords() {
   }
 }
 
+// 日期范围/创建人/仅私密后端 list 接口不支持，改为对当前页结果本地过滤
+function applyLocalFilters(rows: any[]): any[] {
+  let result = rows
+
+  if (filterDateRange.value) {
+    const startTime = dayjs(filterDateRange.value[0]).startOf('day')
+    const endTime = dayjs(filterDateRange.value[1]).endOf('day')
+    result = result.filter(r => {
+      if (!r.createdAt) return false
+      const created = dayjs(r.createdAt)
+      return !created.isBefore(startTime) && !created.isAfter(endTime)
+    })
+  }
+
+  if (filterCreator.value.trim()) {
+    const keyword = filterCreator.value.trim().toLowerCase()
+    result = result.filter(r => (r.creatorName || '').toLowerCase().includes(keyword))
+  }
+
+  if (showPrivateOnly.value) {
+    result = result.filter(r => r.isPrivate === 1)
+  }
+
+  return result
+}
+
 async function fetchAllTags() {
   if (!currentModuleId.value) return
   try {
-    const response = await api.get('/records/list', {
-      params: { moduleId: currentModuleId.value, page: 1, size: 500 }
+    const response = await recordApi.list({
+      moduleId: currentModuleId.value,
+      page: 1,
+      size: 500
     })
     const tagSet = new Set<string>()
     response.data.forEach((r: any) => {
@@ -461,15 +497,15 @@ function handleSizeChange(newSize: number) {
 }
 
 function handleCreate() {
-  router.push(`/module/${currentModuleKey}/create`)
+  router.push(`/module/${currentModuleKey.value}/create`)
 }
 
 function goToDetail(record: any) {
-  router.push(`/module/${currentModuleKey}/${record.id}`)
+  router.push(`/module/${currentModuleKey.value}/${record.id}`)
 }
 
 function goToEdit(record: any) {
-  router.push(`/module/${currentModuleKey}/${record.id}/edit`)
+  router.push(`/module/${currentModuleKey.value}/${record.id}/edit`)
 }
 
 function canEdit(record: any) {
@@ -483,6 +519,9 @@ function canDelete(record: any) {
 }
 
 async function handleDelete(record: any) {
+  const moduleId = currentModuleId.value
+  if (!moduleId) return
+
   try {
     await ElMessageBox.confirm('确定要删除这条记录吗？删除后不可恢复', '确认删除', {
       confirmButtonText: '删除',
@@ -490,7 +529,7 @@ async function handleDelete(record: any) {
       type: 'warning',
       confirmButtonClass: 'el-button--danger'
     })
-    await recordApi.delete(record.id, currentModuleId.value)
+    await recordApi.delete(record.id, moduleId)
     ElMessage.success('删除成功')
     fetchRecords()
   } catch (e: any) {
@@ -499,10 +538,13 @@ async function handleDelete(record: any) {
 }
 
 async function togglePrivate(record: any, isPrivate: boolean) {
+  const moduleId = currentModuleId.value
+  if (!moduleId) return
+
   try {
     await recordApi.update({
       recordId: record.id,
-      moduleId: currentModuleId.value,
+      moduleId,
       dataJson: { ...record.dataJson, is_private: isPrivate }
     })
     ElMessage.success(isPrivate ? '已设为私密' : '已取消私密')
@@ -512,12 +554,18 @@ async function togglePrivate(record: any, isPrivate: boolean) {
   }
 }
 
-function resetFilter() {
+function clearFilterState() {
+  searchKeyword.value = ''
   selectedTag.value = ''
   filterDateRange.value = null
   filterCreator.value = ''
   showPrivateOnly.value = false
-  handleSearch()
+  page.value = 1
+}
+
+function resetFilter() {
+  clearFilterState()
+  fetchRecords()
 }
 
 function getDisplayValue(record: any): string {

@@ -31,6 +31,8 @@ public class ImportController {
             @RequestParam("file") MultipartFile file) {
         log.info("Drug CSV preview import: filename={}, size={}", file.getOriginalFilename(), file.getSize());
         ImportResultVO result = importService.preview(file);
+        log.info("Drug CSV preview result: total={}, success={}, failed={}",
+                result.getTotalRows(), result.getSuccessRows(), result.getFailedRows());
         return ResponseEntity.ok(result);
     }
 
@@ -43,6 +45,8 @@ public class ImportController {
             @RequestParam("file") MultipartFile file) {
         log.info("Drug CSV import: filename={}, size={}", file.getOriginalFilename(), file.getSize());
         ImportResultVO result = importService.importDrug(file);
+        log.info("Drug CSV import result: total={}, success={}, failed={}",
+                result.getTotalRows(), result.getSuccessRows(), result.getFailedRows());
         return ResponseEntity.ok(result);
     }
 

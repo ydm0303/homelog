@@ -89,7 +89,7 @@
               </el-radio-group>
             </el-form-item>
             <el-form-item label="邮件提醒">
-              <el-switch v-model="addMemberForm.receiveMail" active-value="1" inactive-value="0" />
+              <el-switch v-model="addMemberForm.receiveMail" :active-value="1" :inactive-value="0" />
             </el-form-item>
           </el-form>
           <template #footer>
@@ -238,8 +238,8 @@
               <el-form :model="exportForm" label-width="100px" inline>
                 <el-form-item label="导出范围">
                   <el-radio-group v-model="exportForm.scope">
-                    <el-radio :label="module">单模块</el-radio>
-                    <el-radio :label="all">全空间</el-radio>
+                    <el-radio label="module">单模块</el-radio>
+                    <el-radio label="all">全空间</el-radio>
                   </el-radio-group>
                 </el-form-item>
                 <el-form-item label="选择模块" v-if="exportForm.scope === 'module'">
@@ -441,7 +441,7 @@ import { useModuleStore } from '@/stores/module'
 import { authApi, metaApi, spaceApi, exportApi } from '@/api'
 import {
   Plus, ArrowDown, Check, Close, Delete, Setting, Upload, Download, InfoFilled,
-  House, Check as CheckIcon
+  House
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -621,7 +621,8 @@ async function confirmAddMember() {
 
 async function updateModule(module: any) {
   try {
-    await metaApi.updateModule(module)
+    // 后端按 moduleId 定位模块，且会用请求中的字段整体覆盖，所以要带上整行
+    await metaApi.updateModule({ ...module, moduleId: module.id })
     ElMessage.success('更新成功')
   } catch {
     ElMessage.error('更新失败')

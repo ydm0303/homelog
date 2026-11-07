@@ -94,9 +94,11 @@ public class MetaController {
     public List<ModuleMetaVO> getAllModules() {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Get all modules for space: {}, role={}", spaceId, role);
 
         // 只有管理员可查看所有模块
         if (role != 1) {
+            log.debug("Non-admin requests all modules, fallback to enabled only: spaceId={}", spaceId);
             return getEnabledModules();
         }
 
@@ -119,6 +121,7 @@ public class MetaController {
         Module module = moduleMapper.selectById(moduleId);
 
         if (module == null || !module.getSpaceId().equals(spaceId)) {
+            log.warn("Get module detail failed, module not found in space: moduleId={}, spaceId={}", moduleId, spaceId);
             return null;
         }
 
@@ -134,13 +137,18 @@ public class MetaController {
     public ModuleMetaVO updateModule(@RequestBody ModuleUpdateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Update module config: spaceId={}, moduleId={}", spaceId, request.getModuleId());
 
         if (role != 1) {
+            log.warn("Update module denied, not an admin: spaceId={}, moduleId={}, role={}",
+                    spaceId, request.getModuleId(), role);
             throw new RuntimeException("权限不足，仅管理员可修改模块配置");
         }
 
         Module module = moduleMapper.selectById(request.getModuleId());
         if (module == null || !module.getSpaceId().equals(spaceId)) {
+            log.warn("Update module failed, module not found in space: moduleId={}, spaceId={}",
+                    request.getModuleId(), spaceId);
             throw new RuntimeException("模块不存在");
         }
 
@@ -153,6 +161,7 @@ public class MetaController {
         moduleMapper.updateById(module);
 
         List<Field> fields = fieldMapper.selectByModuleId(request.getModuleId());
+        log.info("Module config updated: moduleId={}", request.getModuleId());
         return ModuleMetaVO.from(module, fields);
     }
 
@@ -164,8 +173,11 @@ public class MetaController {
     public ModuleMetaVO createModule(@RequestBody ModuleCreateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Create custom module: spaceId={}, moduleKey={}, name={}",
+                spaceId, request.getModuleKey(), request.getName());
 
         if (role != 1) {
+            log.warn("Create module denied, not an admin: spaceId={}, role={}", spaceId, role);
             throw new RuntimeException("权限不足，仅管理员可创建模块");
         }
 
@@ -182,6 +194,7 @@ public class MetaController {
         moduleMapper.insert(module);
 
         List<Field> fields = fieldMapper.selectByModuleId(module.getId());
+        log.info("Custom module created: moduleId={}, moduleKey={}", module.getId(), module.getModuleKey());
         return ModuleMetaVO.from(module, fields);
     }
 
@@ -193,20 +206,25 @@ public class MetaController {
     public void deleteModule(@RequestParam Long moduleId) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
+        log.info("Delete module: spaceId={}, moduleId={}", spaceId, moduleId);
 
         if (role != 1) {
+            log.warn("Delete module denied, not an admin: spaceId={}, moduleId={}, role={}", spaceId, moduleId, role);
             throw new RuntimeException("权限不足，仅管理员可删除模块");
         }
 
         Module module = moduleMapper.selectById(moduleId);
         if (module == null || !module.getSpaceId().equals(spaceId)) {
+            log.warn("Delete module failed, module not found in space: moduleId={}, spaceId={}", moduleId, spaceId);
             throw new RuntimeException("模块不存在");
         }
 
         if (module.getModuleType() != 2) {
+            log.warn("Delete module denied, built-in module cannot be deleted: moduleId={}", moduleId);
             throw new RuntimeException("内置模块不可删除");
         }
 
         moduleMapper.deleteById(moduleId);
+        log.info("Module deleted: moduleId={}", moduleId);
     }
 }

@@ -97,6 +97,7 @@ public class RemindTask {
 
         String typeLabel = getRecordTypeLabel(record);
         String title = record.getTitle() != null ? record.getTitle() : "未命名记录";
+        log.info("Processing due record: recordId={}, title={}, leadDays={}", record.getId(), title, leadDays);
 
         // 构建消息内容
         String content;
@@ -109,7 +110,13 @@ public class RemindTask {
         }
 
         // 为每个开启邮件提醒的成员创建消息
+        // 私密记录仅管理员可见（与 RecordService.canViewRecord 一致），避免标题/内容泄露给非管理员
+        boolean isPrivate = record.getIsPrivate() != null && record.getIsPrivate() == 1;
         for (SpaceMember member : mailMembers) {
+            if (isPrivate && (member.getRole() == null || member.getRole() != 1)) {
+                continue;
+            }
+
             // 写入消息中心
             Message message = new Message()
                     .setSpaceId(1L)

@@ -89,10 +89,18 @@ public class MessageService {
     public void markRead(Long messageId) {
         Long userId = getCurrentUserId();
         Message message = messageMapper.selectById(messageId);
-        if (message != null && message.getUserId().equals(userId)) {
-            message.setIsRead(1);
-            messageMapper.updateById(message);
+        if (message == null) {
+            log.warn("Mark message read failed, message not found: messageId={}", messageId);
+            return;
         }
+        if (!message.getUserId().equals(userId)) {
+            log.warn("Mark message read denied, not the owner: messageId={}, userId={}, ownerId={}",
+                    messageId, userId, message.getUserId());
+            return;
+        }
+        message.setIsRead(1);
+        messageMapper.updateById(message);
+        log.info("Message marked read: messageId={}, userId={}", messageId, userId);
     }
 
     /**
@@ -102,6 +110,7 @@ public class MessageService {
     public void markAllRead() {
         Long userId = getCurrentUserId();
         messageMapper.updateAllReadByUserId(userId);
+        log.info("All messages marked read for userId={}", userId);
     }
 
     /**
@@ -125,6 +134,8 @@ public class MessageService {
                 .setIsRead(0)
                 .setCreatedAt(LocalDateTime.now());
         messageMapper.insert(message);
+        log.info("Message created: messageId={}, userId={}, recordId={}, type={}",
+                message.getId(), userId, recordId, type);
     }
 
     /**
@@ -132,6 +143,7 @@ public class MessageService {
      */
     @Transactional
     public void createMessagesForSpace(List<Long> userIds, Long recordId, String content, String type) {
+        log.info("Batch create messages: recordId={}, type={}, recipientCount={}", recordId, type, userIds.size());
         for (Long userId : userIds) {
             createMessage(userId, recordId, content, type);
         }

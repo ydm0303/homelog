@@ -54,10 +54,12 @@ public class ExportController {
         File file = new File(filePath);
 
         if (!file.exists()) {
+            log.warn("Export file download failed, file not found: {}", filePath);
             return ResponseEntity.notFound().build();
         }
 
         FileSystemResource resource = new FileSystemResource(file);
+        log.info("Export file downloaded: filename={}, size={}", filename, file.length());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

@@ -287,14 +287,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi } from '@/api'
 import {
   Checked, AlarmClock, Clock, Grid, Plus, Download,
-  HomeFilled, Document, Calendar, FirstAidKit, CreditCard, Picture
+  Document, Calendar, FirstAidKit
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
@@ -324,7 +324,6 @@ const isMobile = ref(false)
 const todoModule = computed(() => moduleStore.getModuleByKey('todo'))
 const drugModule = computed(() => moduleStore.getModuleByKey('drug'))
 const idocModule = computed(() => moduleStore.getModuleByKey('idoc'))
-const noteModule = computed(() => moduleStore.getModuleByKey('note'))
 
 const enabledModules = computed(() => moduleStore.enabledModules)
 const homeModules = computed(() => moduleStore.homeModules)
@@ -335,12 +334,12 @@ const moduleCounts = ref<Record<string, number>>({})
 onMounted(async () => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
+  window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
 
   await moduleStore.fetchModules()
   await fetchDashboardData()
 
   // PWA 安装提示
-  const { needRefresh } = (window as any).__WB_MANIFEST
   if ('serviceWorker' in navigator) {
     const registration = await navigator.serviceWorker.ready
     if (registration.active?.state === 'activated') {
@@ -543,15 +542,32 @@ function confirmCreate() {
   router.push(`/module/${createDialogModule.value}/create`)
 }
 
-function handleInstall() {
-  // 触发 PWA 安装
-  const event = new CustomEvent('pwa-install')
-  window.dispatchEvent(event)
-  showInstallPrompt.value = false
+// 浏览器在应用可安装时抛出该事件，保存下来才能在点击时调起安装
+let deferredInstallPrompt: any = null
+
+function onBeforeInstallPrompt(e: Event) {
+  e.preventDefault()
+  deferredInstallPrompt = e
+  showInstallPrompt.value = true
+}
+
+async function handleInstall() {
+  if (!deferredInstallPrompt) {
+    ElMessage.info('请点击浏览器菜单选择「添加到主屏幕」')
+    return
+  }
+
+  deferredInstallPrompt.prompt()
+  const { outcome } = await deferredInstallPrompt.userChoice
+  if (outcome === 'accepted') {
+    showInstallPrompt.value = false
+  }
+  deferredInstallPrompt = null
 }
 
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
+  window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
 })
 </script>
 

@@ -97,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Download, House } from '@element-plus/icons-vue'
@@ -140,6 +140,8 @@ onMounted(() => {
 function checkMobile() {
   isMobile.value = window.innerWidth < 768
 }
+
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
 async function handleLogin() {
   if (!loginFormRef.value) return

@@ -60,6 +60,7 @@
           <DynamicFieldRenderer
             :field="field"
             :value="formData.dataJson[field.fieldKey]"
+            :module-key="moduleKey"
             @update:value="val => updateFieldValue(field.fieldKey, val)"
             :disabled="isReadonly || field.fieldKey === 'creator_id'"
           />
@@ -127,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
@@ -135,10 +136,7 @@ import { recordApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import DynamicFieldRenderer from '@/components/DynamicFieldRenderer.vue'
-import {
-  ArrowLeft, Delete, Check, User, Calendar, Picture,
-  FirstAidKit, CreditCard, Picture as PictureIcon, Checked
-} from '@element-plus/icons-vue'
+import { ArrowLeft, Delete, Check } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -194,6 +192,7 @@ onMounted(async () => {
   } else {
     // 新增：初始化默认值
     initDefaultValues()
+    restoreDraft()
   }
 
   // 自动保存草稿
@@ -300,9 +299,11 @@ async function handleSave() {
           remindDate: formData.value.remindDate
         })
         ElMessage.success('保存成功')
+        clearDraft()
       } else {
         const response = await recordApi.create(payload)
         ElMessage.success('创建成功')
+        clearDraft()
         router.push(`/module/${moduleKey}/${response.data.id}`)
       }
     } catch (error) {
@@ -351,8 +352,14 @@ function startAutoSave() {
   window.addEventListener('beforeunload', saveDraft)
 }
 
+function draftKey() {
+  return `draft_${moduleKey}_${recordId || 'new'}`
+}
+
 function saveDraft() {
-  const draftKey = `draft_${moduleKey}_${recordId || 'new'}`
+  // 草稿只服务新增流程，编辑态直接保存即可
+  if (isEdit.value) return
+
   const draft = {
     title: formData.value.title,
     dataJson: formData.value.dataJson,
@@ -361,7 +368,7 @@ function saveDraft() {
     remindDate: formData.value.remindDate,
     updatedAt: Date.now()
   }
-  localStorage.setItem(draftKey, JSON.stringify(draft))
+  localStorage.setItem(draftKey(), JSON.stringify(draft))
   showDraftSaved.value = true
   // 2秒后自动隐藏
   setTimeout(() => {
@@ -369,10 +376,13 @@ function saveDraft() {
   }, 2000)
 }
 
+function clearDraft() {
+  localStorage.removeItem(draftKey())
+}
+
 // 恢复草稿
 function restoreDraft() {
-  const draftKey = `draft_${moduleKey}_${recordId || 'new'}`
-  const saved = localStorage.getItem(draftKey)
+  const saved = localStorage.getItem(draftKey())
   if (saved) {
     try {
       const draft = JSON.parse(saved)

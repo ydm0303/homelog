@@ -55,7 +55,7 @@ public class GlobalExceptionHandler {
         }
         body.put("details", errors);
 
-        log.warn("Validation failed: {}", errors);
+        log.warn("Validation failed: path={}, errors={}", request.getRequestURI(), errors);
         return body;
     }
 
@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
         body.put("path", request.getRequestURI());
         body.put("timestamp", System.currentTimeMillis());
         body.put("traceId", generateTraceId());
-        log.warn("Illegal argument: {}", ex.getMessage());
+        log.warn("Illegal argument: path={}, message={}", request.getRequestURI(), ex.getMessage());
         return body;
     }
 
@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
         body.put("path", request.getRequestURI());
         body.put("timestamp", System.currentTimeMillis());
         body.put("traceId", generateTraceId());
-        log.error("Runtime error: ", ex);
+        log.error("Runtime error: path={}", request.getRequestURI(), ex);
         return body;
     }
 
@@ -103,7 +103,7 @@ public class GlobalExceptionHandler {
         body.put("path", request.getRequestURI());
         body.put("timestamp", System.currentTimeMillis());
         body.put("traceId", generateTraceId());
-        log.error("Unexpected error: ", ex);
+        log.error("Unexpected error: path={}", request.getRequestURI(), ex);
         return body;
     }
 

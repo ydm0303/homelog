@@ -248,20 +248,19 @@
         </el-breadcrumb-item>
       </el-breadcrumb>
 
-      <!-- 页面内容 -->
+      <!-- 页面内容：嵌套子路由的渲染出口 -->
       <main class="page-content">
-        <slot />
+        <router-view />
       </main>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, User, Avatar,
-  Search, Refresh, Fold as FoldIcon
+  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, Search
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
@@ -297,7 +296,7 @@ onMounted(() => {
   window.addEventListener('resize', checkMobile)
 
   // PWA 安装提示
-  const { needRefresh } = registerSW({
+  registerSW({
     onNeedRefresh() {
       showInstallPrompt.value = true
     },
@@ -444,12 +443,6 @@ function handleSearch() {
     router.push({ path: '/search', query: { q: searchKeyword.value.trim() } })
     searchKeyword.value = ''
     showSearchDrawer.value = false
-  }
-}
-
-function handleSearchKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    handleSearch()
   }
 }
 </script>

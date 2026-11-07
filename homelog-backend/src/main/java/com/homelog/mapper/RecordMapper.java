@@ -28,6 +28,7 @@ public interface RecordMapper extends BaseMapper<Record> {
 
     /**
      * 全局搜索（跨模块）
+     * 隐私过滤：非管理员只能看到公共记录或自己创建的记录
      */
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} " +
             "AND (#{moduleId} IS NULL OR module_id = #{moduleId}) " +
@@ -35,6 +36,7 @@ public interface RecordMapper extends BaseMapper<Record> {
             "AND (#{tag} IS NULL OR #{tag} = '' OR tags LIKE CONCAT('%', #{tag}, '%')) " +
             "AND (#{startDate} IS NULL OR #{startDate} = '' OR remind_date >= #{startDate}) " +
             "AND (#{endDate} IS NULL OR #{endDate} = '' OR remind_date <= #{endDate}) " +
+            "AND (#{isAdmin} = 1 OR is_private = 0 OR creator_id = #{userId}) " +
             "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
     List<Record> searchGlobal(
             @Param("spaceId") Long spaceId,
@@ -43,25 +45,30 @@ public interface RecordMapper extends BaseMapper<Record> {
             @Param("tag") String tag,
             @Param("startDate") String startDate,
             @Param("endDate") String endDate,
+            @Param("isAdmin") Integer isAdmin,
+            @Param("userId") Long userId,
             @Param("offset") int offset,
             @Param("size") int size
     );
 
     /**
-     * 全局搜索总数
+     * 全局搜索总数（隐私条件与 searchGlobal 保持一致）
      */
     @Select("SELECT COUNT(*) FROM jj_record WHERE space_id = #{spaceId} " +
             "AND (#{moduleId} IS NULL OR module_id = #{moduleId}) " +
             "AND (#{keyword} IS NULL OR #{keyword} = '' OR title LIKE CONCAT('%', #{keyword}, '%') OR data_json LIKE CONCAT('%', #{keyword}, '%') OR tags LIKE CONCAT('%', #{keyword}, '%')) " +
             "AND (#{tag} IS NULL OR #{tag} = '' OR tags LIKE CONCAT('%', #{tag}, '%')) " +
             "AND (#{startDate} IS NULL OR #{startDate} = '' OR remind_date >= #{startDate}) " +
-            "AND (#{endDate} IS NULL OR #{endDate} = '' OR remind_date <= #{endDate})")
+            "AND (#{endDate} IS NULL OR #{endDate} = '' OR remind_date <= #{endDate}) " +
+            "AND (#{isAdmin} = 1 OR is_private = 0 OR creator_id = #{userId})")
     Integer countSearchGlobal(
             @Param("spaceId") Long spaceId,
             @Param("moduleId") Long moduleId,
             @Param("keyword") String keyword,
             @Param("tag") String tag,
             @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("endDate") String endDate,
+            @Param("isAdmin") Integer isAdmin,
+            @Param("userId") Long userId
     );
 }
