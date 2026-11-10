@@ -312,6 +312,7 @@ async function markRead(message: any) {
     await messageApi.markRead(message.id)
     message.isRead = 1
     unreadCount.value = Math.max(0, unreadCount.value - 1)
+    ElMessage.success('已标记已读')
   } catch {
     ElMessage.error('操作失败')
   }
