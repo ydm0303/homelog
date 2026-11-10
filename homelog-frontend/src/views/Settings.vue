@@ -390,11 +390,6 @@
             </div>
             <p class="about-slogan">家里的事，都记在这里</p>
             <p class="about-version">版本：1.0.0 (MVP)</p>
-            <p class="about-desc">
-              私有模块化家庭记录 PWA 平台。电脑、手机浏览器均可访问，支持添加桌面快捷方式。
-              管理员自由配置插拔式模块，内置药箱、待办、记事、证件档案，还能自建表单扩展任意记录类型；
-              三级权限管控，数据私有，支持导出备份，邮件提醒兜底。
-            </p>
 
             <el-divider />
 
@@ -663,6 +658,10 @@ async function createCustomModule() {
 }
 
 async function handleExport() {
+  if (exportForm.scope === 'module' && !exportForm.moduleId) {
+    ElMessage.warning('请选择要导出的模块')
+    return
+  }
   try {
     exporting.value = true
     const params: any = { scope: exportForm.scope }
@@ -700,10 +699,14 @@ function downloadTemplate() {
   a.download = 'drug_import_template.csv'
   a.click()
   window.URL.revokeObjectURL(url)
+  ElMessage.success('模板已下载')
 }
 
 async function handleImport() {
-  if (!importFile.value) return
+  if (!importFile.value) {
+    ElMessage.warning('请先选择要导入的 CSV 文件')
+    return
+  }
   try {
     importing.value = true
     const formData = new FormData()
@@ -746,8 +749,10 @@ function toggleElderlyMode() {
   localStorage.setItem('elderlySettings', JSON.stringify(elderlyForm))
   if (elderlyForm.enabled) {
     document.body.classList.add('elderly-mode')
+    ElMessage.success('已开启长辈模式')
   } else {
     document.body.classList.remove('elderly-mode')
+    ElMessage.success('已关闭长辈模式')
   }
 }
 </script>
@@ -873,15 +878,6 @@ function toggleElderlyMode() {
       margin: 0 0 16px;
     }
 
-    .about-desc {
-      font-size: 14px;
-      color: $text-secondary;
-      line-height: 1.8;
-      max-width: 600px;
-      margin: 0 auto 24px;
-      text-align: left;
-    }
-
     .tech-stack {
       display: flex;
       flex-wrap: wrap;
@@ -924,10 +920,6 @@ function toggleElderlyMode() {
         font-size: 13px;
       }
     }
-
-    .about-desc {
-      text-align: center;
-    }
   }
 }
 
@@ -939,7 +931,6 @@ function toggleElderlyMode() {
   :deep(.el-input__inner) { font-size: 15px !important; padding: 14px 16px !important; height: 52px !important; }
   .matrix-title { font-size: 16px !important; }
   .about-slogan { font-size: 20px !important; }
-  .about-desc { font-size: 16px !important; }
   .disclaimer { font-size: 15px !important; }
 }
 </style>
