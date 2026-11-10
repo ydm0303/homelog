@@ -17,27 +17,37 @@
 cd d:/CodexWork/HomeLog/homelog-backend
 ```
 
-### 2. 修改配置 (如需)
-编辑 `src/main/resources/application-dev.yml`：
+### 2. 配置数据库口令（不要写进 application.yml）
+
+数据库连接全部走环境变量 / 本地私有配置，**仓库里不含任何明文口令**。
+
+**方式一（推荐）：`application-local.yml`**
+
+在 `homelog-backend/src/main/resources/` 下新建 `application-local.yml`（已被 `.gitignore` 忽略，不会入库）：
+
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/homelog?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: root
-    password: ling3.141592654
-
-homelog:
-  jwt:
-    secret: homelog-dev-secret-key-change-in-production
-  remind:
-    from: your-qq@qq.com
-  frontend:
-    base-url: http://localhost:5173
-  storage:
-    local:
-      base-path: ./uploads
-      base-url: /api/files
+    password: 你的数据库口令
 ```
+
+`application.yml` 已通过 `spring.config.import` 自动加载它，优先级最高，换机器只改这个文件。
+
+**方式二：环境变量**
+
+```bash
+# Windows PowerShell
+$env:DB_USERNAME="root"
+$env:DB_PASSWORD="你的数据库口令"
+# 可选：$env:DB_HOST / $env:DB_PORT / $env:DB_NAME
+```
+
+其余可配置项（`application.yml`）：
+- `homelog.jwt.secret` ← `JWT_SECRET`
+- `spring.mail.username` / `password` ← `MAIL_USERNAME` / `MAIL_PASSWORD`
+- `homelog.remind.from` ← `MAIL_USERNAME`
+- `homelog.storage.local.base-path` ← 默认 `./uploads`
 
 ### 3. 编译并运行
 ```bash
@@ -49,8 +59,8 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 后端将在 `http://localhost:8080/api` 启动
-- Swagger UI: `http://localhost:8080/api/swagger-ui.html`
-- 健康检查: `http://localhost:8080/api/actuator/health`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- 健康检查: `http://localhost:8080/actuator/health`（actuator 不带 `/api` 前缀）
 
 ---
 
@@ -95,8 +105,8 @@ mvn test
 # 打包 JAR
 mvn package -DskipTests
 
-# Flyway 迁移
-mvn flyway:migrate -Dflyway.url=jdbc:mysql://localhost:3306/homelog -Dflyway.user=root -Dflyway.password=ling3.141592654
+# Flyway 迁移（口令用环境变量传入，不要写在命令行历史里）
+mvn flyway:migrate -Dflyway.url=jdbc:mysql://localhost:3306/homelog -Dflyway.user=root -Dflyway.password=$env:DB_PASSWORD
 ```
 
 ### 前端
@@ -133,13 +143,15 @@ docker build -t homelog-frontend .
 ```
 
 ### 使用 Docker Compose (需创建 docker-compose.yml)
+> 口令从同目录 `.env` 文件读取（`.env` 已在 `.gitignore` 中），不要写死在 compose 里。
+
 ```yaml
 version: '3.8'
 services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: ling3.141592654
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?请在 .env 中设置 DB_PASSWORD}
       MYSQL_DATABASE: homelog
     volumes:
       - mysql_data:/var/lib/mysql
@@ -154,7 +166,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/homelog
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ling3.141592654
+      DB_PASSWORD: ${DB_PASSWORD:?请在 .env 中设置 DB_PASSWORD}
     depends_on:
       - mysql
 
@@ -167,6 +179,11 @@ services:
 
 volumes:
   mysql_data:
+```
+
+`.env`（不放仓库）：
+```bash
+DB_PASSWORD=你的数据库口令
 ```
 
 ```bash
@@ -201,7 +218,7 @@ docker-compose up -d
 ### MySQL 连接失败
 - 检查 MySQL 服务是否运行: `net start mysql80`
 - 检查端口 3306 是否被占用
-- 确认密码 `ling3.141592654` 正确
+- 确认 `DB_PASSWORD` 环境变量（或 `application-local.yml` 中的口令）正确
 
 ### Maven 编译慢
 - 使用阿里云镜像源 (在 `~/.m2/settings.xml` 配置)

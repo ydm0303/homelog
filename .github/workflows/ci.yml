@@ -1,0 +1,111 @@
+# ============================================================================
+# 家记 HomeLog · 持续集成
+# ============================================================================
+# 说明：
+#   1. 本文件位于 .github/workflows/，仅 GitHub Actions 会执行；
+#      若仓库主战场是 Gitee，请改用 Gitee Go（.workflow/ 目录），见 README「CI 说明」。
+#   2. 所有口令一律走 Secrets，禁止在仓库中出现明文：
+#      Settings → Secrets and variables → Actions 中添加（可选）
+#        DB_PASSWORD      数据库口令（当前 CI 未连库，保留给后续集成测试）
+#        MAIL_USERNAME    发信邮箱
+#        MAIL_PASSWORD    邮箱授权码
+#   3. 目前仓库没有单元测试，故只做「编译 + 打包 + 类型检查」，
+#      测试补齐后请把 `-DskipTests` 去掉，让 `mvn package` 真正跑测试。
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'codex/**']
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# 最小权限原则
+permissions:
+  contents: read
+
+# 同一分支的新提交自动取消上一次未完成的构建
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '8'
+  NODE_VERSION: '20'
+
+jobs:
+  # ==========================================================================
+  # 后端：Spring Boot 2.7 / JDK 8 / Maven
+  # ==========================================================================
+  backend:
+    name: 后端构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./homelog-backend
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Maven 编译打包
+        # 有单元测试后去掉 -DskipTests
+        run: mvn -B -ntp -DskipTests package
+
+      - name: 上传 jar 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: homelog-backend-jar
+          path: homelog-backend/target/*.jar
+          retention-days: 7
+          if-no-files-found: error
+
+  # ==========================================================================
+  # 前端：Vue 3 + Vite + TypeScript
+  # ==========================================================================
+  frontend:
+    name: 前端构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./homelog-frontend
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: homelog-frontend/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查 + 生产构建
+        # package.json 的 build 脚本 = vue-tsc && vite build，类型错误会直接失败
+        run: npm run build
+
+      - name: ESLint 检查（暂不阻断构建）
+        # 现有代码存在告警，先观察；清理干净后删除 continue-on-error
+        continue-on-error: true
+        run: npx eslint . --ext .vue,.js,.ts,.tsx --max-warnings=0
+
+      - name: 上传 dist 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: homelog-frontend-dist
+          path: homelog-frontend/dist
+          retention-days: 7
+          if-no-files-found: error

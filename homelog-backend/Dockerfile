@@ -26,23 +26,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建非 root 用户
-RUN groupadd -r jiaji && useradd -r -g jiaji jiaji
+RUN groupadd -r homelog && useradd -r -g homelog homelog
 
-# 复制构建产物
-COPY --from=builder /app/target/jiaji-backend-*.jar app.jar
+# 复制构建产物（artifactId = homelog-backend）
+COPY --from=builder /app/target/homelog-backend-*.jar app.jar
 
 # 创建上传目录
-RUN mkdir -p /app/uploads && chown -R jiaji:jiaji /app
+RUN mkdir -p /app/uploads && chown -R homelog:homelog /app
 
 # 切换用户
-USER jiaji
+USER homelog
 
 # 暴露端口
 EXPOSE 8080
 
-# 健康检查
+# 健康检查（注意：actuator 不带 /api 前缀，Controller 才带）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # 启动参数
 ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"

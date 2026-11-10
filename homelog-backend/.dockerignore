@@ -1,0 +1,9 @@
+# 构建镜像时排除的文件（避免把本地密钥、构建产物打进镜像）
+target/
+*.iml
+.idea/
+application-local.yml
+src/main/resources/application-local.yml
+logs/
+uploads/
+*.log

@@ -28,3 +28,10 @@ logging:
     com.homelog: debug
     org.springframework.web: debug
     org.hibernate.SQL: debug
+
+# 开发环境邮件账号是占位值，必然认证失败；
+# 若保留邮件健康探针，/actuator/health 会一直返回 503 DOWN，导致容器健康检查失败。
+management:
+  health:
+    mail:
+      enabled: false
