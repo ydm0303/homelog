@@ -8,19 +8,6 @@
             <span>家记</span>
           </div>
           <p class="slogan">家里的事，都记在这里</p>
-          <p class="description">
-            私有模块化家庭记录平台。电脑、手机浏览器均可访问，支持添加桌面快捷方式。
-            管理员自由配置插拔式模块，内置药箱、待办、记事、证件档案，
-            还能自建表单扩展任意记录类型；三级权限管控，数据私有，支持导出备份。
-          </p>
-          <div class="features">
-            <el-tag effect="plain" size="small">多端自适应</el-tag>
-            <el-tag effect="plain" size="small">PWA 安装</el-tag>
-            <el-tag effect="plain" size="small">三级权限</el-tag>
-            <el-tag effect="plain" size="small">数据私有</el-tag>
-            <el-tag effect="plain" size="small">邮件提醒</el-tag>
-            <el-tag effect="plain" size="small">导出备份</el-tag>
-          </div>
         </div>
       </div>
 
@@ -36,7 +23,7 @@
             :model="loginForm"
             :rules="loginRules"
             class="login-form"
-            @submit.native.prevent="handleLogin"
+            @submit.prevent="handleLogin"
           >
             <el-form-item prop="username">
               <el-input
@@ -215,21 +202,8 @@ function goRegister() {
     font-size: 24px;
     font-weight: 500;
     color: $text-primary;
-    margin: 0 0 24px;
+    margin: 0;
     line-height: 1.4;
-  }
-
-  .description {
-    font-size: 16px;
-    color: $text-secondary;
-    line-height: 1.8;
-    margin: 0 0 32px;
-  }
-
-  .features {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
   }
 }
 
@@ -279,6 +253,7 @@ function goRegister() {
 
 .form-footer {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 8px;
   margin-top: 24px;
@@ -286,7 +261,10 @@ function goRegister() {
   color: $text-secondary;
 
   :deep(.el-button) {
+    height: auto;
     padding: 0;
+    font-size: 14px;
+    line-height: 1;
     color: $primary-color;
     font-weight: 500;
   }

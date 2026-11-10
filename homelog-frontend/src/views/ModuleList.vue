@@ -123,15 +123,16 @@
             show-overflow-tooltip
           >
             <template #default="scope">
-              <el-tag
-                v-if="scope.row.tags"
-                v-for="tag in scope.row.tags.split(',')"
-                :key="tag"
-                size="small"
-                effect="plain"
-              >
-                {{ tag }}
-              </el-tag>
+              <template v-if="scope.row.tags">
+                <el-tag
+                  v-for="tag in scope.row.tags.split(',')"
+                  :key="tag"
+                  size="small"
+                  effect="plain"
+                >
+                  {{ tag }}
+                </el-tag>
+              </template>
             </template>
           </el-table-column>
           <el-table-column

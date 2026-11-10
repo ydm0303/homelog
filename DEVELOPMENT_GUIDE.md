@@ -192,6 +192,41 @@ docker-compose up -d
 
 ---
 
+## ✅ 本地 CI 自检
+
+不需要任何云端流水线，一条命令验证前后端是否可构建：
+
+```powershell
+# 全量检查（后端打包 + 前端 lint + 构建）
+./scripts/ci.ps1
+
+# 只查前端 / 只查后端
+./scripts/ci.ps1 -Target frontend
+./scripts/ci.ps1 -Target backend
+
+# 严格模式：lint 告警也算失败，并运行后端单元测试
+./scripts/ci.ps1 -StrictLint -RunTests
+```
+
+说明：
+
+| 参数 | 作用 |
+|------|------|
+| `-Target all\|backend\|frontend` | 检查范围，默认 `all` |
+| `-SkipLint` | 跳过前端 ESLint |
+| `-StrictLint` | ESLint 告警即失败（默认只告警，不阻断） |
+| `-RunTests` | 后端跑单元测试（默认 `-DskipTests`） |
+| `-Clean` | 后端先 `mvn clean`，默认复用 target 以适配离线环境 |
+| `-TypeCheck` | 额外跑 `vue-tsc --noEmit`（见下方注意） |
+| `-CleanInstall` | 强制 `npm ci` 重装前端依赖 |
+
+> ⚠️ `-TypeCheck` 目前会失败：`package-lock.json` 锁定的 `vue-tsc@1.8.27` 与
+> `typescript@5.9.3` 不兼容（报 `Search string not found: /supportedTSExtensions ...`）。
+> 解决办法二选一：把 typescript 降到 `~5.4.5`，或把 vue-tsc 升到 `^2.x` 后重新 `npm install`。
+> 在此之前 `npm run build` 只跑 `vite build`，类型检查单独用 `npm run type-check`。
+
+---
+
 ## ✅ 验证清单
 
 启动后验证以下功能：

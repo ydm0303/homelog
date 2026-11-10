@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "vite build",
+    "type-check": "vue-tsc --noEmit",
     "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.js,.ts,.tsx --fix",
+    "lint": "eslint . --ext .vue,.js,.ts,.tsx",
+    "lint:fix": "eslint . --ext .vue,.js,.ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{vue,js,ts,tsx,json,css,scss,md}\""
   },
   "dependencies": {

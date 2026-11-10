@@ -38,7 +38,7 @@
       :rules="validationRules"
       label-width="120px"
       class="edit-form"
-      @submit.native.prevent="handleSave"
+      @submit.prevent="handleSave"
     >
       <!-- 标题字段 -->
       <el-form-item
