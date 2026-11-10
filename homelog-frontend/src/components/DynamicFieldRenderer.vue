@@ -345,6 +345,7 @@ function handleSuccess(response: any, file: any) {
   file.serverPath = response.url
   const currentUrls = Array.isArray(localValue.value) ? localValue.value : []
   localValue.value = [...currentUrls, response.url]
+  ElMessage.success('图片上传成功')
 }
 
 function handleError() {
@@ -385,6 +386,7 @@ async function handleCameraCapture(event: Event) {
         status: 'success'
       }
     ]
+    ElMessage.success('图片上传成功')
   } catch {
     ElMessage.error('上传失败')
   } finally {

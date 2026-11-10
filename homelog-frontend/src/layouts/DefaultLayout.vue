@@ -411,13 +411,16 @@ function toggleElderlyMode() {
   localStorage.setItem('elderlyMode', elderlyMode.value.toString())
   if (elderlyMode.value) {
     document.body.classList.add('elderly-mode')
+    ElMessage.success('已开启长辈模式')
   } else {
     document.body.classList.remove('elderly-mode')
+    ElMessage.success('已关闭长辈模式')
   }
 }
 
 // 处理安装
 function handleInstall() {
+  ElMessage.success('正在更新应用...')
   location.reload()
 }
 
@@ -429,6 +432,7 @@ function handleDrawerClose() {
 // 退出登录
 function handleLogout() {
   authStore.logout()
+  ElMessage.success('已退出登录')
   router.push('/login')
 }
 

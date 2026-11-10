@@ -561,6 +561,7 @@ async function handleInstall() {
   const { outcome } = await deferredInstallPrompt.userChoice
   if (outcome === 'accepted') {
     showInstallPrompt.value = false
+    ElMessage.success('已添加到桌面')
   }
   deferredInstallPrompt = null
 }
