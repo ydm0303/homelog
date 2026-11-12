@@ -92,7 +92,7 @@ public class ImportService {
         int successCount = 0;
         int totalRows = 0;
 
-        log.info("Start CSV import processing: previewOnly={}", previewOnly);
+        log.info("开始处理 CSV 导入：是否仅预检={}", previewOnly);
 
         // 获取药品模块
         Long spaceId = 1L;

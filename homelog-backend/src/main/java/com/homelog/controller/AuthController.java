@@ -53,7 +53,7 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("User login attempt: {}", request.getUsername());
+        log.info("用户登录尝试：{}", request.getUsername());
 
         // 认证
         Authentication authentication = authenticationManager.authenticate(
@@ -67,7 +67,7 @@ public class AuthController {
         String refreshToken = jwtTokenProvider.generateRefreshToken(request.getUsername());
 
         TokenResponse response = new TokenResponse(accessToken, refreshToken, jwtTokenProvider.getAccessTokenExpire());
-        log.info("User login success: {}", request.getUsername());
+        log.info("用户登录成功：{}", request.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -77,7 +77,7 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("User register: {}", request.getUsername());
+        log.info("用户注册：{}", request.getUsername());
         log.info("注册用户开始");
 
         // 检查用户名是否存在
@@ -104,7 +104,7 @@ public class AuthController {
                 .setUpdatedAt(LocalDateTime.now());
 
         userMapper.insert(user);
-        log.info("User created: userId={}, username={}", user.getId(), user.getUsername());
+        log.info("用户创建成功：用户ID={}，用户名={}", user.getId(), user.getUsername());
 
         // 加入默认空间（MVP 单空间）：不再为每个新用户新建空间。
         // 内置模块、记录等都挂在默认空间下，若注册时另建空间，会导致
@@ -117,7 +117,7 @@ public class AuthController {
                 .setReceiveMail(1)
                 .setCreatedAt(LocalDateTime.now());
         spaceMemberMapper.insert(member);
-        log.info("Space member created: spaceId={}, userId={}, role=ADMIN", DEFAULT_SPACE_ID, user.getId());
+        log.info("空间成员创建成功：空间ID={}，用户ID={}，角色=管理员", DEFAULT_SPACE_ID, user.getId());
         log.info("注册用户结束");
 
         // 登录生成 Token
@@ -129,7 +129,7 @@ public class AuthController {
         String refreshToken = jwtTokenProvider.generateRefreshToken(request.getUsername());
 
         TokenResponse response = new TokenResponse(accessToken, refreshToken, jwtTokenProvider.getAccessTokenExpire());
-        log.info("User register success: userId={}, username={}", user.getId(), user.getUsername());
+        log.info("用户注册成功：用户ID={}，用户名={}", user.getId(), user.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -169,7 +169,7 @@ public class AuthController {
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(username);
 
         TokenResponse response = new TokenResponse(newAccessToken, newRefreshToken, jwtTokenProvider.getAccessTokenExpire());
-        log.info("Token refreshed for user: {}", username);
+        log.info("用户令牌刷新成功：{}", username);
         return ResponseEntity.ok(response);
     }
 
@@ -205,7 +205,7 @@ public class AuthController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = (authentication != null) ? authentication.getName() : "anonymous";
         SecurityContextHolder.clearContext();
-        log.info("User logout: {}", username);
+        log.info("用户退出登录：{}", username);
         return ResponseEntity.ok().build();
     }
 
@@ -221,7 +221,7 @@ public class AuthController {
         }
 
         String username = authentication.getName();
-        log.info("Password update request for user: {}", username);
+        log.info("用户密码修改请求：{}", username);
 
         User user = userMapper.selectByUsername(username);
         if (user == null) {
@@ -238,7 +238,7 @@ public class AuthController {
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
 
-        log.info("Password updated for user: {}", username);
+        log.info("用户密码修改成功：{}", username);
         return ResponseEntity.ok().build();
     }
 }

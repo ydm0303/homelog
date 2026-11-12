@@ -100,7 +100,7 @@ public class MessageService {
         }
         message.setIsRead(1);
         messageMapper.updateById(message);
-        log.info("Message marked read: messageId={}, userId={}", messageId, userId);
+        log.info("消息已标记为已读：消息ID={}，用户ID={}", messageId, userId);
     }
 
     /**
@@ -110,7 +110,7 @@ public class MessageService {
     public void markAllRead() {
         Long userId = getCurrentUserId();
         messageMapper.updateAllReadByUserId(userId);
-        log.info("All messages marked read for userId={}", userId);
+        log.info("用户的全部消息已标记为已读：用户ID={}", userId);
     }
 
     /**
@@ -134,7 +134,7 @@ public class MessageService {
                 .setIsRead(0)
                 .setCreatedAt(LocalDateTime.now());
         messageMapper.insert(message);
-        log.info("Message created: messageId={}, userId={}, recordId={}, type={}",
+        log.info("消息创建成功：消息ID={}，用户ID={}，记录ID={}，类型={}",
                 message.getId(), userId, recordId, type);
     }
 
@@ -143,7 +143,7 @@ public class MessageService {
      */
     @Transactional
     public void createMessagesForSpace(List<Long> userIds, Long recordId, String content, String type) {
-        log.info("Batch create messages: recordId={}, type={}, recipientCount={}", recordId, type, userIds.size());
+        log.info("批量创建消息：记录ID={}，类型={}，接收人数={}", recordId, type, userIds.size());
         for (Long userId : userIds) {
             createMessage(userId, recordId, content, type);
         }

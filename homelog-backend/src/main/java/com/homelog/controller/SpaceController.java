@@ -66,7 +66,7 @@ public class SpaceController {
      */
     @GetMapping("/members/list")
     public List<SpaceMemberVO> getMembers(@RequestParam Long spaceId) {
-        log.info("Get members for space: {}", spaceId);
+        log.info("查询空间成员：空间ID={}", spaceId);
 
         List<SpaceMember> members = spaceMemberMapper.selectBySpaceId(spaceId);
         return members.stream()
@@ -85,7 +85,7 @@ public class SpaceController {
     public SpaceMemberVO createMember(@RequestBody SpaceMemberCreateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Add space member: spaceId={}, email={}, role={}", spaceId, request.getEmail(), request.getRole());
+        log.info("添加空间成员：空间ID={}，邮箱={}，角色={}", spaceId, request.getEmail(), request.getRole());
 
         // 只有管理员可添加成员
         if (role != 1) {
@@ -115,7 +115,7 @@ public class SpaceController {
                 .setCreatedAt(java.time.LocalDateTime.now());
 
         spaceMemberMapper.insert(member);
-        log.info("Space member added: spaceId={}, userId={}, role={}", spaceId, user.getId(), request.getRole());
+        log.info("空间成员添加成功：空间ID={}，用户ID={}，角色={}", spaceId, user.getId(), request.getRole());
 
         return SpaceMemberVO.from(member, user);
     }
@@ -128,7 +128,7 @@ public class SpaceController {
     public SpaceMemberVO updateMember(@RequestBody SpaceMemberUpdateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Update space member: spaceId={}, userId={}, role={}", spaceId, request.getUserId(), request.getRole());
+        log.info("更新空间成员：空间ID={}，用户ID={}，角色={}", spaceId, request.getUserId(), request.getRole());
 
         // 只有管理员可更新成员
         if (role != 1) {
@@ -157,7 +157,7 @@ public class SpaceController {
         spaceMemberMapper.updateById(member);
 
         var user = userMapper.selectById(request.getUserId());
-        log.info("Space member updated: spaceId={}, userId={}", spaceId, request.getUserId());
+        log.info("空间成员更新成功：空间ID={}，用户ID={}", spaceId, request.getUserId());
         return SpaceMemberVO.from(member, user);
     }
 
@@ -169,7 +169,7 @@ public class SpaceController {
     public void deleteMember(@RequestBody SpaceMemberDeleteRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Delete space member: spaceId={}, userId={}", spaceId, request.getUserId());
+        log.info("删除空间成员：空间ID={}，用户ID={}", spaceId, request.getUserId());
 
         // 只有管理员可删除成员
         if (role != 1) {
@@ -191,6 +191,6 @@ public class SpaceController {
         }
 
         spaceMemberMapper.deleteById(member.getId());
-        log.info("Space member deleted: spaceId={}, userId={}", spaceId, request.getUserId());
+        log.info("空间成员删除成功：空间ID={}，用户ID={}", spaceId, request.getUserId());
     }
 }
