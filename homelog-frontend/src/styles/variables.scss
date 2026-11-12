@@ -1,8 +1,8 @@
 // 设计系统变量
 // 色板
-$primary-color: #3a8dff;
-$primary-light-bg: #eef6ff;
-$primary-light-border: #b3d8ff;
+$primary-color: #dd704e;
+$primary-light-bg: #fff2ec;
+$primary-light-border: #f7cbb6;
 
 $success-color: #67c23a;
 $warning-color: #e6a23c;
@@ -10,20 +10,20 @@ $danger-color: #f56c6c;
 $info-color: #909399;
 
 // 中性色
-$text-primary: #1f2d3d;
-$text-secondary: #4a5a6a;
-$text-placeholder: #a0b0c0;
-$text-disabled: #c0d0e0;
+$text-primary: #2b2622;
+$text-secondary: rgba(43, 38, 34, 0.72);
+$text-placeholder: #9c8d84;
+$text-disabled: #d2c5bc;
 
-$bg-color: #f5f7fa;
+$bg-color: #f7f3ed;
 $card-bg: #ffffff;
-$header-bg: #ffffff;
-$sidebar-bg: #ffffff;
-$sidebar-header-bg: #fafbfc;
-$hover-bg: #f0f6fc;
+$header-bg: #fffdfb;
+$sidebar-bg: #fffaf5;
+$sidebar-header-bg: #f5efe8;
+$hover-bg: #fff0ea;
 
-$border-color: #e0e6ed;
-$border-color-light: #eef1f5;
+$border-color: #f0e5dd;
+$border-color-light: #f7efe9;
 
 // 边框圆角
 $border-radius-sm: 4px;

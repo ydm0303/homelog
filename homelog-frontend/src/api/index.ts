@@ -10,6 +10,59 @@ const api = axios.create({
   }
 })
 
+export function getApiErrorMessage(error: any, fallback: string): string {
+  const payload = error?.response?.data
+
+  if (typeof payload === 'string' && payload.trim()) {
+    return payload.trim()
+  }
+
+  if (payload && typeof payload === 'object') {
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim()
+    }
+
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim()
+    }
+
+    const details = payload.details
+    if (details && typeof details === 'object') {
+      const firstDetail = Object.values(details as Record<string, unknown>)[0]
+      if (typeof firstDetail === 'string' && firstDetail.trim()) {
+        return firstDetail.trim()
+      }
+    }
+  }
+
+  if (error?.message) {
+    return error.message
+  }
+
+  return fallback
+}
+
+export function getFriendlyAuthErrorMessage(error: any, fallback: string): string {
+  const message = getApiErrorMessage(error, fallback)
+  const normalized = message.toLowerCase()
+
+  if (
+    normalized.includes('bad credentials') ||
+    normalized.includes('invalid credentials') ||
+    normalized.includes('用户名或密码') ||
+    normalized.includes('password') ||
+    normalized.includes('username')
+  ) {
+    return '用户名或密码错误'
+  }
+
+  if (normalized.includes('already exists') || normalized.includes('已被注册')) {
+    return '该用户名已被注册'
+  }
+
+  return message
+}
+
 // 请求拦截器
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -34,11 +87,14 @@ api.interceptors.response.use(
     }
     const authStore = useAuthStore()
 
-    // 刷新接口自身的 401 不能再触发刷新，否则会无限递归
+    const isAuthRequest = /\/auth\/(login|register|refresh)/.test(originalRequest.url || '')
+
+    // 登录/注册/刷新请求本身的 401 不应走 token 刷新逻辑，避免覆盖真实鉴权错误
     if (
       error.response?.status === 401 &&
       !originalRequest._skipAuthRefresh &&
-      !originalRequest._retry
+      !originalRequest._retry &&
+      !isAuthRequest
     ) {
       originalRequest._retry = true
 
@@ -58,7 +114,7 @@ api.interceptors.response.use(
     }
 
     // 统一错误提示
-    const message = (error.response?.data as any)?.message || error.message || '请求失败'
+    const message = getApiErrorMessage(error, '请求失败')
     if (error.response?.status !== 401 && !originalRequest._skipErrorToast) {
       ElMessage.error(message)
     }
@@ -71,15 +127,15 @@ export default api
 
 // ============ 认证相关 API ============
 export const authApi = {
-  /** 登录 POST /api/auth/login（错误提示由登录页统一处理，跳过拦截器提示） */
+  /** 登录 POST /api/auth/login（错误提示由登录页统一处理，跳过拦截器提示和 token 刷新） */
   login: (username: string, password: string) => {
-    const config = { _skipErrorToast: true }
+    const config = { _skipErrorToast: true, _skipAuthRefresh: true }
     return api.post('/auth/login', { username, password }, config)
   },
 
-  /** 注册 POST /api/auth/register（错误提示由注册页统一处理，跳过拦截器提示） */
+  /** 注册 POST /api/auth/register（错误提示由注册页统一处理，跳过拦截器提示和 token 刷新） */
   register: (data: { username: string; password: string; email: string; nickName?: string }) => {
-    const config = { _skipErrorToast: true }
+    const config = { _skipErrorToast: true, _skipAuthRefresh: true }
     return api.post('/auth/register', data, config)
   },
 
