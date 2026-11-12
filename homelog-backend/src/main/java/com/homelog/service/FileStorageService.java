@@ -84,7 +84,7 @@ public class FileStorageService {
                 relativePath = String.format("%s/%s/temp/%s/%s", baseUrl, moduleKey, datePath, filename);
             }
 
-            log.info("File uploaded: {} -> {}", originalFilename, relativePath);
+            log.info("文件上传成功：{} -> {}", originalFilename, relativePath);
             return relativePath;
 
         } catch (IOException e) {
@@ -102,7 +102,7 @@ public class FileStorageService {
             String pathStr = relativePath.replace(baseUrl, basePath);
             Path filePath = Paths.get(pathStr);
             Files.deleteIfExists(filePath);
-            log.info("File deleted: {}", relativePath);
+            log.info("文件删除成功：{}", relativePath);
         } catch (IOException e) {
             log.warn("File delete failed: {}", relativePath, e);
         }

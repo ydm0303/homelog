@@ -29,9 +29,9 @@ public class ImportController {
     @PostMapping("/drug/csv/preview")
     public ResponseEntity<ImportResultVO> preview(
             @RequestParam("file") MultipartFile file) {
-        log.info("Drug CSV preview import: filename={}, size={}", file.getOriginalFilename(), file.getSize());
+        log.info("收到药品 CSV 预检导入请求：文件名={}，大小={}", file.getOriginalFilename(), file.getSize());
         ImportResultVO result = importService.preview(file);
-        log.info("Drug CSV preview result: total={}, success={}, failed={}",
+        log.info("药品 CSV 预检导入完成：总行数={}，成功={}，失败={}",
                 result.getTotalRows(), result.getSuccessRows(), result.getFailedRows());
         return ResponseEntity.ok(result);
     }
@@ -43,9 +43,9 @@ public class ImportController {
     @PostMapping("/drug/csv")
     public ResponseEntity<ImportResultVO> importDrug(
             @RequestParam("file") MultipartFile file) {
-        log.info("Drug CSV import: filename={}, size={}", file.getOriginalFilename(), file.getSize());
+        log.info("收到药品 CSV 导入请求：文件名={}，大小={}", file.getOriginalFilename(), file.getSize());
         ImportResultVO result = importService.importDrug(file);
-        log.info("Drug CSV import result: total={}, success={}, failed={}",
+        log.info("药品 CSV 导入完成：总行数={}，成功={}，失败={}",
                 result.getTotalRows(), result.getSuccessRows(), result.getFailedRows());
         return ResponseEntity.ok(result);
     }

@@ -50,7 +50,7 @@ public class RemindTask {
     @Scheduled(cron = "0 0 8 * * ?")
     @Transactional
     public void scanDueRecords() {
-        log.info("Starting due records scan...");
+        log.info("开始扫描到期记录...");
 
         // 解析提前提醒天数
         String[] leadDaysArray = leadDaysStr.split(",");
@@ -62,11 +62,11 @@ public class RemindTask {
             List<Record> dueRecords = recordMapper.selectDueRecords(1L, targetDate.toString());
 
             if (dueRecords.isEmpty()) {
-                log.info("No due records for leadDays={}, date={}", leadDays, targetDate);
+                log.info("未发现符合条件的到期记录：提前天数={}，日期={}", leadDays, targetDate);
                 continue;
             }
 
-            log.info("Found {} due records for leadDays={}, date={}", dueRecords.size(), leadDays, targetDate);
+            log.info("发现到期记录：数量={}，提前天数={}，日期={}", dueRecords.size(), leadDays, targetDate);
 
             // 获取所有开启邮件提醒的成员
             List<SpaceMember> members = spaceMemberMapper.selectBySpaceId(1L);
@@ -86,7 +86,7 @@ public class RemindTask {
             }
         }
 
-        log.info("Due records scan completed.");
+        log.info("到期记录扫描完成。");
     }
 
     /**
@@ -97,7 +97,7 @@ public class RemindTask {
 
         String typeLabel = getRecordTypeLabel(record);
         String title = record.getTitle() != null ? record.getTitle() : "未命名记录";
-        log.info("Processing due record: recordId={}, title={}, leadDays={}", record.getId(), title, leadDays);
+        log.info("正在处理到期记录：记录ID={}，标题={}，提前天数={}", record.getId(), title, leadDays);
 
         // 构建消息内容
         String content;

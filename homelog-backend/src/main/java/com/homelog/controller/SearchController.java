@@ -32,7 +32,7 @@ public class SearchController {
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> search(@Valid SearchRequest request) {
-        log.info("Global search request: {}", request);
+        log.info("收到全局搜索请求：{}", request);
 
         List<SearchResultVO> results = searchService.search(request);
         long total = searchService.count(request);
@@ -43,7 +43,7 @@ public class SearchController {
         response.put("page", request.getPage());
         response.put("size", request.getSize());
 
-        log.info("Global search result: total={}, returned={}", total, results.size());
+        log.info("全局搜索完成：总数={}，返回数={}", total, results.size());
         return ResponseEntity.ok(response);
     }
 }

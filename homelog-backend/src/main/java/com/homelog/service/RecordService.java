@@ -198,7 +198,7 @@ public class RecordService {
                 .setUpdatedAt(LocalDateTime.now());
 
         recordMapper.insert(record);
-        log.info("Record created: recordId={}, moduleId={}, creatorId={}", record.getId(), module.getId(), currentUserId);
+        log.info("记录创建成功：记录ID={}，模块ID={}，创建者ID={}", record.getId(), module.getId(), currentUserId);
 
         return RecordVO.from(record, module.getModuleKey(), module.getName(), "用户");
     }
@@ -258,7 +258,7 @@ public class RecordService {
         }
 
         recordMapper.updateById(record);
-        log.info("Record updated: recordId={}, moduleId={}, userId={}", recordId, moduleId, currentUserId);
+        log.info("记录更新成功：记录ID={}，模块ID={}，用户ID={}", recordId, moduleId, currentUserId);
 
         return RecordVO.from(record, module.getModuleKey(), module.getName(), "用户");
     }
@@ -291,7 +291,7 @@ public class RecordService {
         }
 
         recordMapper.deleteById(recordId);
-        log.info("Record deleted: recordId={}, moduleId={}, userId={}", recordId, moduleId, currentUserId);
+        log.info("记录删除成功：记录ID={}，模块ID={}，用户ID={}", recordId, moduleId, currentUserId);
     }
 
     /**

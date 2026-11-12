@@ -32,7 +32,7 @@ public class MessageController {
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> list(@Valid MessageQueryRequest request) {
-        log.info("Message list request: {}", request);
+        log.info("收到消息列表查询请求：{}", request);
 
         List<MessageVO> messages = messageService.list(request);
         long total = messageService.count(request);
@@ -43,7 +43,7 @@ public class MessageController {
         response.put("page", request.getPage());
         response.put("size", request.getSize());
 
-        log.info("Message list result: total={}, returned={}", total, messages.size());
+        log.info("消息列表查询完成：总数={}，返回数={}", total, messages.size());
         return ResponseEntity.ok(response);
     }
 
@@ -66,7 +66,7 @@ public class MessageController {
      */
     @PutMapping("/{id}/read")
     public ResponseEntity<Void> markRead(@PathVariable Long id) {
-        log.info("Mark message read: {}", id);
+        log.info("标记消息为已读：{}", id);
         messageService.markRead(id);
         return ResponseEntity.ok().build();
     }
@@ -77,7 +77,7 @@ public class MessageController {
      */
     @PutMapping("/read-all")
     public ResponseEntity<Void> markAllRead() {
-        log.info("Mark all messages read");
+        log.info("标记全部消息为已读");
         messageService.markAllRead();
         return ResponseEntity.ok().build();
     }

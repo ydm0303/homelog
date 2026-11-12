@@ -32,7 +32,7 @@ public class FileController {
             @RequestParam("moduleKey") String moduleKey,
             @RequestParam(value = "recordId", required = false) Long recordId) {
 
-        log.info("File upload: moduleKey={}, recordId={}, filename={}, size={}",
+        log.info("收到文件上传请求：模块标识={}，记录ID={}，文件名={}，大小={}",
                 moduleKey, recordId, file.getOriginalFilename(), file.getSize());
 
         String relativePath = fileStorageService.upload(file, moduleKey, recordId);

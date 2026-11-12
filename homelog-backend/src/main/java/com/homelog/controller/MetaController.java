@@ -75,7 +75,7 @@ public class MetaController {
     @GetMapping("/modules/list")
     public List<ModuleMetaVO> getEnabledModules() {
         Long spaceId = getCurrentSpaceId();
-        log.info("Get enabled modules for space: {}", spaceId);
+        log.info("查询空间已启用模块：空间ID={}", spaceId);
 
         List<Module> modules = moduleMapper.selectEnabledBySpaceId(spaceId);
         return modules.stream()
@@ -94,7 +94,7 @@ public class MetaController {
     public List<ModuleMetaVO> getAllModules() {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Get all modules for space: {}, role={}", spaceId, role);
+        log.info("查询空间全部模块：空间ID={}，用户角色={}", spaceId, role);
 
         // 只有管理员可查看所有模块
         if (role != 1) {
@@ -137,7 +137,7 @@ public class MetaController {
     public ModuleMetaVO updateModule(@RequestBody ModuleUpdateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Update module config: spaceId={}, moduleId={}", spaceId, request.getModuleId());
+        log.info("更新模块配置：空间ID={}，模块ID={}", spaceId, request.getModuleId());
 
         if (role != 1) {
             log.warn("Update module denied, not an admin: spaceId={}, moduleId={}, role={}",
@@ -161,7 +161,7 @@ public class MetaController {
         moduleMapper.updateById(module);
 
         List<Field> fields = fieldMapper.selectByModuleId(request.getModuleId());
-        log.info("Module config updated: moduleId={}", request.getModuleId());
+        log.info("模块配置更新成功：模块ID={}", request.getModuleId());
         return ModuleMetaVO.from(module, fields);
     }
 
@@ -173,7 +173,7 @@ public class MetaController {
     public ModuleMetaVO createModule(@RequestBody ModuleCreateRequest request) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Create custom module: spaceId={}, moduleKey={}, name={}",
+        log.info("创建自定义模块：空间ID={}，模块标识={}，名称={}",
                 spaceId, request.getModuleKey(), request.getName());
 
         if (role != 1) {
@@ -194,7 +194,7 @@ public class MetaController {
         moduleMapper.insert(module);
 
         List<Field> fields = fieldMapper.selectByModuleId(module.getId());
-        log.info("Custom module created: moduleId={}, moduleKey={}", module.getId(), module.getModuleKey());
+        log.info("自定义模块创建成功：模块ID={}，模块标识={}", module.getId(), module.getModuleKey());
         return ModuleMetaVO.from(module, fields);
     }
 
@@ -206,7 +206,7 @@ public class MetaController {
     public void deleteModule(@RequestParam Long moduleId) {
         Long spaceId = getCurrentSpaceId();
         Integer role = getCurrentUserRole(spaceId);
-        log.info("Delete module: spaceId={}, moduleId={}", spaceId, moduleId);
+        log.info("删除模块：空间ID={}，模块ID={}", spaceId, moduleId);
 
         if (role != 1) {
             log.warn("Delete module denied, not an admin: spaceId={}, moduleId={}, role={}", spaceId, moduleId, role);
@@ -225,6 +225,6 @@ public class MetaController {
         }
 
         moduleMapper.deleteById(moduleId);
-        log.info("Module deleted: moduleId={}", moduleId);
+        log.info("模块删除成功：模块ID={}", moduleId);
     }
 }

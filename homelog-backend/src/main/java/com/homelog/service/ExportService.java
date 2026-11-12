@@ -121,7 +121,7 @@ public class ExportService {
                     .setFileSize(fileSize)
                     .setRecordCount(records.size());
 
-            log.info("Module export completed: module={}, records={}, fileSize={}", module.getModuleKey(), records.size(), fileSize);
+            log.info("模块数据导出完成：模块={}，记录数={}，文件大小={}", module.getModuleKey(), records.size(), fileSize);
             return result;
 
         } catch (IOException e) {
@@ -188,7 +188,7 @@ public class ExportService {
                     .setFileSize(fileSize)
                     .setRecordCount(totalRecords);
 
-            log.info("Full space export completed: modules={}, records={}, fileSize={}", modules.size(), totalRecords, fileSize);
+            log.info("全空间数据导出完成：模块数={}，记录数={}，文件大小={}", modules.size(), totalRecords, fileSize);
             return result;
 
         } catch (IOException e) {

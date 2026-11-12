@@ -39,7 +39,7 @@ public class ExportController {
      */
     @GetMapping
     public ResponseEntity<ExportResultVO> export(@Valid ExportRequest request) {
-        log.info("Export request: scope={}, moduleId={}", request.getScope(), request.getModuleId());
+        log.info("收到数据导出请求：范围={}，模块ID={}", request.getScope(), request.getModuleId());
         ExportResultVO result = exportService.export(request);
         return ResponseEntity.ok(result);
     }
@@ -59,7 +59,7 @@ public class ExportController {
         }
 
         FileSystemResource resource = new FileSystemResource(file);
-        log.info("Export file downloaded: filename={}, size={}", filename, file.length());
+        log.info("导出文件下载成功：文件名={}，大小={}", filename, file.length());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
