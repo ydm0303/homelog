@@ -40,10 +40,10 @@ public class RecordController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String tag) {
 
-        log.info("List records: moduleId={}, page={}, size={}, keyword={}, tag={}", moduleId, page, size, keyword, tag);
+        log.info("查询记录列表：模块ID={}，页码={}，每页数量={}，关键词={}，标签={}", moduleId, page, size, keyword, tag);
 
         List<RecordVO> records = recordService.list(moduleId, page, size, keyword, tag);
-        log.info("List records result: moduleId={}, count={}", moduleId, records.size());
+        log.info("记录列表查询完成：模块ID={}，记录数={}", moduleId, records.size());
         return ResponseEntity.ok(records);
     }
 
@@ -54,7 +54,7 @@ public class RecordController {
     @GetMapping("/detail")
     public ResponseEntity<RecordVO> detail(@Valid RecordDetailRequest request) {
 
-        log.info("Get record detail: moduleId={}, recordId={}", request.getModuleId(), request.getRecordId());
+        log.info("查询记录详情：模块ID={}，记录ID={}", request.getModuleId(), request.getRecordId());
 
         RecordVO record = recordService.get(request.getModuleId(), request.getRecordId());
         if (record == null) {
@@ -71,10 +71,10 @@ public class RecordController {
      */
     @PostMapping("/create")
     public ResponseEntity<RecordVO> create(@Valid @RequestBody RecordCreateRequest request) {
-        log.info("Create record: moduleId={}, title={}", request.getModuleId(), request.getTitle());
+        log.info("创建记录：模块ID={}，标题={}", request.getModuleId(), request.getTitle());
 
         RecordVO record = recordService.create(request);
-        log.info("Record created: moduleId={}, recordId={}", request.getModuleId(), record.getId());
+        log.info("记录创建成功：模块ID={}，记录ID={}", request.getModuleId(), record.getId());
         return ResponseEntity.ok(record);
     }
 
@@ -84,10 +84,10 @@ public class RecordController {
      */
     @PostMapping("/update")
     public ResponseEntity<RecordVO> update(@Valid @RequestBody RecordUpdateRequest request) {
-        log.info("Update record: moduleId={}, recordId={}", request.getModuleId(), request.getRecordId());
+        log.info("更新记录：模块ID={}，记录ID={}", request.getModuleId(), request.getRecordId());
 
         RecordVO record = recordService.update(request.getModuleId(), request.getRecordId(), request);
-        log.info("Record updated: moduleId={}, recordId={}", request.getModuleId(), request.getRecordId());
+        log.info("记录更新成功：模块ID={}，记录ID={}", request.getModuleId(), request.getRecordId());
         return ResponseEntity.ok(record);
     }
 
@@ -97,10 +97,10 @@ public class RecordController {
      */
     @PostMapping("/delete")
     public ResponseEntity<Void> delete(@Valid @RequestBody RecordDeleteRequest request) {
-        log.info("Delete record: moduleId={}, recordId={}", request.getModuleId(), request.getRecordId());
+        log.info("删除记录：模块ID={}，记录ID={}", request.getModuleId(), request.getRecordId());
 
         recordService.delete(request.getModuleId(), request.getRecordId());
-        log.info("Record deleted: moduleId={}, recordId={}", request.getModuleId(), request.getRecordId());
+        log.info("记录删除成功：模块ID={}，记录ID={}", request.getModuleId(), request.getRecordId());
         return ResponseEntity.ok().build();
     }
 }

@@ -35,7 +35,7 @@ public class MailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
             mailSender.send(mime);
-            log.info("Email sent to: {}", toEmail);
+            log.info("邮件发送成功：收件人={}", toEmail);
         } catch (MessagingException e) {
             log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
         }
