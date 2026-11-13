@@ -1,7 +1,6 @@
 # ============================================================================
-# 后端 Dockerfile - Spring Boot 2.7 + Java 8
+# 后端 Dockerfile - Spring Boot 2.7 + Java 8 【适配Render Free】
 # ============================================================================
-
 # 构建阶段
 FROM maven:3.8-openjdk-8-slim AS builder
 
@@ -37,15 +36,21 @@ RUN mkdir -p /app/uploads && chown -R homelog:homelog /app
 # 切换用户
 USER homelog
 
-# 暴露端口
-EXPOSE 8080
+# ========== 修改1：暴露端口改为10000（Render要求） ==========
+EXPOSE 10000
 
-# 健康检查（注意：actuator 不带 /api 前缀，Controller 才带）
+# ========== 修改2：健康检查端口改成10000 ==========
+# 如果你不用actuator，就改成你自己的 /common/health
+# 方案A（沿用你actuator）：
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/actuator/health || exit 1
+    CMD curl -f http://localhost:10000/actuator/health || exit 1
+# 方案B（用你自己写的健康接口，推荐，和reggie统一）
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+#    CMD curl -f http://localhost:10000/common/health || exit 1
 
-# 启动参数
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+# ========== 修改3：内存下调，Render免费实例上限512MB，防止OOM ==========
+ENV JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 ENV SPRING_PROFILES_ACTIVE=prod
 
+# ========== 修改4：application.yml 里 server.port: 10000 要配套！ ==========
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

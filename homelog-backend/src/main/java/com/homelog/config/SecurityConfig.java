@@ -49,7 +49,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 "/webjars/**",
                 "/favicon.ico",
                 "/actuator/health",
-                "/actuator/info"
+                "/actuator/info",
+                "/common/health"
         );
     }
 

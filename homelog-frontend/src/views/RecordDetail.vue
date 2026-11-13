@@ -330,9 +330,11 @@ function openImagePreview(index: number) {
   imagePreviewVisible.value = true
 }
 
+const apiBase = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '')
+
 function getImageUrl(path: string) {
   if (path.startsWith('http') || path.startsWith('//')) return path
-  return `${import.meta.env.VITE_API_BASE_URL || '/api'}/files${path}`
+  return `${apiBase}/api/files${path}`
 }
 
 function formatFieldValue(field: any, value: any): string {

@@ -220,7 +220,7 @@ const emit = defineEmits<{
 // 本地值
 const localValue = ref(props.value)
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+const apiBase = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '')
 
 // el-upload 的文件列表，通过 v-model:file-list 与组件保持双向同步
 // 每个文件上额外挂 serverPath（服务端相对路径）：file.url 是 blob 预览地址，移除时需要它回写
