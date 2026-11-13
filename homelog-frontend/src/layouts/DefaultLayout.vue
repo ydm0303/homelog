@@ -1,179 +1,120 @@
 <template>
   <div class="default-layout">
-    <!-- 侧边栏 (PC) -->
-    <aside
-      v-show="!isMobile"
-      class="sidebar"
-      :class="{ collapsed: sidebarCollapsed }"
-    >
+    <aside v-show="!isMobile" class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-header">
-        <h1 v-if="!sidebarCollapsed" class="logo">家记</h1>
-        <div v-else class="logo-mini">记</div>
+        <div class="brand-block">
+          <div class="brand-mark">
+            <el-icon><HomeFilled /></el-icon>
+          </div>
+          <div v-if="!sidebarCollapsed" class="brand-text">
+            <h1 class="logo">家记</h1>
+            <span class="brand-subtitle">家庭空间</span>
+          </div>
+        </div>
       </div>
 
       <nav class="sidebar-nav">
-        <!-- 首页 -->
         <router-link to="/" class="nav-item" exact-active-class="active">
           <el-icon><HomeFilled /></el-icon>
           <span v-if="!sidebarCollapsed">首页</span>
         </router-link>
 
-        <!-- 动态模块菜单 -->
-        <template v-for="module in enabledModules" :key="module.id">
-          <router-link
-            :to="`/module/${module.moduleKey}`"
-            class="nav-item"
-            :class="{ active: $route.path.startsWith(`/module/${module.moduleKey}`) }"
-          >
-            <el-icon>
-              <component :is="getModuleIcon(module.moduleKey)" />
-            </el-icon>
-            <span v-if="!sidebarCollapsed">{{ module.name }}</span>
-          </router-link>
-        </template>
+        <router-link to="/module/drug" class="nav-item" exact-active-class="active">
+          <el-icon><FirstAidKit /></el-icon>
+          <span v-if="!sidebarCollapsed">药品档案</span>
+        </router-link>
 
-        <!-- 设置中心 (仅管理员) -->
-        <router-link
-          v-if="isAdmin"
-          to="/settings"
-          class="nav-item"
-          exact-active-class="active"
-        >
+        <router-link to="/module/todo" class="nav-item" exact-active-class="active">
+          <el-icon><Checked /></el-icon>
+          <span v-if="!sidebarCollapsed">家庭待办</span>
+        </router-link>
+
+        <router-link to="/module/note" class="nav-item" exact-active-class="active">
+          <el-icon><Picture /></el-icon>
+          <span v-if="!sidebarCollapsed">生活记事相册</span>
+        </router-link>
+
+        <router-link to="/module/idoc" class="nav-item" exact-active-class="active">
+          <el-icon><CreditCard /></el-icon>
+          <span v-if="!sidebarCollapsed">证件档案</span>
+        </router-link>
+
+        <router-link v-if="isAdmin" to="/settings" class="nav-item" exact-active-class="active">
           <el-icon><Setting /></el-icon>
           <span v-if="!sidebarCollapsed">设置中心</span>
         </router-link>
       </nav>
 
-      <div class="sidebar-footer" v-if="!sidebarCollapsed">
-        <el-divider />
+      <div v-if="!sidebarCollapsed" class="sidebar-footer">
+        <p class="footer-note">把平凡日子 过成温柔的纪念</p>
         <div class="user-info">
-          <el-avatar :size="32" :src="authStore.user?.avatar" />
+          <el-avatar :size="36" :src="authStore.user?.avatar" />
           <div class="user-detail">
-            <span class="user-name">{{ authStore.user?.nickName || authStore.user?.username }}</span>
-            <el-tag :type="getRoleTagType" size="small">{{ getRoleLabel }}</el-tag>
+            <span class="user-name">{{ authStore.user?.nickName || '杨东铭' }}</span>
+            <span class="user-role">管理员</span>
           </div>
         </div>
-        <el-button
-          class="logout-btn"
-          @click="handleLogout"
-          size="small"
-          link
-        >
-          退出登录
-        </el-button>
       </div>
     </aside>
 
-    <!-- 移动端抽屉菜单 -->
-    <el-drawer
-      v-model="mobileDrawer"
-      direction="ltr"
-      size="75%"
-      :before-close="handleDrawerClose"
-    >
+    <el-drawer v-model="mobileDrawer" direction="ltr" size="78%" :before-close="handleDrawerClose">
       <nav class="mobile-nav">
         <router-link to="/" class="mobile-nav-item" @click="mobileDrawer = false">
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </router-link>
-
-        <template v-for="module in enabledModules" :key="module.id">
-          <router-link
-            :to="`/module/${module.moduleKey}`"
-            class="mobile-nav-item"
-            @click="mobileDrawer = false"
-          >
-            <el-icon>
-              <component :is="getModuleIcon(module.moduleKey)" />
-            </el-icon>
-            <span>{{ module.name }}</span>
-          </router-link>
-        </template>
-
-        <router-link
-          v-if="isAdmin"
-          to="/settings"
-          class="mobile-nav-item"
-          @click="mobileDrawer = false"
-        >
+        <router-link to="/module/drug" class="mobile-nav-item" @click="mobileDrawer = false">
+          <el-icon><FirstAidKit /></el-icon>
+          <span>药品档案</span>
+        </router-link>
+        <router-link to="/module/todo" class="mobile-nav-item" @click="mobileDrawer = false">
+          <el-icon><Checked /></el-icon>
+          <span>家庭待办</span>
+        </router-link>
+        <router-link to="/module/note" class="mobile-nav-item" @click="mobileDrawer = false">
+          <el-icon><Picture /></el-icon>
+          <span>生活记事相册</span>
+        </router-link>
+        <router-link to="/module/idoc" class="mobile-nav-item" @click="mobileDrawer = false">
+          <el-icon><CreditCard /></el-icon>
+          <span>证件档案</span>
+        </router-link>
+        <router-link v-if="isAdmin" to="/settings" class="mobile-nav-item" @click="mobileDrawer = false">
           <el-icon><Setting /></el-icon>
           <span>设置中心</span>
         </router-link>
 
-        <el-divider class="mobile-divider" />
-        <div class="mobile-user">
-          <el-avatar :size="40" :src="authStore.user?.avatar" />
+        <div class="mobile-user-box">
+          <el-avatar :size="42" :src="authStore.user?.avatar" />
           <div>
-            <p>{{ authStore.user?.nickName || authStore.user?.username }}</p>
-            <el-tag :type="getRoleTagType" size="small">{{ getRoleLabel }}</el-tag>
+            <p>{{ authStore.user?.nickName || '杨东铭' }}</p>
+            <span>管理员</span>
           </div>
         </div>
-        <el-button
-          class="mobile-logout"
-          @click="handleLogout"
-          block
-          size="default"
-        >
-          退出登录
-        </el-button>
       </nav>
     </el-drawer>
 
-    <!-- 主内容区 -->
     <div class="main-content" :class="{ expanded: sidebarCollapsed && !isMobile }">
-      <!-- 顶部栏 -->
       <header class="top-bar">
         <div class="top-bar-left">
-          <el-button
-            v-if="!isMobile"
-            class="toggle-btn"
-            @click="sidebarCollapsed = !sidebarCollapsed"
-            circle
-            size="small"
-          >
+          <el-button v-if="!isMobile" class="toggle-btn" @click="sidebarCollapsed = !sidebarCollapsed" circle size="small">
             <el-icon><Fold v-if="!sidebarCollapsed" /><Expand v-else /></el-icon>
           </el-button>
 
-          <el-button
-            v-if="isMobile"
-            class="menu-btn"
-            @click="mobileDrawer = true"
-            circle
-            size="small"
-          >
+          <el-button v-if="isMobile" class="menu-btn" @click="mobileDrawer = true" circle size="small">
             <el-icon><Menu /></el-icon>
           </el-button>
-
-          <h1 class="page-title">{{ pageTitle }}</h1>
         </div>
 
         <div class="top-bar-center" v-show="!isMobile">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索记录、标签、内容..."
-            :prefix-icon="Search"
-            clearable
-            size="small"
-            class="top-search-input"
-            @keyup.enter="handleSearch"
-            @focus="showSearchDrawer = true"
-            @blur="setTimeout(() => showSearchDrawer = false, 200)"
-          />
+          <el-input v-model="searchKeyword" placeholder="搜索记录、标签、内容..." :prefix-icon="Search" clearable size="small" class="top-search-input" @keyup.enter="handleSearch" @focus="showSearchDrawer = true" @blur="setTimeout(() => showSearchDrawer = false, 200)" />
         </div>
 
         <div class="top-bar-right">
-          <!-- 移动端搜索按钮 -->
-          <el-button
-            v-if="isMobile"
-            class="search-btn"
-            @click="showSearchDrawer = true"
-            circle
-            size="small"
-          >
+          <el-button v-if="isMobile" class="search-btn" @click="showSearchDrawer = true" circle size="small">
             <el-icon><Search /></el-icon>
           </el-button>
 
-          <!-- 消息中心入口 -->
           <el-dropdown>
             <span class="dropdown-link">
               <el-icon class="notification-icon"><Bell /></el-icon>
@@ -187,72 +128,29 @@
             </template>
           </el-dropdown>
 
-          <!-- 适老化模式切换 -->
-          <el-switch
-            v-model="elderlyMode"
-            @change="toggleElderlyMode"
-            inline-prompt
-            active-text="长辈模式"
-            inactive-text="标准模式"
-            v-show="!isMobile"
-          />
-
-          <!-- PWA 安装提示 -->
-          <el-tooltip
-            v-if="showInstallPrompt"
-            content="安装到桌面"
-            placement="bottom"
-          >
-            <el-button
-              class="install-btn"
-              @click="handleInstall"
-              circle
-              size="small"
-              type="primary"
-            >
-              <el-icon><Download /></el-icon>
-            </el-button>
-          </el-tooltip>
+          <el-dropdown trigger="click" class="user-drop">
+            <div class="user-trigger">
+              <el-avatar :size="32" :src="authStore.user?.avatar" />
+              <span class="user-trigger-name">{{ authStore.user?.nickName || '杨东铭' }}</span>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </header>
 
-      <!-- 移动端搜索抽屉 -->
-      <el-drawer
-        v-model="showSearchDrawer"
-        direction="rtl"
-        size="60%"
-        title="全局搜索"
-        :before-close="handleDrawerClose"
-      >
-        <el-input
-          v-model="searchKeyword"
-          placeholder="输入关键词搜索..."
-          :prefix-icon="Search"
-          clearable
-          size="large"
-          autofocus
-          @keyup.enter="handleSearch"
-          class="drawer-search-input"
-        >
-          <template #append>
-            <el-button type="primary" @click="handleSearch">搜索</el-button>
-          </template>
-        </el-input>
-      </el-drawer>
-
-      <!-- 面包屑 -->
-      <el-breadcrumb class="breadcrumb" separator="/">
-        <el-breadcrumb-item :to="{ name: 'Dashboard' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item v-for="crumb in breadcrumbs" :key="crumb.path" :to="crumb.to">
-          {{ crumb.label }}
-        </el-breadcrumb-item>
-      </el-breadcrumb>
-
-      <!-- 页面内容：嵌套子路由的渲染出口 -->
       <main class="page-content">
         <router-view />
       </main>
     </div>
+
+    <button class="global-fab" @click="handleQuickCreate" aria-label="新增记录">
+      <span class="fab-plus">＋</span>
+      <span class="fab-label">新增记录</span>
+    </button>
   </div>
 </template>
 
@@ -260,7 +158,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, Search
+  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, Search,
+  FirstAidKit, Checked, Picture, CreditCard
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
@@ -353,24 +252,6 @@ const pageTitle = computed(() => {
   return titles[route.name as string] || '家记'
 })
 
-// 面包屑
-const breadcrumbs = computed(() => {
-  const crumbs: Array<{ path: string; label: string; to?: any }> = []
-  const matched = route.matched.slice(1) // 排除根路由
-
-  matched.forEach((record, index) => {
-    if (record.meta.title) {
-      crumbs.push({
-        path: record.path,
-        label: record.meta.title as string,
-        to: index === matched.length - 1 ? undefined : record.path
-      })
-    }
-  })
-
-  return crumbs
-})
-
 // 启用的模块
 const enabledModules = computed(() => moduleStore.enabledModules)
 
@@ -424,6 +305,15 @@ function handleInstall() {
   location.reload()
 }
 
+function handleQuickCreate() {
+  const firstModule = moduleStore.enabledModules?.[0]
+  if (firstModule?.moduleKey) {
+    router.push(`/module/${firstModule.moduleKey}/create`)
+    return
+  }
+  router.push('/settings')
+}
+
 // 抽屉关闭前
 function handleDrawerClose() {
   return true
@@ -458,7 +348,7 @@ function handleSearch() {
   display: flex;
   width: 100%;
   height: 100%;
-  background-color: $bg-color;
+  background: linear-gradient(180deg, #f7f3ed 0%, #f4efe9 100%);
 }
 
 // 侧边栏
@@ -466,13 +356,14 @@ function handleSearch() {
   width: 240px;
   min-width: 240px;
   height: 100%;
-  background-color: $sidebar-bg;
+  background: linear-gradient(180deg, rgba(255, 250, 245, 0.95), rgba(255, 250, 245, 0.98));
   border-right: 1px solid $border-color;
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
   z-index: 100;
   overflow: hidden;
+  box-shadow: inset -1px 0 0 rgba(221, 112, 78, 0.06);
 
   &.collapsed {
     width: 64px;
@@ -481,26 +372,34 @@ function handleSearch() {
 }
 
 .sidebar-header {
-  height: 60px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 16px;
   border-bottom: 1px solid $border-color;
-  background-color: $sidebar-header-bg;
+  background: linear-gradient(180deg, rgba(245, 239, 232, 0.9), rgba(245, 239, 232, 0.76));
 
   .logo {
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 800;
     color: $primary-color;
     margin: 0;
     white-space: nowrap;
+    letter-spacing: 0.04em;
   }
 
   .logo-mini {
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 800;
     color: $primary-color;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(221, 112, 78, 0.1);
   }
 }
 
@@ -514,21 +413,24 @@ function handleSearch() {
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    border-radius: $border-radius-base;
+    border-radius: 14px;
     color: $text-primary;
     text-decoration: none;
     transition: all 0.2s ease;
     white-space: nowrap;
+    font-weight: 500;
 
     &:hover {
       background-color: $hover-bg;
       color: $primary-color;
+      transform: translateX(1px);
     }
 
     &.active {
-      background-color: $primary-light-bg;
+      background: linear-gradient(135deg, rgba(221, 112, 78, 0.12), rgba(221, 112, 78, 0.06));
       color: $primary-color;
-      font-weight: 500;
+      box-shadow: inset 0 0 0 1px rgba(221, 112, 78, 0.08);
+      font-weight: 700;
     }
 
     el-icon {
@@ -585,16 +487,17 @@ function handleSearch() {
 
 // 顶部栏
 .top-bar {
-  height: 56px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background-color: $header-bg;
+  background: rgba(255, 253, 251, 0.8);
   border-bottom: 1px solid $border-color;
   position: sticky;
   top: 0;
   z-index: 50;
+  backdrop-filter: blur(10px);
 
   .top-bar-left {
     display: flex;
@@ -603,9 +506,10 @@ function handleSearch() {
 
     .page-title {
       font-size: 18px;
-      font-weight: 600;
+      font-weight: 700;
       color: $text-primary;
       margin: 0;
+      letter-spacing: -0.02em;
     }
   }
 
@@ -671,32 +575,59 @@ function handleSearch() {
 }
 
 // 面包屑
-.breadcrumb {
-  padding: 12px 24px;
-  background-color: $header-bg;
-  border-bottom: 1px solid $border-color;
-  font-size: 14px;
-
-  :deep(.el-breadcrumb__inner) {
-    color: $text-secondary;
-
-    &:hover {
-      color: $primary-color;
-    }
-  }
-
-  :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-    color: $text-primary;
-    font-weight: 500;
-  }
-}
-
 // 页面内容
 .page-content {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
-  background-color: $bg-color;
+  background: linear-gradient(180deg, rgba(247, 243, 237, 0.7), rgba(247, 243, 237, 0.92));
+}
+
+.global-fab {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 0 14px;
+  height: 58px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dd704e 0%, #d9633d 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 16px 26px rgba(221, 112, 78, 0.28);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 18px 30px rgba(221, 112, 78, 0.32);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.fab-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.fab-label {
+  white-space: nowrap;
 }
 
 // 移动端抽屉
