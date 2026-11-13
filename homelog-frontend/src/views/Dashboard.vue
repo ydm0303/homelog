@@ -1,279 +1,164 @@
 <template>
   <div class="dashboard-page">
-    <!-- 核心指标卡片 -->
-    <el-row :gutter="24" class="metrics-row">
-      <el-col :xs="24" :sm="12" :md="6" :lg="3" v-for="metric in metrics" :key="metric.key">
-        <el-card class="metric-card" :class="metric.class">
-          <div class="metric-content">
-            <div class="metric-icon" :class="metric.iconClass">
-              <el-icon><component :is="metric.icon" /></el-icon>
-            </div>
-            <div class="metric-info">
-              <p class="metric-value">{{ metric.value }}</p>
-              <p class="metric-label">{{ metric.label }}</p>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <section class="welcome-block">
+      <div class="welcome-topline">
+        <span class="welcome-badge">✦</span>
+        <span>星期四 · 和家人一起慢慢来</span>
+      </div>
 
-    <!-- 主要内容区：两列布局 -->
-    <el-row :gutter="24" class="content-row">
-      <!-- 左侧：待办 + 到期提醒 -->
-      <el-col :xs="24" :lg="16">
-        <el-row :gutter="24">
-          <!-- 今日待办 -->
-          <el-col :xs="24" :md="12">
-            <el-card class="section-card">
-              <template #header>
-                <div class="card-header">
-                  <h3>
-                    <el-icon><Checked /></el-icon>
-                    今日待办
-                  </h3>
-                  <el-button
-                    v-if="todoModule"
-                    size="small"
-                    type="text"
-                    @click="goToModule('todo')"
-                  >
-                    查看全部
-                  </el-button>
-                </div>
-              </template>
+      <div class="welcome-row">
+        <div class="welcome-copy">
+          <h1>欢迎回家，杨东铭</h1>
+          <p>把家里的小事，一件一件安心收好。</p>
+        </div>
 
-              <div v-if="todoList.length === 0" class="empty-state">
-                <el-icon class="empty-icon"><Document /></el-icon>
-                <p>暂无待办事项</p>
-                <el-button
-                  v-if="todoModule"
-                  size="small"
-                  type="primary"
-                  @click="goToModule('todo')"
-                >
-                  添加第一个待办
-                </el-button>
-              </div>
+        <div class="date-card">
+          <span class="date-label">今天</span>
+          <strong>11月12日</strong>
+          <small>2026年 · 星期四</small>
+        </div>
+      </div>
+    </section>
 
-              <ul v-else class="item-list">
-                <li v-for="item in todoList" :key="item.id" class="list-item">
-                  <el-checkbox
-                    v-model="item.checked"
-                    @change="toggleTodo(item)"
-                    :disabled="isReadonly"
-                  />
-                  <div class="item-content">
-                    <p class="item-title">{{ item.title || item.dataJson?.title }}</p>
-                    <p class="item-meta" v-if="item.dataJson?.dueDate">
-                      <el-icon><Calendar /></el-icon>
-                      {{ formatDate(item.dataJson.dueDate) }}
-                    </p>
-                  </div>
-                  <el-tag :type="getPriorityType(item.dataJson?.priority)" size="small">
-                    {{ getPriorityLabel(item.dataJson?.priority) }}
-                  </el-tag>
-                </li>
-              </ul>
-            </el-card>
-          </el-col>
-
-          <!-- 即将到期药品/证件 -->
-          <el-col :xs="24" :md="12">
-            <el-card class="section-card">
-              <template #header>
-                <div class="card-header">
-                  <h3>
-                    <el-icon><AlarmClock /></el-icon>
-                    即将到期
-                  </h3>
-                  <el-button
-                    v-if="drugModule || idocModule"
-                    size="small"
-                    type="text"
-                    @click="goToModule('drug')"
-                  >
-                    查看全部
-                  </el-button>
-                </div>
-              </template>
-
-              <div v-if="expiringList.length === 0" class="empty-state">
-                <el-icon class="empty-icon"><FirstAidKit /></el-icon>
-                <p>暂无即将到期项目</p>
-              </div>
-
-              <ul v-else class="item-list">
-                <li v-for="item in expiringList" :key="item.id" class="list-item expiring-item">
-                  <div class="item-icon" :class="item.moduleKey">
-                    <el-icon>
-                      <component :is="item.moduleKey === 'drug' ? 'FirstAidKit' : 'CreditCard'" />
-                    </el-icon>
-                  </div>
-                  <div class="item-content">
-                    <p class="item-title">{{ item.title }}</p>
-                    <p class="item-meta">
-                      <el-icon><Calendar /></el-icon>
-                      {{ formatDate(item.remindDate) }} 到期
-                      <span v-if="item.moduleKey === 'drug'"> · {{ item.dataJson?.drug_name || item.dataJson?.doc_type }}</span>
-                    </p>
-                  </div>
-                  <el-tag :type="getExpiringType(item.remindDate)" size="small">
-                    {{ getExpiringLabel(item.remindDate) }}
-                  </el-tag>
-                </li>
-              </ul>
-            </el-card>
-          </el-col>
-        </el-row>
-
-        <!-- 最近记录 -->
-        <el-card class="section-card recent-section">
-          <template #header>
-            <div class="card-header">
-              <h3>
-                <el-icon><Clock /></el-icon>
-                最近记录
-              </h3>
-              <el-select
-                v-model="recentModuleFilter"
-                placeholder="全部模块"
-                size="small"
-                style="width: 160px"
-                @change="fetchRecentRecords"
-              >
-                <el-option
-                  label="全部模块"
-                  value=""
-                />
-                <el-option
-                  v-for="module in enabledModules"
-                  :key="module.id"
-                  :label="module.name"
-                  :value="module.moduleKey"
-                />
-              </el-select>
-            </div>
-          </template>
-
-          <div v-if="recentRecords.length === 0" class="empty-state">
-            <el-icon class="empty-icon"><Document /></el-icon>
-            <p>暂无最近记录</p>
-          </div>
-
-          <div v-else class="recent-grid">
-            <div
-              v-for="record in recentRecords"
-              :key="record.id"
-              class="recent-card"
-              @click="goToDetail(record)"
-            >
-              <div class="recent-card-header">
-                <el-tag size="small" :type="getModuleTagType(record.moduleKey)">
-                  {{ record.moduleName }}
-                </el-tag>
-                <span class="recent-time">{{ formatDateTime(record.createdAt) }}</span>
-              </div>
-              <p class="recent-title">{{ record.title || getFirstFieldValue(record) }}</p>
-              <div class="recent-tags" v-if="record.tags">
-                <el-tag
-                  v-for="tag in record.tags.split(',')"
-                  :key="tag"
-                  size="small"
-                  effect="plain"
-                >
-                  {{ tag }}
-                </el-tag>
-              </div>
+    <div class="panel-grid upper-grid">
+      <section class="soft-card todo-card">
+        <header class="card-header">
+          <div class="title-wrap">
+            <div class="mini-icon orange"><el-icon><Checked /></el-icon></div>
+            <div class="title-copy">
+              <h2>今日待办</h2>
+              <small>把今天的小事安排好</small>
             </div>
           </div>
-        </el-card>
-      </el-col>
 
-      <!-- 右侧：快捷入口 -->
-      <el-col :xs="24" :lg="8">
-        <el-card class="section-card shortcuts-card">
-          <template #header>
-            <h3>
-              <el-icon><Grid /></el-icon>
-              快捷入口
-            </h3>
-          </template>
-
-          <div class="shortcuts-grid">
-            <a
-              v-for="module in homeModules"
-              :key="module.id"
-              :href="`#/module/${module.moduleKey}`"
-              class="shortcut-item"
-              @click.prevent="goToModule(module.moduleKey)"
-            >
-              <div class="shortcut-icon" :class="module.moduleKey">
-                <el-icon>
-                  <component :is="getModuleIcon(module.moduleKey)" />
-                </el-icon>
-              </div>
-              <span class="shortcut-name">{{ module.name }}</span>
-              <span class="shortcut-count" v-if="getModuleCount(module.moduleKey) > 0">
-                {{ getModuleCount(module.moduleKey) }}
-              </span>
-            </a>
-
-            <!-- 通用新增按钮 -->
-            <a
-              v-if="enabledModules.length > 0"
-              class="shortcut-item add-shortcut"
-              @click.prevent="showCreateDialog = true"
-            >
-              <el-icon class="add-icon"><Plus /></el-icon>
-              <span>新增记录</span>
-            </a>
+          <div class="header-right">
+            <div class="stat-chips">
+              <span>待办总数</span>
+              <span>药品数量</span>
+              <span>记事条数</span>
+              <span>证件数量</span>
+            </div>
+            <button type="button" class="text-link" @click="goToModule('todo')">查看全部</button>
           </div>
-        </el-card>
+        </header>
 
-        <!-- PWA 安装提示 -->
-        <el-card
-          v-if="showInstallPrompt && isMobile"
-          class="section-card pwa-install-card"
-        >
-          <template #header>
-            <h3>
-              <el-icon><Download /></el-icon>
-              安装应用
-            </h3>
-          </template>
-          <p class="pwa-install-text">
-            点击浏览器菜单选择「添加到主屏幕」，像原生 APP 一样使用家记
-          </p>
-          <el-button
-            type="primary"
-            block
-            @click="handleInstall"
+        <div v-if="todoList.length === 0" class="empty-state">
+          <div class="empty-illustration todo-illustration">
+            <span class="mini-house"></span>
+            <span class="mini-plant plant-left"></span>
+            <span class="mini-plant plant-right"></span>
+            <span class="mini-bubble">待办</span>
+          </div>
+          <h3>还没有今日待办</h3>
+          <p>把家务、采购、家人约定记在这里，不错过重要小事</p>
+          <button class="primary-btn" type="button" @click="goToModule('todo')">添加第一个待办</button>
+        </div>
+      </section>
+
+      <section class="soft-card expiring-card">
+        <header class="card-header">
+          <div class="title-wrap">
+            <div class="mini-icon orange"><el-icon><AlarmClock /></el-icon></div>
+            <div class="title-copy">
+              <h2>即将到期</h2>
+              <small>重要日期，提前放在心上</small>
+            </div>
+          </div>
+
+          <button type="button" class="text-link" @click="goToModule('drug')">查看全部</button>
+        </header>
+
+        <div v-if="expiringList.length === 0" class="empty-state">
+          <div class="empty-illustration alert-illustration">
+            <span class="mini-clock"></span>
+            <span class="mini-alert">!</span>
+          </div>
+          <h3>暂无即将到期项目</h3>
+          <p>药品有效期、证件到期会在这里提前提醒你</p>
+          <button class="primary-btn" type="button" @click="goToModule('drug')">新增提醒</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="panel-grid lower-grid">
+      <section class="soft-card recent-card-panel">
+        <header class="card-header recent-header">
+          <div class="title-wrap">
+            <div class="mini-icon purple"><el-icon><Clock /></el-icon></div>
+            <div class="title-copy">
+              <h2>最近记录</h2>
+              <small>家里的点滴，都有迹可循</small>
+            </div>
+          </div>
+
+          <el-select
+            v-model="recentModuleFilter"
+            placeholder="筛选模块"
+            size="small"
+            class="filter-select"
+            @change="fetchRecentRecords"
           >
-            立即安装
-          </el-button>
-        </el-card>
-      </el-col>
-    </el-row>
+            <el-option label="全部模块" value="" />
+            <el-option v-for="module in enabledModules" :key="module.id" :label="module.name" :value="module.moduleKey" />
+          </el-select>
+        </header>
 
-    <!-- 新增记录对话框 -->
-    <el-dialog
-      v-model="showCreateDialog"
-      title="选择要新增的记录类型"
-      width="500px"
-      :before-close="handleCreateDialogClose"
-    >
+        <div v-if="recentRecords.length === 0" class="empty-state compact-empty">
+          <h3>暂无记录</h3>
+        </div>
+
+        <div v-else class="record-list">
+          <article v-for="record in recentRecords" :key="record.id" class="record-item" @click="goToDetail(record)">
+            <div class="record-left">
+              <span class="module-badge" :class="getModuleColorClass(record.moduleKey)">{{ record.moduleName }}</span>
+              <div class="record-meta">{{ formatDateTime(record.createdAt) }}</div>
+            </div>
+            <div class="record-body">
+              <h3>{{ record.title || getFirstFieldValue(record) }}</h3>
+              <p>{{ record.summary || getRecordSummary(record) }}</p>
+            </div>
+            <div class="record-actions">
+              <button type="button" aria-label="查看详情">↗</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="soft-card shortcut-panel">
+        <header class="card-header shortcut-header-row">
+          <div class="title-wrap">
+            <div class="mini-icon blue"><el-icon><Grid /></el-icon></div>
+            <div class="title-copy">
+              <h2>快捷入口</h2>
+              <small>常用的家庭空间</small>
+            </div>
+          </div>
+        </header>
+
+        <div class="shortcut-grid">
+          <button v-for="module in homeModules" :key="module.id" class="shortcut-item" type="button" @click="goToModule(module.moduleKey)">
+            <span class="shortcut-icon" :class="module.moduleKey">
+              <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
+            </span>
+            <span class="shortcut-name">{{ module.name }}</span>
+            <span class="shortcut-arrow">›</span>
+          </button>
+
+          <button class="shortcut-item add-shortcut" type="button" @click="showCreateDialog = true">
+            <span class="add-box">＋</span>
+            <span class="shortcut-name">新增记录</span>
+          </button>
+        </div>
+
+        <p class="shortcut-footer">每一份用心，都是家的小小光亮。</p>
+      </aside>
+    </div>
+
+    <el-dialog v-model="showCreateDialog" title="选择要新增的记录类型" width="500px" :before-close="handleCreateDialogClose">
       <div class="module-select-grid">
-        <div
-          v-for="module in enabledModules"
-          :key="module.id"
-          class="module-select-item"
-          :class="{ selected: createDialogModule === module.moduleKey }"
-          @click="createDialogModule = module.moduleKey"
-        >
+        <div v-for="module in enabledModules" :key="module.id" class="module-select-item" :class="{ selected: createDialogModule === module.moduleKey }" @click="createDialogModule = module.moduleKey">
           <div class="module-select-icon" :class="module.moduleKey">
-            <el-icon>
-              <component :is="getModuleIcon(module.moduleKey)" />
-            </el-icon>
+            <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
           </div>
           <span>{{ module.name }}</span>
         </div>
@@ -320,6 +205,7 @@ const showCreateDialog = ref(false)
 const createDialogModule = ref('')
 const showInstallPrompt = ref(false)
 const isMobile = ref(false)
+const showMetricStrip = ref(true)
 
 const todoModule = computed(() => moduleStore.getModuleByKey('todo'))
 const drugModule = computed(() => moduleStore.getModuleByKey('drug'))
@@ -406,6 +292,12 @@ async function fetchDashboardData() {
     // 排序最近记录
     recentRecords.value.sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)))
     recentRecords.value = recentRecords.value.slice(0, 8)
+
+    // 为记录面板增加摘要（避免空文本）
+    recentRecords.value = recentRecords.value.map((record: any) => ({
+      ...record,
+      summary: getRecordSummary(record)
+    }))
 
     // 更新指标卡片
     metrics.value.forEach(m => {
@@ -517,7 +409,7 @@ function formatDate(dateStr: string) {
 }
 
 function formatDateTime(dateStr: string) {
-  return dayjs(dateStr).format('MM-DD HH:mm')
+  return dayjs(dateStr).format('MM-DD HH:mm · YYYY')
 }
 
 function getFirstFieldValue(record: any) {
@@ -526,6 +418,23 @@ function getFirstFieldValue(record: any) {
   if (keys.length === 0) return ''
   const val = record.dataJson[keys[0]]
   return typeof val === 'string' ? val.substring(0, 30) : String(val).substring(0, 30)
+}
+
+function getRecordSummary(record: any) {
+  if (record.summary) return record.summary
+  if (!record.dataJson) return '家里的点滴，认真记好每一刻。'
+  const text = Object.values(record.dataJson).filter((value) => typeof value === 'string').join(' ')
+  return text ? text.slice(0, 80) : '家里的点滴，认真记好每一刻。'
+}
+
+function getModuleColorClass(moduleKey: string) {
+  const map: Record<string, string> = {
+    note: 'note',
+    drug: 'drug',
+    todo: 'todo',
+    idoc: 'idoc'
+  }
+  return map[moduleKey] || 'note'
 }
 
 function handleCreateDialogClose(done: () => void) {
@@ -576,326 +485,570 @@ onUnmounted(() => {
 @use '@/styles/variables' as *;
 
 .dashboard-page {
-  .metrics-row {
-    margin-bottom: 8px;
-  }
+  width: 100%;
+  min-height: 100%;
+  background: #f7f3ed;
+  color: #2b2622;
+}
 
-  .metric-card {
-    height: 100%;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.welcome-block {
+  padding: 10px 0 18px;
+}
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: $shadow-lg;
-    }
-  }
+.welcome-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #7c746d;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
 
-  .metric-content {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 8px 0;
-  }
+.welcome-badge {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(221, 112, 78, 0.08);
+  color: #dd704e;
+  font-size: 12px;
+}
 
-  .metric-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: $border-radius-base;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
+.welcome-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
 
-    &.icon-todo { background: #e1f3d8; color: #67c23a; }
-    &.icon-drug { background: #fef0f0; color: #f56c6c; }
-    &.icon-note { background: #e0f3ff; color: #409eff; }
-    &.icon-idoc { background: #fdf6ec; color: #e6a23c; }
-  }
-
-  .metric-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .metric-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 4px;
-    line-height: 1;
-  }
-
-  .metric-label {
-    font-size: 13px;
-    color: $text-secondary;
+.welcome-copy {
+  h1 {
     margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: clamp(2.25rem, 2.5vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.05em;
+    font-weight: 800;
+    color: #2b2622;
+  }
+
+  p {
+    margin: 10px 0 0;
+    color: #7c746d;
+    font-size: 15px;
   }
 }
 
-.content-row {
-  .section-card {
-    height: 100%;
+.date-card {
+  min-width: 162px;
+  background: #fffbf7;
+  border: 1px solid rgba(43, 38, 34, 0.05);
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 22px rgba(221, 112, 78, 0.05);
+
+  .date-label {
+    margin-bottom: 6px;
+    color: #7c746d;
+    font-size: 12px;
   }
 
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0;
-
-    h3 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 15px;
-      font-weight: 600;
-      color: $text-primary;
-      margin: 0;
-
-      el-icon {
-        font-size: 16px;
-        color: $primary-color;
-      }
-    }
+  strong {
+    color: #2b2622;
+    font-size: 26px;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
   }
 
-  .empty-state {
-    display: flex;
-    flex-direction: column;
+  small {
+    margin-top: 6px;
+    color: #7c746d;
+    font-size: 12px;
+  }
+}
+
+.panel-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.upper-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.lower-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+}
+
+.soft-card {
+  background: #fffbf7;
+  border: 1px solid rgba(43, 38, 34, 0.04);
+  border-radius: 16px;
+  box-shadow: 0 16px 30px rgba(221, 112, 78, 0.04);
+  padding: 18px 20px;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mini-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+
+  &.orange {
+    background: rgba(221, 112, 78, 0.12);
+    color: #dd704e;
+  }
+
+  &.purple {
+    background: rgba(153, 129, 255, 0.12);
+    color: #8d76d8;
+  }
+
+  &.blue {
+    background: rgba(84, 150, 255, 0.12);
+    color: #5f8de7;
+  }
+}
+
+.title-copy {
+  h2 {
+    margin: 0;
+    line-height: 1.2;
+    font-size: 18px;
+    color: #2b2622;
+    font-weight: 700;
+  }
+
+  small {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #7c746d;
+  }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+
+  span {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
-    text-align: center;
-
-    .empty-icon {
-      font-size: 40px;
-      color: $text-placeholder;
-      margin-bottom: 12px;
-    }
-
-    p {
-      color: $text-secondary;
-      margin: 0 0 16px;
-    }
-  }
-
-  .item-list {
-    .list-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid $border-color-light;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      .item-content {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .item-title {
-        font-size: 14px;
-        font-weight: 500;
-        color: $text-primary;
-        margin: 0 0 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .item-meta {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 12px;
-        color: $text-secondary;
-        margin: 0;
-
-        el-icon {
-          font-size: 12px;
-        }
-      }
-    }
-
-    .expiring-item {
-      .item-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: $border-radius-base;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        flex-shrink: 0;
-
-        &.drug { background: #fef0f0; color: #f56c6c; }
-        &.idoc { background: #fdf6ec; color: #e6a23c; }
-      }
-    }
+    min-height: 22px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #fff9f5;
+    border: 1px solid #f5e2d8;
+    color: #7c746d;
+    font-size: 10px;
   }
 }
 
-.recent-section {
-  .recent-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-
-  .recent-card {
-    padding: 16px;
-    background: #fff;
-    border: 1px solid $border-color;
-    border-radius: $border-radius-base;
-    transition: all 0.2s ease;
-    cursor: pointer;
-
-    &:hover {
-      border-color: $primary-color;
-      box-shadow: $shadow-base;
-      transform: translateY(-2px);
-    }
-
-    .recent-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-
-      .recent-time {
-        font-size: 12px;
-        color: $text-placeholder;
-      }
-    }
-
-    .recent-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: $text-primary;
-      margin: 0 0 8px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .recent-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-  }
+.text-link {
+  border: none;
+  background: transparent;
+  color: #dd704e;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
 }
 
-.shortcuts-card {
-  .shortcuts-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  padding: 10px 18px 4px;
+  text-align: center;
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    color: #2b2622;
+    font-weight: 700;
   }
 
-  .shortcut-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 20px 12px;
-    background: #fff;
-    border: 1px solid $border-color;
-    border-radius: $border-radius-base;
-    text-decoration: none;
-    color: $text-primary;
-    transition: all 0.2s ease;
-    position: relative;
-
-    &:hover {
-      border-color: $primary-color;
-      color: $primary-color;
-      transform: translateY(-2px);
-      box-shadow: $shadow-base;
-    }
-
-    .shortcut-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: $border-radius-base;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-
-      &.drug { background: #fef0f0; color: #f56c6c; }
-      &.todo { background: #e1f3d8; color: #67c23a; }
-      &.note { background: #e0f3ff; color: #409eff; }
-      &.idoc { background: #fdf6ec; color: #e6a23c; }
-    }
-
-    .shortcut-name {
-      font-size: 14px;
-      font-weight: 500;
-      text-align: center;
-    }
-
-    .shortcut-count {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      min-width: 18px;
-      height: 18px;
-      border-radius: 9px;
-      background: $primary-color;
-      color: #fff;
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 5px;
-    }
-  }
-
-  .add-shortcut {
-    border-style: dashed;
-    border-color: $border-color;
-
-    &:hover {
-      border-color: $primary-color;
-      background: $primary-light-bg;
-    }
-
-    .add-icon {
-      font-size: 28px;
-      color: $text-placeholder;
-
-      &:hover {
-        color: $primary-color;
-      }
-    }
-  }
-}
-
-.pwa-install-card {
-  background: $primary-light-bg;
-  border-color: $primary-light-border;
-
-  .pwa-install-text {
-    font-size: 13px;
-    color: $text-secondary;
+  p {
     margin: 0 0 16px;
-    line-height: 1.6;
+    max-width: 360px;
+    line-height: 1.7;
+    color: #7c746d;
+    font-size: 13px;
   }
+}
+
+.empty-illustration {
+  position: relative;
+  width: 170px;
+  height: 110px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff9f5 0%, #f7f3ed 100%);
+  border: 1px solid rgba(221, 112, 78, 0.08);
+}
+
+.mini-house {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  width: 86px;
+  height: 52px;
+  border-radius: 12px 12px 10px 10px;
+  background: linear-gradient(180deg, #f4c785 0%, #efa75c 100%);
+  transform: translateX(-50%);
+}
+
+.mini-house::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  width: 68px;
+  height: 34px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #f8b56f 0%, #eb8f5d 100%);
+  clip-path: polygon(50% 0, 100% 38%, 100% 100%, 0 100%, 0 38%);
+  border-radius: 8px 8px 0 0;
+}
+
+.mini-plant {
+  position: absolute;
+  bottom: 10px;
+  width: 17px;
+  height: 34px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #d7efc7 0%, #b7d79a 100%);
+}
+
+.mini-plant::before,
+.mini-plant::after {
+  content: '';
+  position: absolute;
+  bottom: 16px;
+  width: 8px;
+  height: 20px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #dfeecb 0%, #afd18f 100%);
+}
+
+.mini-plant::before { left: 1px; transform: rotate(-18deg); }
+.mini-plant::after { right: 1px; transform: rotate(18deg); }
+
+.plant-left { left: 30px; }
+.plant-right { right: 30px; }
+
+.mini-bubble {
+  position: absolute;
+  right: 22px;
+  top: 18px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #dd704e;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(43, 38, 34, 0.06);
+}
+
+.mini-clock {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  width: 54px;
+  height: 54px;
+  transform: translateX(-50%);
+  border: 3px solid rgba(221, 112, 78, 0.45);
+  border-radius: 50%;
+}
+
+.mini-clock::before,
+.mini-clock::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: #dd704e;
+  border-radius: 2px;
+  transform-origin: center bottom;
+}
+
+.mini-clock::before {
+  width: 2px;
+  height: 18px;
+  transform: translate(-50%, -100%) rotate(38deg);
+}
+
+.mini-clock::after {
+  width: 2px;
+  height: 12px;
+  transform: translate(-50%, -100%) rotate(130deg);
+}
+
+.mini-alert {
+  position: absolute;
+  right: 30px;
+  bottom: 18px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbe2e2 0%, #f9d8d8 100%);
+  color: #d56767;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(245, 108, 108, 0.12);
+}
+
+.primary-btn {
+  border: none;
+  background: linear-gradient(135deg, #dd704e 0%, #d9633d 100%);
+  color: #fff;
+  min-width: 150px;
+  height: 38px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(221, 112, 78, 0.18);
+}
+
+.recent-header {
+  margin-bottom: 12px;
+}
+
+.filter-select {
+  width: 140px;
+
+  :deep(.el-input__wrapper) {
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(43, 38, 34, 0.05);
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: none;
+  }
+}
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.record-item {
+  display: grid;
+  grid-template-columns: 1.3fr minmax(0, 2.8fr) 40px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(43, 38, 34, 0.04);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.52);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 10px 18px rgba(43, 38, 34, 0.04);
+  }
+}
+
+.record-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.module-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 20px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+
+  &.note { background: rgba(112, 161, 255, 0.12); color: #5a86d7; }
+  &.drug { background: rgba(118, 175, 103, 0.12); color: #4e8a4c; }
+  &.todo { background: rgba(221, 112, 78, 0.12); color: #d06a47; }
+  &.idoc { background: rgba(216, 110, 110, 0.12); color: #c76767; }
+}
+
+.record-meta {
+  color: #7c746d;
+  font-size: 11px;
+}
+
+.record-body {
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 6px;
+    color: #2b2622;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 0;
+    color: rgba(43, 38, 34, 0.66);
+    font-size: 12px;
+    line-height: 1.65;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.record-actions {
+  display: flex;
+  justify-content: center;
+
+  button {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(221, 112, 78, 0.08);
+    color: #dd704e;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+  }
+}
+
+.record-item:hover .record-actions button {
+  opacity: 1;
+}
+
+.shortcut-panel {
+  padding-bottom: 12px;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shortcut-item {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 12px 10px 12px 12px;
+  border: 1px solid rgba(43, 38, 34, 0.06);
+  border-radius: 12px;
+  background: #fffbf7;
+  color: #2b2622;
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgba(221, 112, 78, 0.34);
+    background: #fff7f2;
+    transform: translateY(-1px);
+  }
+}
+
+.shortcut-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 18px;
+
+  &.drug { background: rgba(81, 163, 92, 0.08); color: #4e8a4c; }
+  &.todo { background: rgba(221, 112, 78, 0.1); color: #dd704e; }
+  &.note { background: rgba(94, 136, 255, 0.08); color: #5a86d7; }
+  &.idoc { background: rgba(214, 111, 111, 0.08); color: #c76767; }
+}
+
+.shortcut-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2b2622;
+}
+
+.shortcut-arrow {
+  color: rgba(43, 38, 34, 0.52);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.add-shortcut {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.add-box {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(221, 112, 78, 0.08);
+  color: #dd704e;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.shortcut-footer {
+  margin: 16px 2px 0;
+  color: #7c746d;
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.02em;
 }
 
 .module-select-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 8px 0;
 }
 
 .module-select-item {
@@ -903,90 +1056,65 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 16px 12px;
-  background: #fff;
-  border: 2px solid $border-color;
-  border-radius: $border-radius-base;
+  padding: 18px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(43, 38, 34, 0.06);
+  background: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: $primary-color;
+    border-color: rgba(221, 112, 78, 0.34);
   }
 
   &.selected {
-    border-color: $primary-color;
-    background: $primary-light-bg;
-  }
-
-  .module-select-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: $border-radius-base;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-
-    &.drug { background: #fef0f0; color: #f56c6c; }
-    &.todo { background: #e1f3d8; color: #67c23a; }
-    &.note { background: #e0f3ff; color: #409eff; }
-    &.idoc { background: #fdf6ec; color: #e6a23c; }
-  }
-
-  span {
-    font-size: 13px;
-    font-weight: 500;
-    color: $text-primary;
+    background: rgba(221, 112, 78, 0.06);
+    border-color: rgba(221, 112, 78, 0.34);
   }
 }
 
-// 响应式
-@media (max-width: 767px) {
-  .dashboard-page {
-    .metrics-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
-    }
+.module-select-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 
-    .metric-content {
-      gap: 12px;
-    }
+  &.drug { background: rgba(81, 163, 92, 0.08); color: #4e8a4c; }
+  &.todo { background: rgba(221, 112, 78, 0.10); color: #dd704e; }
+  &.note { background: rgba(94, 136, 255, 0.08); color: #5a86d7; }
+  &.idoc { background: rgba(214, 111, 111, 0.08); color: #c76767; }
+}
 
-    .metric-icon {
-      width: 40px;
-      height: 40px;
-      font-size: 18px;
-    }
+@media (max-width: 980px) {
+  .upper-grid,
+  .lower-grid {
+    grid-template-columns: 1fr;
+  }
 
-    .metric-value {
-      font-size: 20px;
-    }
-
-    .recent-grid {
-      grid-template-columns: 1fr !important;
-    }
-
-    .shortcuts-grid {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
-
-    .shortcut-item {
-      padding: 16px 8px;
-    }
+  .record-item {
+    grid-template-columns: 1fr;
   }
 }
 
-// 长辈模式
-.elderly-mode .dashboard-page {
-  .metric-value { font-size: 28px !important; }
-  .metric-label { font-size: 16px !important; }
-  .item-title { font-size: 16px !important; }
-  .item-meta { font-size: 14px !important; }
-  .recent-title { font-size: 16px !important; }
-  .recent-time { font-size: 14px !important; }
-  .shortcut-name { font-size: 16px !important; }
-  .section-card :deep(.el-card__header) { padding: 16px 20px !important; }
+@media (max-width: 640px) {
+  .welcome-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .date-card {
+    width: 100%;
+  }
+
+  .stat-chips {
+    justify-content: flex-start;
+  }
+
+  .shortcut-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
