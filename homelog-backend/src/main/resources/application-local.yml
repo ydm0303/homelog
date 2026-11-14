@@ -158,4 +158,4 @@ logging:
     max-history: 30
 # 前端跨域域名
 cors:
-  allow-origins: http://localhost:5173,http://127.0.0.1:5173,https://homelog-frontend.onrender.com
+  allow-origins: http://localhost:5173,http://127.0.0.1:5173

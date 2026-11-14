@@ -93,7 +93,6 @@ home-log/
 ```bash
 cd homelog-backend
 
-# 修改配置文件 (application-dev.yml)
 # 配置数据库连接信息
 
 # 编译并运行
@@ -248,7 +247,6 @@ home-log/
 ```bash
 cd homelog-backend
 
-# Configure database (application-dev.yml)
 
 # Build and run
 mvn clean package -DskipTests

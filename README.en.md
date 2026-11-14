@@ -89,7 +89,6 @@ home-log/
 ```bash
 cd homelog-backend
 
-# Configure database (application-dev.yml)
 
 # Build and run
 mvn clean package -DskipTests
