@@ -39,18 +39,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     public void configure(WebSecurity web) throws Exception {
+        // web.ignoring 只放静态资源、swagger相关，不要放业务接口！
         web.ignoring().antMatchers(
-                "/api/auth/**",
-                "/api/public/**",
-                "/api/messages/unread-count",  // 未读数（顶部栏徽标）
                 "/swagger-ui/**",
                 "/v2/api-docs",
                 "/swagger-resources/**",
                 "/webjars/**",
-                "/favicon.ico",
-                "/actuator/health",
-                "/actuator/info",
-                "/common/health"
+                "/favicon.ico"
         );
     }
 
@@ -61,18 +56,24 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
+                // 所有OPTIONS预检请求放行
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // 登录注册接口（你当前使用 /auth/register）
+                .antMatchers("/auth/**").permitAll()
                 .antMatchers("/api/auth/**").permitAll()
                 .antMatchers("/api/public/**").permitAll()
+                .antMatchers("/api/messages/unread-count").permitAll()
                 .antMatchers("/actuator/**").permitAll()
-                .antMatchers("/swagger-ui/**", "/v2/api-docs", "/swagger-resources/**", "/webjars/**").permitAll()
+                // 保活健康接口
+                .antMatchers("/common/health").permitAll()
                 .anyRequest().authenticated()
                 .and()
+                // jwt过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .headers().frameOptions().disable();
-
-        // CORS 配置
-        http.cors();
+                .headers().frameOptions().disable()
+                .and()
+                // 开启CORS，配合CorsConfig生效
+                .cors();
     }
 
     @Bean
