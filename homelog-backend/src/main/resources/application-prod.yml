@@ -156,3 +156,7 @@ logging:
     name: logs/homelog-prod.log
     max-size: 200MB
     max-history: 30
+
+# 前端跨域域名
+cors:
+  allow-origins: ${origins}
