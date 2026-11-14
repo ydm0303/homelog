@@ -5,6 +5,8 @@ export interface User {
   email: string
   nickName: string
   avatar: string
+  role?: number
+  spaceId?: number
   createdAt: string
   updatedAt: string
 }
@@ -88,4 +90,26 @@ export interface ApiResponse<T> {
   message: string
   data: T
   timestamp: number
+}
+
+export interface PageResult<T> {
+  data: T[]
+  total: number
+  page: number
+  size: number
+}
+
+export interface DashboardModuleStat {
+  moduleId: number
+  moduleKey: string
+  name: string
+  showInHome: number
+  count: number
+}
+
+export interface DashboardSummary {
+  modules: DashboardModuleStat[]
+  todos: RecordVO[]
+  expiring: RecordVO[]
+  recent: RecordVO[]
 }

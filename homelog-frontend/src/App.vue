@@ -9,15 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-
-const authStore = useAuthStore()
-
-onMounted(() => {
-  // 初始化认证状态
-  authStore.initAuth()
-})
+// 认证状态由路由守卫在首次导航前初始化，避免刷新页面时先跳登录页
 </script>
 
 <style lang="scss">

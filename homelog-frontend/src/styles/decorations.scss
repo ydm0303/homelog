@@ -1,0 +1,27 @@
+// ============================================================
+// 品牌插画与页面装饰色板
+// ------------------------------------------------------------
+// 这里的颜色只服务于登录页插画、首页空状态插画与品牌渐变，
+// 不参与设计系统语义，页面不要用它表达状态或层级。
+// 修改时请同步检查 Login / Register / Dashboard 三处视觉。
+// ============================================================
+
+@use './variables' as *;
+
+// 登录 / 注册
+$gradient-login-bg: linear-gradient(135deg, #f8f4ef 0%, #f4efe7 32%, #f7f3ee 100%);
+$gradient-brand-panel: linear-gradient(180deg, #f7f3ed 0%, #f3efe9 100%);
+
+// 房屋插画
+$gradient-house: linear-gradient(180deg, #f1c38a 0%, #f2b267 100%);
+$gradient-house-roof: linear-gradient(180deg, #f7b26d 0%, #ed8a5b 100%);
+$illustration-house-shadow: rgba(122, 87, 44, 0.12);
+
+// 植物插画
+$gradient-plant: linear-gradient(180deg, #e7f4df 0%, #bfd9b7 100%);
+$gradient-leaf: linear-gradient(180deg, #d9efc9, #a3c98c);
+
+// 提醒气泡 / 空状态装饰
+$gradient-alert: linear-gradient(135deg, #fbe2e2 0%, #f9d8d8 100%);
+$gradient-empty-illustration: linear-gradient(180deg, $surface-warm-soft 0%, $bg-color 100%);
+$illustration-alert-text: #d56767;

@@ -1,7 +1,15 @@
 <template>
   <div class="module-list-page">
+    <PageHeader :title="currentModuleName || '模块列表'" :description="pageDescription">
+      <template #actions>
+        <el-button v-if="canCreate" type="primary" :icon="Plus" @click="handleCreate">
+          新增记录
+        </el-button>
+      </template>
+    </PageHeader>
+
     <!-- 搜索筛选栏 -->
-    <el-card class="filter-card" shadow="never">
+    <AppCard class="filter-card" padding="sm">
       <div class="filter-row">
         <el-input
           v-model="searchKeyword"
@@ -9,15 +17,15 @@
           :prefix-icon="Search"
           clearable
           size="default"
+          class="filter-search"
           @keyup.enter="handleSearch"
-          style="max-width: 320px; flex: 1"
         />
 
         <el-select
           v-model="selectedTag"
           placeholder="标签筛选"
           size="default"
-          style="width: 160px"
+          class="filter-tag"
           @change="handleSearch"
           filterable
         >
@@ -29,26 +37,12 @@
           />
         </el-select>
 
-        <el-select
+        <el-segmented
           v-model="viewMode"
-          placeholder="视图模式"
-          size="default"
-          style="width: 140px"
+          :options="viewOptions"
+          class="view-segment"
           @change="handleViewModeChange"
-        >
-          <el-option label="列表视图" value="list" />
-          <el-option label="卡片视图" value="card" />
-          <el-option label="时间轴" value="timeline" />
-        </el-select>
-
-        <el-button
-          v-if="isAdmin || isEditor"
-          type="primary"
-          :icon="Plus"
-          @click="handleCreate"
-        >
-          新增
-        </el-button>
+        />
       </div>
 
       <!-- 高级筛选 -->
@@ -62,7 +56,8 @@
               range-separator="至"
               start-placeholder="开始日期"
               end-placeholder="结束日期"
-              style="width: 280px"
+              value-format="YYYY-MM-DD"
+              class="filter-date"
               @change="handleSearch"
             />
             <el-input
@@ -70,10 +65,10 @@
               placeholder="创建人"
               :prefix-icon="User"
               clearable
-              style="width: 200px"
+              class="filter-creator"
               @keyup.enter="handleSearch"
             />
-            <el-checkbox v-model="showPrivateOnly" @change="handleSearch">
+            <el-checkbox v-if="isAdmin" v-model="showPrivateOnly" @change="handleSearch">
               仅显示私密记录 (管理员)
             </el-checkbox>
             <el-button @click="resetFilter">重置筛选</el-button>
@@ -88,42 +83,75 @@
         </el-button>
         <span class="result-count">共 {{ total }} 条记录</span>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 列表内容 -->
-    <el-card class="list-card" shadow="never">
+    <AppCard class="list-card" padding="none">
       <!-- 列表视图 -->
-      <div v-if="viewMode === 'list'" class="list-view">
+      <div v-if="viewMode === 'list'" v-loading="loading" class="list-view">
+        <div class="mobile-record-list">
+          <article
+            v-for="record in records"
+            :key="`mobile-${record.id}`"
+            class="mobile-record"
+            role="button"
+            tabindex="0"
+            @click="goToDetail(record)"
+            @keyup.enter="goToDetail(record)"
+          >
+            <div class="mobile-record-top">
+              <span class="mobile-record-title">{{ record.title || getDisplayValue(record) }}</span>
+              <span
+                v-if="record.remindDate"
+                class="remind-tag"
+                :class="getRemindClass(record.remindDate)"
+              >
+                {{ formatDate(record.remindDate) }}
+              </span>
+            </div>
+            <p class="mobile-record-summary">{{ getDisplayValue(record) || '暂无摘要' }}</p>
+            <div class="mobile-record-meta">
+              <span>{{ record.creatorName }}</span>
+              <span>{{ formatDateTime(record.createdAt) }}</span>
+            </div>
+          </article>
+
+          <EmptyState
+            v-if="records.length === 0 && !loading"
+            compact
+            :icon="hasActiveFilters ? Search : Document"
+            :title="emptyTitle"
+            :description="emptyDescription"
+          >
+            <template #actions>
+              <el-button v-if="hasActiveFilters" @click="resetFilter">清空筛选</el-button>
+              <el-button v-else-if="canCreate" type="primary" @click="handleCreate">
+                创建第一条记录
+              </el-button>
+            </template>
+          </EmptyState>
+        </div>
+
         <el-table
           :data="records"
-          :loading="loading"
-          border
-          stripe
+          class="record-table"
           style="width: 100%"
           :default-sort="{ prop: 'createdAt', order: 'descending' }"
+          row-class-name="record-row"
+          @row-click="goToDetail"
         >
-          <el-table-column
-            prop="title"
-            label="标题"
-            min-width="180"
-            show-overflow-tooltip
-          />
-          <el-table-column
-            label="核心字段"
-            min-width="200"
-          >
+          <el-table-column label="记录" min-width="300">
             <template #default="scope">
-              <span class="field-value">{{ getDisplayValue(scope.row) }}</span>
+              <div class="record-cell">
+                <span class="record-title">{{ scope.row.title || getDisplayValue(scope.row) }}</span>
+                <span class="record-summary">{{ getDisplayValue(scope.row) || '暂无摘要' }}</span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column
-            prop="tags"
-            label="标签"
-            width="140"
-            show-overflow-tooltip
-          >
+
+          <el-table-column label="标签" width="180">
             <template #default="scope">
-              <template v-if="scope.row.tags">
+              <div v-if="scope.row.tags" class="tag-list">
                 <el-tag
                   v-for="tag in scope.row.tags.split(',')"
                   :key="tag"
@@ -132,105 +160,109 @@
                 >
                   {{ tag }}
                 </el-tag>
-              </template>
+              </div>
+              <span v-else class="cell-muted">—</span>
             </template>
           </el-table-column>
-          <el-table-column
-            prop="creatorName"
-            label="创建人"
-            width="100"
-          />
-          <el-table-column
-            prop="remindDate"
-            label="提醒日期"
-            width="120"
-          >
+
+          <el-table-column label="提醒" width="120">
             <template #default="scope">
-              <span v-if="scope.row.remindDate" :class="getRemindClass(scope.row.remindDate)">
+              <span
+                v-if="scope.row.remindDate"
+                class="remind-tag"
+                :class="getRemindClass(scope.row.remindDate)"
+              >
                 {{ formatDate(scope.row.remindDate) }}
               </span>
+              <span v-else class="cell-muted">—</span>
             </template>
           </el-table-column>
-          <el-table-column
-            prop="createdAt"
-            label="创建时间"
-            width="160"
-          >
+
+          <el-table-column prop="creatorName" label="创建人" width="100">
             <template #default="scope">
-              {{ formatDateTime(scope.row.createdAt) }}
+              <span class="cell-muted">{{ scope.row.creatorName }}</span>
             </template>
           </el-table-column>
-          <el-table-column
-            label="操作"
-            width="160"
-            fixed="right"
-          >
+
+          <el-table-column label="创建时间" width="150">
             <template #default="scope">
-              <el-dropdown size="small">
-                <el-button link>
-                  操作 <el-icon><ArrowDown /></el-icon>
+              <span class="cell-muted">{{ formatDateTime(scope.row.createdAt) }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="128" fixed="right" align="right">
+            <template #default="scope">
+              <div class="row-actions" @click.stop>
+                <el-tooltip content="查看详情" placement="top" :show-after="300">
+                  <el-button text circle class="action-btn" aria-label="查看详情" @click="goToDetail(scope.row)">
+                    <el-icon><View /></el-icon>
+                  </el-button>
+                </el-tooltip>
+
+                <el-tooltip v-if="canEdit(scope.row)" content="编辑" placement="top" :show-after="300">
+                  <el-button text circle class="action-btn" aria-label="编辑" @click="goToEdit(scope.row)">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                </el-tooltip>
+
+                <el-dropdown trigger="click" size="small">
+                  <el-button text circle class="action-btn" aria-label="更多操作">
+                    <el-icon><MoreFilled /></el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="togglePrivate(scope.row, scope.row.isPrivate === 0)">
+                        <el-icon>
+                          <Lock v-if="scope.row.isPrivate === 0" />
+                          <Unlock v-else />
+                        </el-icon>
+                        {{ scope.row.isPrivate === 0 ? '设为私密' : '取消私密' }}
+                      </el-dropdown-item>
+                      <el-dropdown-item
+                        v-if="canDelete(scope.row)"
+                        class="danger-item"
+                        @click="handleDelete(scope.row)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                        删除
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </template>
+          </el-table-column>
+
+          <template #empty>
+            <EmptyState
+              compact
+              :icon="hasActiveFilters ? Search : Document"
+              :title="emptyTitle"
+              :description="emptyDescription"
+            >
+              <template #actions>
+                <el-button v-if="hasActiveFilters" @click="resetFilter">清空筛选</el-button>
+                <el-button v-else-if="canCreate" type="primary" @click="handleCreate">
+                  创建第一条记录
                 </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="goToDetail(scope.row)">
-                      <el-icon><View /></el-icon>
-                      查看详情
-                    </el-dropdown-item>
-                    <el-dropdown-item v-if="canEdit(scope.row)" @click="goToEdit(scope.row)">
-                      <el-icon><Edit /></el-icon>
-                      编辑
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      v-if="canDelete(scope.row)"
-                      @click="handleDelete(scope.row)"
-                      class="danger-item"
-                    >
-                      <el-icon><Delete /></el-icon>
-                      删除
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      v-if="scope.row.isPrivate === 0"
-                      @click="togglePrivate(scope.row, true)"
-                    >
-                      <el-icon><Lock /></el-icon>
-                      设为私密
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      v-if="scope.row.isPrivate === 1"
-                      @click="togglePrivate(scope.row, false)"
-                    >
-                      <el-icon><Unlock /></el-icon>
-                      取消私密
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </template>
-          </el-table-column>
+              </template>
+            </EmptyState>
+          </template>
         </el-table>
 
-        <!-- 分页 -->
-        <div class="pagination" v-if="total > pageSize">
-          <el-pagination
-            :current-page="page"
-            :page-size="pageSize"
-            :total="total"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handlePageChange"
-          />
-        </div>
       </div>
 
       <!-- 卡片视图 -->
-      <div v-else-if="viewMode === 'card'" class="card-view">
+      <div v-else-if="viewMode === 'card'" v-loading="loading" class="card-view">
         <div class="card-grid">
           <div
             v-for="record in records"
             :key="record.id"
             class="record-card"
+            role="button"
+            tabindex="0"
             @click="goToDetail(record)"
+            @keyup.enter="goToDetail(record)"
           >
             <div class="card-header">
               <el-tag size="small" :type="getModuleTagType(currentModuleKey)">
@@ -262,41 +294,34 @@
           </div>
         </div>
 
-        <div v-if="records.length === 0" class="empty-state">
-          <el-icon class="empty-icon"><Document /></el-icon>
-          <p>暂无记录</p>
-          <el-button
-            v-if="isAdmin || isEditor"
-            type="primary"
-            @click="handleCreate"
-          >
-            创建第一条记录
-          </el-button>
-        </div>
-
-        <div class="pagination" v-if="total > pageSize">
-          <el-pagination
-            :current-page="page"
-            :page-size="pageSize"
-            :total="total"
-            layout="prev, pager, next"
-            @current-change="handlePageChange"
-          />
-        </div>
+        <EmptyState
+          v-if="records.length === 0 && !loading"
+          compact
+          :icon="hasActiveFilters ? Search : Document"
+          :title="emptyTitle"
+          :description="emptyDescription"
+        >
+          <template #actions>
+            <el-button v-if="hasActiveFilters" @click="resetFilter">清空筛选</el-button>
+            <el-button v-else-if="canCreate" type="primary" @click="handleCreate">
+              创建第一条记录
+            </el-button>
+          </template>
+        </EmptyState>
       </div>
 
       <!-- 时间轴视图 -->
-      <div v-else-if="viewMode === 'timeline'" class="timeline-view">
+      <div v-else-if="viewMode === 'timeline'" v-loading="loading" class="timeline-view">
         <el-timeline>
           <el-timeline-item
             v-for="record in records"
             :key="record.id"
             :timestamp="formatDateTime(record.createdAt)"
-            :type="getTimelineType(record.moduleKey)"
-            :icon="getTimelineIcon(record.moduleKey)"
+            :type="getModuleTagType(record.moduleKey)"
+            :icon="getModuleIcon(record.moduleKey)"
             placement="top"
           >
-            <div class="timeline-content" @click="goToDetail(record)">
+            <div class="timeline-content" role="button" tabindex="0" @click="goToDetail(record)" @keyup.enter="goToDetail(record)">
               <div class="timeline-header">
                 <h4>{{ record.title || getDisplayValue(record) }}</h4>
                 <el-tag size="small" :type="getModuleTagType(record.moduleKey)">
@@ -319,22 +344,32 @@
           </el-timeline-item>
         </el-timeline>
 
-        <div v-if="records.length === 0" class="empty-state">
-          <el-icon class="empty-icon"><Clock /></el-icon>
-          <p>暂无记录</p>
-        </div>
-
-        <div class="pagination" v-if="total > pageSize">
-          <el-pagination
-            :current-page="page"
-            :page-size="pageSize"
-            :total="total"
-            layout="prev, pager, next"
-            @current-change="handlePageChange"
-          />
-        </div>
+        <EmptyState
+          v-if="records.length === 0 && !loading"
+          compact
+          :icon="hasActiveFilters ? Search : Clock"
+          :title="emptyTitle"
+          :description="emptyDescription"
+        >
+          <template #actions>
+            <el-button v-if="hasActiveFilters" @click="resetFilter">清空筛选</el-button>
+          </template>
+        </EmptyState>
       </div>
-    </el-card>
+
+      <!-- 分页 -->
+      <div class="pagination" v-if="total > pageSize">
+        <el-pagination
+          :current-page="page"
+          :page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
+        />
+      </div>
+    </AppCard>
   </div>
 </template>
 
@@ -346,10 +381,14 @@ import { useModuleStore } from '@/stores/module'
 import { recordApi } from '@/api'
 import {
   Search, Plus, ArrowDown, View, Edit, Delete, Lock, Unlock,
-  User, Document, Clock
+  User, Document, Clock, MoreFilled
 } from '@element-plus/icons-vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import AppCard from '@/components/ui/AppCard.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import dayjs from 'dayjs'
+import { formatDate as formatDateSafe, formatDateTime as formatDateTimeSafe, dayDiffFromToday } from '@/utils/date'
+import { getModuleIcon, getModuleTagType } from '@/utils/module'
 
 const route = useRoute()
 const router = useRouter()
@@ -367,7 +406,7 @@ const page = ref(1)
 const pageSize = ref(20)
 const searchKeyword = ref('')
 const selectedTag = ref('')
-const viewMode = ref<'list' | 'card' | 'timeline'>('list')
+const viewMode = ref('list')
 const showAdvancedFilter = ref(false)
 const filterDateRange = ref<[string, string] | null>(null)
 const filterCreator = ref('')
@@ -382,6 +421,31 @@ const fields = computed(() => currentModule.value?.fields || [])
 const isAdmin = computed(() => authStore.isAdmin)
 const isEditor = computed(() => authStore.isEditor)
 const isReadonly = computed(() => authStore.isReadonly)
+const canCreate = computed(() => isAdmin.value || isEditor.value)
+
+const viewOptions = [
+  { label: '列表', value: 'list' },
+  { label: '卡片', value: 'card' },
+  { label: '时间轴', value: 'timeline' }
+]
+
+const hasActiveFilters = computed(() =>
+  Boolean(
+    searchKeyword.value ||
+      selectedTag.value ||
+      filterDateRange.value ||
+      filterCreator.value.trim() ||
+      showPrivateOnly.value
+  )
+)
+
+const emptyTitle = computed(() => (hasActiveFilters.value ? '没有符合条件的记录' : '还没有记录'))
+const emptyDescription = computed(() =>
+  hasActiveFilters.value ? '换个关键词，或清空筛选后再看看' : '把家里的小事记下来，之后随时能找到'
+)
+const pageDescription = computed(() =>
+  total.value > 0 ? `共 ${total.value} 条记录` : '查看和管理这个模块下的所有记录'
+)
 
 onMounted(async () => {
   // 必须先加载模块列表，否则刷新页面时 currentModuleId 仍为空会被误判为模块不存在
@@ -412,7 +476,7 @@ async function fetchRecords() {
 
   loading.value = true
   try {
-    const params: Record<string, any> = {
+    const params: any = {
       moduleId: currentModuleId.value,
       page: page.value,
       size: pageSize.value
@@ -420,11 +484,17 @@ async function fetchRecords() {
 
     if (searchKeyword.value) params.keyword = searchKeyword.value
     if (selectedTag.value) params.tag = selectedTag.value
+    if (filterDateRange.value) {
+      params.startDate = filterDateRange.value[0]
+      params.endDate = filterDateRange.value[1]
+    }
+    if (filterCreator.value.trim()) params.creator = filterCreator.value.trim()
+    if (showPrivateOnly.value) params.privateOnly = true
 
     const response = await recordApi.list(params)
-    records.value = applyLocalFilters(response.data)
-    // 后端 list 接口不返回总数，用当前页长度估算
-    total.value = records.value.length + (page.value - 1) * pageSize.value
+    const body = response.data || {}
+    records.value = body.data || []
+    total.value = body.total ?? records.value.length
   } catch (error) {
     console.error('Failed to fetch records:', error)
     ElMessage.error('获取列表失败')
@@ -433,45 +503,11 @@ async function fetchRecords() {
   }
 }
 
-// 日期范围/创建人/仅私密后端 list 接口不支持，改为对当前页结果本地过滤
-function applyLocalFilters(rows: any[]): any[] {
-  let result = rows
-
-  if (filterDateRange.value) {
-    const startTime = dayjs(filterDateRange.value[0]).startOf('day')
-    const endTime = dayjs(filterDateRange.value[1]).endOf('day')
-    result = result.filter(r => {
-      if (!r.createdAt) return false
-      const created = dayjs(r.createdAt)
-      return !created.isBefore(startTime) && !created.isAfter(endTime)
-    })
-  }
-
-  if (filterCreator.value.trim()) {
-    const keyword = filterCreator.value.trim().toLowerCase()
-    result = result.filter(r => (r.creatorName || '').toLowerCase().includes(keyword))
-  }
-
-  if (showPrivateOnly.value) {
-    result = result.filter(r => r.isPrivate === 1)
-  }
-
-  return result
-}
-
 async function fetchAllTags() {
   if (!currentModuleId.value) return
   try {
-    const response = await recordApi.list({
-      moduleId: currentModuleId.value,
-      page: 1,
-      size: 500
-    })
-    const tagSet = new Set<string>()
-    response.data.forEach((r: any) => {
-      r.tags?.split(',').forEach((t: string) => t.trim() && tagSet.add(t.trim()))
-    })
-    allTags.value = Array.from(tagSet).sort()
+    const response = await recordApi.tags(currentModuleId.value)
+    allTags.value = Array.isArray(response.data) ? response.data : []
   } catch (e) {
     console.error(e)
   }
@@ -482,8 +518,8 @@ function handleSearch() {
   fetchRecords()
 }
 
-function handleViewModeChange(mode: 'list' | 'card' | 'timeline') {
-  viewMode.value = mode
+function handleViewModeChange(mode: string | number | boolean) {
+  viewMode.value = String(mode)
 }
 
 function handlePageChange(newPage: number) {
@@ -515,7 +551,7 @@ function canEdit(record: any) {
   return record.creatorId === authStore.user?.id
 }
 
-function canDelete(record: any) {
+function canDelete(_record: any) {
   return isAdmin.value
 }
 
@@ -600,53 +636,25 @@ function getDisplayFields(record: any): Record<string, any> {
 }
 
 function getRemindClass(remindDate: string) {
-  const diff = dayjs(remindDate).diff(dayjs(), 'day')
+  const diff = dayDiffFromToday(remindDate)
+  if (diff === null) return ''
   if (diff < 0) return 'remind-overdue'
   if (diff <= 3) return 'remind-soon'
   return ''
 }
 
-function getModuleTagType(moduleKey: string) {
-  const types: Record<string, string> = {
-    drug: 'primary',
-    todo: 'success',
-    note: 'info',
-    idoc: 'warning'
-  }
-  return types[moduleKey] || 'info'
-}
-
-function getTimelineType(moduleKey: string) {
-  const types: Record<string, string> = {
-    drug: 'primary',
-    todo: 'success',
-    note: 'info',
-    idoc: 'warning'
-  }
-  return types[moduleKey] || 'info'
-}
-
-function getTimelineIcon(moduleKey: string) {
-  const icons: Record<string, string> = {
-    drug: 'FirstAidKit',
-    todo: 'Checked',
-    note: 'Picture',
-    idoc: 'CreditCard'
-  }
-  return icons[moduleKey] || 'Document'
-}
-
 function formatDate(dateStr: string) {
-  return dayjs(dateStr).format('MM-DD')
+  return formatDateSafe(dateStr, 'MM-DD')
 }
 
 function formatDateTime(dateStr: string) {
-  return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
+  return formatDateTimeSafe(dateStr)
 }
 </script>
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
+@use '@/styles/breakpoints' as *;
 
 .module-list-page {
   .filter-card {
@@ -691,17 +699,17 @@ function formatDateTime(dateStr: string) {
       }
 
       .remind-overdue {
-        color: #f56c6c;
+        color: $danger-text;
         font-weight: 500;
       }
 
       .remind-soon {
-        color: #e6a23c;
+        color: $warning-text;
         font-weight: 500;
       }
 
       .danger-item {
-        color: #f56c6c;
+        color: $danger-text;
       }
     }
   }
@@ -722,15 +730,15 @@ function formatDateTime(dateStr: string) {
 
     .record-card {
       padding: 16px;
-      background: #fff;
+      background: $card-bg;
       border: 1px solid $border-color;
       border-radius: $border-radius-base;
       transition: all 0.2s ease;
       cursor: pointer;
 
       &:hover {
-        border-color: $primary-color;
-        box-shadow: $shadow-base;
+        border-color: $primary-text;
+        box-shadow: $shadow-hover;
         transform: translateY(-2px);
       }
 
@@ -820,7 +828,7 @@ function formatDateTime(dateStr: string) {
 
         &:hover {
           .timeline-header h4 {
-            color: $primary-color;
+            color: $primary-text;
           }
         }
       }
@@ -865,12 +873,6 @@ function formatDateTime(dateStr: string) {
       flex-direction: column;
       align-items: stretch;
 
-      :deep(.el-input),
-      :deep(.el-select) {
-        width: 100% !important;
-        max-width: none !important;
-      }
-
       :deep(.el-button) {
         width: 100%;
       }
@@ -879,33 +881,221 @@ function formatDateTime(dateStr: string) {
     .advanced-filter-content {
       flex-direction: column;
       align-items: stretch;
-
-      :deep(.el-date-picker),
-      :deep(.el-input) {
-        width: 100% !important;
-      }
     }
 
     .card-grid {
-      grid-template-columns: 1fr !important;
+      grid-template-columns: 1fr;
     }
   }
 }
 
-// 长辈模式
-.elderly-mode .module-list-page {
-  :deep(.el-table) {
-    font-size: 16px !important;
+// ============================================================
+// Phase 1：列表页结构、表格与移动端卡片
+// ============================================================
+.module-list-page {
+  .filter-card {
+    margin-bottom: 16px;
   }
 
-  :deep(.el-pagination) {
-    font-size: 15px !important;
+  .filter-search {
+    width: 320px;
+    max-width: 100%;
   }
 
-  .card-title { font-size: 18px !important; }
-  .field-label { font-size: 15px !important; }
-  .field-value { font-size: 15px !important; }
-  .timeline-header h4 { font-size: 17px !important; }
-  .timeline-fields { font-size: 15px !important; }
+  .filter-tag,
+  .filter-creator {
+    width: 160px;
+  }
+
+  .filter-date {
+    width: 280px;
+  }
+
+  .view-segment {
+    margin-left: auto;
+  }
+
+  .remind-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: $surface-warm;
+    color: $text-secondary;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+
+    &.remind-overdue {
+      background: $danger-bg;
+      color: $danger-text;
+    }
+
+    &.remind-soon {
+      background: $warning-bg;
+      color: $warning-text;
+    }
+  }
+}
+
+.record-table {
+  :deep(.el-table__cell) {
+    padding: 12px 0;
+  }
+
+  :deep(th.el-table__cell) {
+    padding: 10px 0;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  :deep(.el-table__row) {
+    cursor: pointer;
+  }
+
+  .record-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .record-title {
+    overflow: hidden;
+    color: $text-primary;
+    font-size: 14px;
+    font-weight: $font-weight-semibold;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .record-summary {
+    overflow: hidden;
+    color: $text-tertiary;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .cell-muted {
+    color: $text-tertiary;
+    font-size: 12px;
+  }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    opacity: 0.55;
+    transition: opacity $transition-fast $ease-out;
+  }
+
+  :deep(.el-table__row:hover) .row-actions {
+    opacity: 1;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    color: $text-tertiary;
+
+    :deep(.el-icon) {
+      font-size: $icon-size-sm;
+    }
+  }
+
+  :deep(.danger-item) {
+    color: $danger-text;
+  }
+}
+
+.mobile-record-list {
+  display: none;
+}
+
+.list-card > .pagination {
+  padding: 14px 20px;
+  border-top: 1px solid $border-color-light;
+}
+
+@include down(md) {
+  .module-list-page {
+    .filter-search,
+    .filter-tag,
+    .filter-date,
+    .filter-creator {
+      width: 100%;
+    }
+
+    .view-segment {
+      width: 100%;
+      margin-left: 0;
+    }
+  }
+
+  .record-table {
+    display: none;
+  }
+
+  .mobile-record-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-record {
+    padding: 14px 16px;
+    border-bottom: 1px solid $border-color-light;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background: $surface-warm-soft;
+    }
+  }
+
+  .mobile-record-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mobile-record-title {
+    overflow: hidden;
+    color: $text-primary;
+    font-size: 14px;
+    font-weight: $font-weight-semibold;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-record-summary {
+    overflow: hidden;
+    margin: 6px 0 8px;
+    color: $text-tertiary;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-record-meta {
+    display: flex;
+    gap: 12px;
+    color: $text-placeholder;
+    font-size: 11px;
+  }
+
+  .list-card > .pagination {
+    padding: 12px;
+  }
 }
 </style>

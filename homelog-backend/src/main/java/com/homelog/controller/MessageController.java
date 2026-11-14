@@ -81,4 +81,15 @@ public class MessageController {
         messageService.markAllRead();
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * 删除单条消息（仅限本人）
+     * DELETE /api/messages/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        log.info("删除消息：{}", id);
+        messageService.deleteMessage(id);
+        return ResponseEntity.ok().build();
+    }
 }

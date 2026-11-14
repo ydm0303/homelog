@@ -1,21 +1,14 @@
 <template>
   <div class="record-detail-page" v-if="record">
     <!-- 返回按钮 + 操作栏 -->
-    <div class="detail-header">
-      <el-button @click="goBack" class="back-btn">
-        <el-icon><ArrowLeft /></el-icon>
-        返回
-      </el-button>
-
-      <div class="detail-title">
-        <el-tag :type="getModuleTagType(record.moduleKey)" size="medium">
+    <PageHeader :title="record.title || '无标题记录'" back @back="goBack">
+      <template #tag>
+        <el-tag :type="getModuleTagType(record.moduleKey)" size="default">
           {{ record.moduleName }}
         </el-tag>
-        <h1 v-if="record.title">{{ record.title }}</h1>
-        <h1 v-else class="untitled">无标题记录</h1>
-      </div>
+      </template>
 
-      <div class="detail-actions">
+      <template #actions>
         <el-dropdown size="default">
           <el-button>
             操作 <el-icon><ArrowDown /></el-icon>
@@ -45,8 +38,8 @@
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 私密标记 -->
     <el-alert
@@ -70,9 +63,13 @@
             v-for="(img, index) in record.imagesJson"
             :key="index"
             class="gallery-item"
-            @click="openImagePreview(index)"
+            role="button"
+            tabindex="0"
+            :aria-label="`查看图片 ${Number(index) + 1}`"
+            @click="openImagePreview(Number(index))"
+            @keyup.enter="openImagePreview(Number(index))"
           >
-            <img :src="getImageUrl(img)" :alt="`图片 ${index + 1}`" loading="lazy" />
+            <img :src="getImageUrl(img)" :alt="`图片 ${Number(index) + 1}`" loading="lazy" />
             <div class="image-overlay">
               <el-icon><ZoomIn /></el-icon>
             </div>
@@ -94,7 +91,71 @@
             class="field-item"
           >
             <label class="field-label">{{ field.fieldLabel }}</label>
-            <div class="field-value" v-html="formatFieldValue(field, record.dataJson[field.fieldKey])" />
+            <div class="field-value">
+              <span
+                v-if="isEmptyValue(record.dataJson[field.fieldKey])"
+                class="empty-value"
+              >—</span>
+
+              <template v-else-if="field.fieldType === 'image'">
+                <img
+                  v-for="(src, idx) in getImageList(record.dataJson[field.fieldKey])"
+                  :key="idx"
+                  :src="src"
+                  alt=""
+                  class="inline-image"
+                />
+              </template>
+
+              <el-tag
+                v-else-if="field.fieldType === 'member'"
+                effect="plain"
+                size="small"
+              >
+                {{ getMemberName(record.dataJson[field.fieldKey]) }}
+              </el-tag>
+
+              <template v-else-if="field.fieldType === 'multi_select'">
+                <el-tag
+                  v-for="label in getOptionLabels(field, record.dataJson[field.fieldKey])"
+                  :key="label"
+                  effect="plain"
+                  size="small"
+                  class="value-tag"
+                >
+                  {{ label }}
+                </el-tag>
+              </template>
+
+              <el-tag
+                v-else-if="field.fieldType === 'select'"
+                effect="plain"
+                size="small"
+              >
+                {{ getOptionLabel(field, record.dataJson[field.fieldKey]) }}
+              </el-tag>
+
+              <el-tag
+                v-else-if="field.fieldType === 'boolean'"
+                :type="record.dataJson[field.fieldKey] ? 'success' : 'info'"
+                size="small"
+              >
+                {{ record.dataJson[field.fieldKey] ? '是' : '否' }}
+              </el-tag>
+
+              <pre
+                v-else-if="field.fieldType === 'textarea'"
+                class="textarea-value"
+              >{{ record.dataJson[field.fieldKey] }}</pre>
+
+              <template v-else-if="field.fieldType === 'date'">
+                {{ formatFieldDate(record.dataJson[field.fieldKey]) }}
+              </template>
+
+              <template v-else>
+                {{ record.dataJson[field.fieldKey] }}
+              </template>
+            </div>
           </div>
         </div>
 
@@ -115,7 +176,7 @@
           <el-tag
             v-for="tag in record.tags.split(',')"
             :key="tag"
-            size="medium"
+            size="default"
             effect="plain"
             class="tag-item"
           >
@@ -203,13 +264,16 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
-import { recordApi } from '@/api'
+import { recordApi, spaceApi } from '@/api'
 import {
   ArrowLeft, ArrowDown, Edit, Delete, Lock, Unlock, Download,
   Picture, Document, PriceTag, InfoFilled, ZoomIn, ArrowRight
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import dayjs from 'dayjs'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import { formatDate as formatDateSafe, formatDateTime as formatDateTimeSafe, dayDiffFromToday } from '@/utils/date'
+import { resolveFileUrl } from '@/utils/file'
+import { getModuleTagType } from '@/utils/module'
 
 const route = useRoute()
 const router = useRouter()
@@ -225,14 +289,16 @@ const loading = ref(true)
 const imagePreviewVisible = ref(false)
 const currentPreviewIndex = ref(0)
 
+// 空间成员（用于把 member 字段的 ID 映射成姓名）
+const members = ref<any[]>([])
+
 const isAdmin = computed(() => authStore.isAdmin)
-const isEditor = computed(() => authStore.isEditor)
 const isReadonly = computed(() => authStore.isReadonly)
 
 const canEdit = computed(() => {
   if (isReadonly.value) return false
   if (isAdmin.value) return true
-  return record.value?.creatorId === authStore.user?.id
+  return Number(record.value?.creatorId) === Number(authStore.user?.id)
 })
 
 const canDelete = computed(() => isAdmin.value)
@@ -253,7 +319,50 @@ const hasPrivateFields = computed(() => {
 onMounted(async () => {
   await moduleStore.fetchModules()
   await fetchRecord()
+  await fetchMembers()
 })
+
+async function fetchMembers() {
+  try {
+    const response = await spaceApi.getMembers(authStore.spaceId)
+    members.value = response.data || []
+  } catch (e) {
+    console.error('Failed to fetch space members:', e)
+  }
+}
+
+// 兼容后端不同版本的序列化形式：dataJson 可能是对象或 JSON 字符串，imagesJson 可能是数组、JSON 字符串或逗号分隔
+function normalizeRecord(raw: any) {
+  const record = { ...raw }
+
+  if (typeof record.dataJson === 'string') {
+    try {
+      record.dataJson = JSON.parse(record.dataJson)
+    } catch {
+      record.dataJson = {}
+    }
+  }
+  if (!record.dataJson || typeof record.dataJson !== 'object') {
+    record.dataJson = {}
+  }
+
+  if (typeof record.imagesJson === 'string') {
+    try {
+      const parsed = JSON.parse(record.imagesJson)
+      record.imagesJson = Array.isArray(parsed) ? parsed : []
+    } catch {
+      record.imagesJson = record.imagesJson
+        .split(',')
+        .map((item: string) => item.trim())
+        .filter(Boolean)
+    }
+  }
+  if (!Array.isArray(record.imagesJson)) {
+    record.imagesJson = record.imagesJson ? [record.imagesJson] : []
+  }
+
+  return record
+}
 
 async function fetchRecord() {
   loading.value = true
@@ -266,7 +375,7 @@ async function fetchRecord() {
     }
 
     const response = await recordApi.detail(Number(recordId), moduleId)
-    record.value = response.data
+    record.value = normalizeRecord(response.data)
   } catch (error) {
     console.error('Failed to fetch record:', error)
     ElMessage.error('获取记录详情失败')
@@ -330,95 +439,68 @@ function openImagePreview(index: number) {
   imagePreviewVisible.value = true
 }
 
-const apiBase = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '')
-
 function getImageUrl(path: string) {
-  if (path.startsWith('http') || path.startsWith('//')) return path
-  return `${apiBase}/api/files${path}`
+  return resolveFileUrl(path)
 }
 
-function formatFieldValue(field: any, value: any): string {
-  if (value === null || value === undefined || value === '') {
-    return '<span class="empty-value">—</span>'
-  }
+function isEmptyValue(value: any): boolean {
+  return value === null || value === undefined || value === ''
+}
 
-  switch (field.fieldType) {
-    case 'image':
-      if (Array.isArray(value)) {
-        return value.map((v: string) =>
-          `<img src="${escapeHtml(getImageUrl(v))}" alt="" class="inline-image" />`
-        ).join('')
-      }
-      return `<img src="${escapeHtml(getImageUrl(value))}" alt="" class="inline-image" />`
+// 图片字段可能是单张、多张或逗号分隔字符串，统一成可直接用于 src 的 URL 列表
+function getImageList(value: any): string[] {
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',').map((item: string) => item.trim())
+      : [value]
+  return list.filter(Boolean).map((v: string) => getImageUrl(v))
+}
 
-    case 'member':
-      return `<el-tag effect="plain" size="small">成员 ID: ${escapeHtml(String(value))}</el-tag>`
-
-    case 'select':
-    case 'multi_select':
-      if (field.optionsJson) {
-        try {
-          const options = JSON.parse(field.optionsJson)
-          if (Array.isArray(value)) {
-            return value.map((v: string) => {
-              const opt = options.find((o: any) => o.value === v)
-              return `<el-tag effect="plain" size="small">${escapeHtml(String(opt?.label || v))}</el-tag>`
-            }).join(' ')
-          }
-          const opt = options.find((o: any) => o.value === value)
-          return `<el-tag effect="plain" size="small">${escapeHtml(String(opt?.label || value))}</el-tag>`
-        } catch {
-          return escapeHtml(String(value))
-        }
-      }
-      return escapeHtml(String(value))
-
-    case 'boolean':
-      return value ? '<el-tag type="success" size="small">是</el-tag>' : '<el-tag type="info" size="small">否</el-tag>'
-
-    case 'date':
-      return escapeHtml(dayjs(value).format('YYYY-MM-DD'))
-
-    case 'number':
-      return `<span class="number-value">${escapeHtml(String(value))}</span>`
-
-    case 'textarea':
-      return `<pre class="textarea-value">${escapeHtml(String(value))}</pre>`
-
-    default:
-      return escapeHtml(String(value))
+function parseOptions(field: any): Array<{ label: string; value: any }> {
+  if (!field.optionsJson) return []
+  try {
+    const parsed = JSON.parse(field.optionsJson)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
   }
 }
 
-function escapeHtml(text: string): string {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
+function getOptionLabel(field: any, value: any): string {
+  const opt = parseOptions(field).find(o => String(o.value) === String(value))
+  return opt?.label || String(value)
 }
 
-function getModuleTagType(moduleKey: string) {
-  const types: Record<string, string> = {
-    drug: 'primary',
-    todo: 'success',
-    note: 'info',
-    idoc: 'warning'
-  }
-  return types[moduleKey] || 'info'
+function getOptionLabels(field: any, value: any): string[] {
+  const list = Array.isArray(value) ? value : [value]
+  return list.map(v => getOptionLabel(field, v))
+}
+
+// 把 member 字段存的值（用户 ID）映射成昵称/用户名
+function getMemberName(value: any): string {
+  const member = members.value.find((m: any) => String(m.id) === String(value))
+  return member?.nickName || member?.username || String(value)
+}
+
+function formatFieldDate(value: any): string {
+  return formatDateSafe(value)
 }
 
 function getRemindClass(remindDate: string) {
-  const diff = dayjs(remindDate).diff(dayjs(), 'day')
+  const diff = dayDiffFromToday(remindDate)
+  if (diff === null) return ''
   if (diff < 0) return 'remind-overdue'
   if (diff <= 3) return 'remind-soon'
   return ''
 }
 
 function formatDate(dateStr: string) {
-  return dayjs(dateStr).format('YYYY-MM-DD')
+  return formatDateSafe(dateStr)
 }
 
 function formatDateTime(dateStr: string) {
-  return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss')
+  return formatDateTimeSafe(dateStr, 'YYYY-MM-DD HH:mm:ss')
 }
 </script>
 
@@ -426,50 +508,6 @@ function formatDateTime(dateStr: string) {
 @use '@/styles/variables' as *;
 
 .record-detail-page {
-  .detail-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid $border-color;
-
-    .back-btn {
-      margin-top: 4px;
-    }
-
-    .detail-title {
-      flex: 1;
-      min-width: 0;
-    }
-
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      color: $text-primary;
-      margin: 8px 0 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .untitled {
-      color: $text-placeholder;
-      font-style: italic;
-    }
-
-    .detail-actions {
-      flex-shrink: 0;
-    }
-  }
-
-  .private-alert {
-    margin-bottom: 16px;
-    :deep(.el-alert) {
-      border-radius: $border-radius-base;
-    }
-  }
-
   .detail-card {
     .section-title {
       display: flex;
@@ -484,7 +522,7 @@ function formatDateTime(dateStr: string) {
 
       el-icon {
         font-size: 18px;
-        color: $primary-color;
+        color: $primary-text;
       }
     }
 
@@ -530,7 +568,7 @@ function formatDateTime(dateStr: string) {
         justify-content: center;
         opacity: 0;
         transition: opacity 0.2s ease;
-        color: #fff;
+        color: $card-bg;
         font-size: 24px;
       }
 
@@ -561,6 +599,10 @@ function formatDateTime(dateStr: string) {
     }
 
     .field-value {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
       font-size: 14px;
       color: $text-primary;
       line-height: 1.6;
@@ -577,6 +619,20 @@ function formatDateTime(dateStr: string) {
         border-radius: $border-radius-base;
         border: 1px solid $border-color-light;
       }
+
+      .value-tag {
+        margin: 0;
+      }
+
+      .textarea-value {
+        width: 100%;
+        margin: 0;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
     }
   }
 
@@ -586,10 +642,10 @@ function formatDateTime(dateStr: string) {
     gap: 8px;
     padding: 12px 16px;
     margin-top: 16px;
-    background: #fffbe8;
-    border: 1px solid #fde2a2;
+    background: $warning-bg;
+    border: 1px solid $warning-border;
     border-radius: $border-radius-base;
-    color: #e6a23c;
+    color: $warning-text;
     font-size: 13px;
   }
 
@@ -637,11 +693,11 @@ function formatDateTime(dateStr: string) {
       font-weight: 500;
 
       &.remind-overdue {
-        color: #f56c6c;
+        color: $danger-text;
       }
 
       &.remind-soon {
-        color: #e6a23c;
+        color: $warning-text;
       }
     }
   }
@@ -668,7 +724,7 @@ function formatDateTime(dateStr: string) {
     justify-content: center;
     gap: 16px;
     padding: 16px;
-    color: #fff;
+    color: $card-bg;
     font-size: 14px;
   }
 }
@@ -708,12 +764,4 @@ function formatDateTime(dateStr: string) {
 }
 
 // 长辈模式
-.elderly-mode .record-detail-page {
-  .detail-title h1 { font-size: 28px !important; }
-  .field-label { font-size: 15px !important; }
-  .field-value { font-size: 16px !important; }
-  .meta-label { font-size: 14px !important; }
-  .meta-value { font-size: 16px !important; }
-  .section-title { font-size: 18px !important; }
-}
 </style>

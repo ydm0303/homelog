@@ -6,7 +6,7 @@ import com.homelog.dto.SpaceMemberDeleteRequest;
 import com.homelog.entity.SpaceMember;
 import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
-import com.homelog.security.JwtTokenProvider;
+import com.homelog.security.CurrentUserService;
 import com.homelog.vo.SpaceMemberVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,42 +30,19 @@ public class SpaceController {
 
     private final SpaceMemberMapper spaceMemberMapper;
     private final UserMapper userMapper;
-    private final JwtTokenProvider jwtTokenProvider;
-
-    /**
-     * 获取当前空间ID（MVP 单空间，默认 space_id=1）
-     */
-    private Long getCurrentSpaceId() {
-        return 1L;
-    }
-
-    /**
-     * 获取当前用户角色
-     */
-    private Integer getCurrentUserRole(Long spaceId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return 3;
-
-        return auth.getAuthorities().stream()
-                .filter(a -> a.getAuthority().startsWith("ROLE_"))
-                .map(a -> a.getAuthority().replace("ROLE_", ""))
-                .map(role -> {
-                    switch (role) {
-                        case "ADMIN": return 1;
-                        case "EDIT": return 2;
-                        default: return 3;
-                    }
-                })
-                .findFirst()
-                .orElse(3);
-    }
+    private final CurrentUserService currentUserService;
 
     /**
      * 获取成员列表
      * GET /api/space/members/list?spaceId=1
      */
     @GetMapping("/members/list")
-    public List<SpaceMemberVO> getMembers(@RequestParam Long spaceId) {
+    public List<SpaceMemberVO> getMembers(@RequestParam(required = false) Long spaceId) {
+        Long currentSpaceId = currentUserService.getCurrentSpaceId();
+        // 非管理员只能查看当前空间，避免通过参数读取其他空间成员
+        if (spaceId == null || (!currentUserService.isAdmin() && !spaceId.equals(currentSpaceId))) {
+            spaceId = currentSpaceId;
+        }
         log.info("查询空间成员：空间ID={}", spaceId);
 
         List<SpaceMember> members = spaceMemberMapper.selectBySpaceId(spaceId);
@@ -83,8 +60,8 @@ public class SpaceController {
      */
     @PostMapping("/members/create")
     public SpaceMemberVO createMember(@RequestBody SpaceMemberCreateRequest request) {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("添加空间成员：空间ID={}，邮箱={}，角色={}", spaceId, request.getEmail(), request.getRole());
 
         // 只有管理员可添加成员
@@ -126,8 +103,8 @@ public class SpaceController {
      */
     @PostMapping("/members/update")
     public SpaceMemberVO updateMember(@RequestBody SpaceMemberUpdateRequest request) {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("更新空间成员：空间ID={}，用户ID={}，角色={}", spaceId, request.getUserId(), request.getRole());
 
         // 只有管理员可更新成员
@@ -167,8 +144,8 @@ public class SpaceController {
      */
     @PostMapping("/members/delete")
     public void deleteMember(@RequestBody SpaceMemberDeleteRequest request) {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("删除空间成员：空间ID={}，用户ID={}", spaceId, request.getUserId());
 
         // 只有管理员可删除成员

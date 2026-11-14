@@ -8,6 +8,8 @@ export const useModuleStore = defineStore('module', () => {
   const modules = ref<ModuleMetaVO[]>([])
   const allModules = ref<ModuleMetaVO[]>([])
   const loading = ref(false)
+  const modulesLoaded = ref(false)
+  let modulesRequest: Promise<void> | null = null
 
   // 当前启用的模块（用于菜单渲染）
   const enabledModules = computed(() =>
@@ -19,15 +21,23 @@ export const useModuleStore = defineStore('module', () => {
     enabledModules.value.filter(m => m.showInHome === 1)
   )
 
-  // 获取启用的模块列表
-  async function fetchModules() {
+  // 获取启用的模块列表（去重：布局、首页、详情页会重复调用，避免并发重复请求）
+  async function fetchModules(force = false) {
+    if (!force && modulesLoaded.value) return
+    if (modulesRequest) return modulesRequest
+
     loading.value = true
-    try {
-      const response = await api.get<ModuleMetaVO[]>('/meta/modules/list')
-      modules.value = response.data
-    } finally {
-      loading.value = false
-    }
+    modulesRequest = api.get<ModuleMetaVO[]>('/meta/modules/list')
+      .then((response) => {
+        modules.value = response.data || []
+        modulesLoaded.value = true
+      })
+      .finally(() => {
+        loading.value = false
+        modulesRequest = null
+      })
+
+    return modulesRequest
   }
 
   // 获取所有模块（管理员用）
@@ -100,6 +110,7 @@ export const useModuleStore = defineStore('module', () => {
     modules,
     allModules,
     loading,
+    modulesLoaded,
     enabledModules,
     homeModules,
     fetchModules,

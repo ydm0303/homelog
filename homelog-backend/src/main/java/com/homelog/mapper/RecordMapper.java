@@ -17,6 +17,9 @@ public interface RecordMapper extends BaseMapper<Record> {
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND module_id = #{moduleId} ORDER BY created_at DESC")
     List<Record> selectBySpaceAndModule(@Param("spaceId") Long spaceId, @Param("moduleId") Long moduleId);
 
+    @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} ORDER BY created_at DESC")
+    List<Record> selectBySpaceId(@Param("spaceId") Long spaceId);
+
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND module_id = #{moduleId} AND id = #{id}")
     Record selectByIdAndSpaceAndModule(@Param("spaceId") Long spaceId, @Param("moduleId") Long moduleId, @Param("id") Long id);
 

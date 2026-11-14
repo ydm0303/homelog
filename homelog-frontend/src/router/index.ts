@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -65,12 +66,20 @@ const routes: RouteRecordRaw[] = [
         name: 'GlobalSearch',
         component: () => import('@/views/GlobalSearch.vue'),
         meta: { title: '全局搜索' }
+      },
+      {
+        path: 'forbidden',
+        name: 'Forbidden',
+        component: () => import('@/views/Forbidden.vue'),
+        meta: { title: '无权访问' }
+      },
+      {
+        path: ':pathMatch(.*)*',
+        name: 'NotFound',
+        component: () => import('@/views/NotFound.vue'),
+        meta: { title: '页面不存在' }
       }
     ]
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/'
   }
 ]
 
@@ -80,11 +89,16 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
 
   // 设置页面标题
   document.title = `${to.meta.title || '家记'} - 家里的事，都记在这里`
+
+  // 刷新页面时先恢复登录态，否则守卫会误判为未登录并跳回登录页
+  if (!authStore.isLoggedIn) {
+    await authStore.initAuth()
+  }
 
   // 检查认证
   if (to.meta.requiresAuth !== false && !authStore.isLoggedIn) {
@@ -94,7 +108,7 @@ router.beforeEach((to, _from, next) => {
 
   // 检查管理员权限
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    next({ name: 'Dashboard' })
+    next({ name: 'Forbidden' })
     return
   }
 
@@ -102,6 +116,3 @@ router.beforeEach((to, _from, next) => {
 })
 
 export default router
-
-// 需要在函数内导入，避免循环依赖
-import { useAuthStore } from '@/stores/auth'

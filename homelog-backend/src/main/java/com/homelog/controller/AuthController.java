@@ -7,8 +7,10 @@ import com.homelog.entity.User;
 import com.homelog.entity.SpaceMember;
 import com.homelog.mapper.UserMapper;
 import com.homelog.mapper.SpaceMemberMapper;
+import com.homelog.security.CurrentUserService;
 import com.homelog.security.JwtTokenProvider;
 import com.homelog.vo.TokenResponse;
+import com.homelog.vo.UserProfileVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +48,7 @@ public class AuthController {
     private final UserDetailsService userDetailsService;
     private final UserMapper userMapper;
     private final SpaceMemberMapper spaceMemberMapper;
+    private final CurrentUserService currentUserService;
 
     /**
      * 用户登录
@@ -174,26 +177,19 @@ public class AuthController {
     }
 
     /**
-     * 获取当前用户信息
+     * 获取当前用户信息（含空间角色，前端据此控制菜单与操作按钮）
      * GET /api/auth/detail
      */
     @GetMapping("/detail")
-    public ResponseEntity<User> detail() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
+    public ResponseEntity<UserProfileVO> detail() {
+        User user = currentUserService.getCurrentUser();
+        if (user == null) {
+            log.warn("Get current user detail failed, user not found");
             return ResponseEntity.status(401).build();
         }
 
-        String username = authentication.getName();
-        User user = userMapper.selectByUsername(username);
-        if (user == null) {
-            log.warn("Get current user detail failed, user not found: {}", username);
-            return ResponseEntity.status(404).build();
-        }
-
-        // 清除密码
-        user.setPassword(null);
-        return ResponseEntity.ok(user);
+        UserProfileVO profile = UserProfileVO.from(user, currentUserService.getCurrentMembership());
+        return ResponseEntity.ok(profile);
     }
 
     /**

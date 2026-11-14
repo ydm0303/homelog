@@ -1,30 +1,27 @@
 <template>
   <div class="message-center-page">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <h1>消息中心</h1>
-      <div class="header-actions">
+    <PageHeader title="消息中心" description="家庭成员的操作提醒与到期通知">
+      <template #actions>
         <el-button
           v-if="unreadCount > 0"
           type="primary"
-          size="small"
-          @click="markAllRead"
           :loading="markingAllRead"
+          @click="markAllRead"
         >
           <el-icon><Check /></el-icon>
           全部标记已读 ({{ unreadCount }})
         </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 筛选栏 -->
-    <el-card class="filter-card" shadow="never">
+    <AppCard class="filter-card" padding="sm">
       <div class="filter-row">
         <el-select
           v-model="filterStatus"
           placeholder="全部状态"
           size="default"
-          style="width: 140px"
+          class="filter-status"
           @change="handleFilterChange"
         >
           <el-option label="全部" value="" />
@@ -38,7 +35,7 @@
           :prefix-icon="Search"
           clearable
           size="default"
-          style="width: 280px"
+          class="filter-keyword"
           @keyup.enter="handleFilterChange"
         />
 
@@ -48,35 +45,32 @@
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
-          style="width: 280px"
+          value-format="YYYY-MM-DD"
+          class="filter-date"
           @change="handleFilterChange"
         />
 
         <el-button @click="resetFilter">重置筛选</el-button>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 消息列表 -->
-    <el-card class="list-card" shadow="never">
-      <div v-if="loading" class="loading-state">
-        <el-skeleton :rows="5" animated />
-      </div>
-
-      <div v-else-if="messages.length === 0" class="empty-state">
-        <el-icon class="empty-icon"><Bell /></el-icon>
-        <p v-if="filterStatus === '0'">暂无未读消息</p>
-        <p v-else>暂无消息记录</p>
-      </div>
-
-      <el-table
-        v-else
-        :data="messages"
-        border
-        stripe
-        style="width: 100%"
-        row-class-name="message-row"
-        :row-style="getRowStyle"
+    <AppCard class="list-card" padding="none">
+      <AsyncState
+        :loading="loading"
+        :empty="!loading && messages.length === 0"
+        :empty-icon="Bell"
+        :empty-title="filterStatus === '0' ? '暂无未读消息' : '暂无消息记录'"
+        empty-description="有新的家庭动态或到期提醒时，会在这里通知你"
+        min-height="320px"
       >
+        <el-table
+          :data="messages"
+          class="message-table"
+          style="width: 100%"
+          row-class-name="message-row"
+          :row-style="getRowStyle"
+        >
         <el-table-column
           type="selection"
           width="55"
@@ -91,7 +85,9 @@
           show-overflow-tooltip
         >
           <template #default="scope">
-            <div class="message-content" v-html="highlightKeyword(scope.row.content)" />
+            <div class="message-content">
+              <HighlightText :text="scope.row.content" :keyword="filterKeyword" />
+            </div>
           </template>
         </el-table-column>
 
@@ -194,7 +190,8 @@
           @current-change="handlePageChange"
         />
       </div>
-    </el-card>
+      </AsyncState>
+    </AppCard>
   </div>
 </template>
 
@@ -204,7 +201,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { messageApi } from '@/api'
 import { Search, Bell, Check, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import dayjs from 'dayjs'
+import HighlightText from '@/components/HighlightText.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import AppCard from '@/components/ui/AppCard.vue'
+import AsyncState from '@/components/ui/AsyncState.vue'
+import { formatDateTime as formatDateTimeSafe } from '@/utils/date'
+import { getModuleTagType } from '@/utils/module'
 
 const router = useRouter()
 const route = useRoute()
@@ -229,6 +231,8 @@ if (initialKeyword) {
   filterKeyword.value = initialKeyword
 }
 
+let unreadTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(async () => {
   await fetchMessages()
   await fetchUnreadCount()
@@ -237,14 +241,16 @@ onMounted(async () => {
   startUnreadPolling()
 })
 
+onUnmounted(() => {
+  if (unreadTimer) clearInterval(unreadTimer)
+})
+
 function startUnreadPolling() {
-  const timer = setInterval(async () => {
+  unreadTimer = setInterval(async () => {
     if (!document.hidden) {
       await fetchUnreadCount()
     }
   }, 30000)
-
-  onUnmounted(() => clearInterval(timer))
 }
 
 async function fetchMessages() {
@@ -340,11 +346,11 @@ async function deleteMessage(message: any) {
       type: 'warning',
       confirmButtonClass: 'el-button--danger'
     })
-    // 后端暂无删除接口，前端本地移除
+    await messageApi.remove(message.id)
     const idx = messages.value.findIndex(m => m.id === message.id)
     if (idx !== -1) {
       messages.value.splice(idx, 1)
-      total.value--
+      total.value = Math.max(0, total.value - 1)
       if (message.isRead === 0) unreadCount.value = Math.max(0, unreadCount.value - 1)
     }
     ElMessage.success('已删除')
@@ -362,18 +368,8 @@ function getRowStyle({ row }: any) {
   return row.isRead === 0 ? { 'font-weight': 500 } : {}
 }
 
-function getModuleTagType(moduleKey: string) {
-  const types: Record<string, string> = {
-    drug: 'primary',
-    todo: 'success',
-    note: 'info',
-    idoc: 'warning'
-  }
-  return types[moduleKey] || 'info'
-}
-
-function getTypeTagType(type: string) {
-  const types: Record<string, string> = {
+function getTypeTagType(type: string): 'primary' | 'success' | 'info' | 'warning' | 'danger' {
+  const types: Record<string, 'primary' | 'success' | 'info' | 'warning' | 'danger'> = {
     remind: 'warning',
     system: 'info',
     mention: 'primary'
@@ -390,24 +386,8 @@ function getTypeLabel(type: string) {
   return labels[type] || type
 }
 
-function highlightKeyword(content: string) {
-  if (!filterKeyword.value) return escapeHtml(content)
-  // 用户输入需先转义正则元字符（如 ( [ + \），否则 new RegExp 会抛语法错误导致渲染中断
-  const keyword = escapeHtml(filterKeyword.value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return escapeHtml(content).replace(
-    new RegExp(`(${keyword})`, 'gi'),
-    '<mark class="highlight">$1</mark>'
-  )
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
-
 function formatDateTime(dateStr: string) {
-  return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
+  return formatDateTimeSafe(dateStr)
 }
 </script>
 
@@ -415,20 +395,6 @@ function formatDateTime(dateStr: string) {
 @use '@/styles/variables' as *;
 
 .message-center-page {
-  .page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-
-    h1 {
-      font-size: 22px;
-      font-weight: 600;
-      color: $text-primary;
-      margin: 0;
-    }
-  }
-
   .filter-card {
     margin-bottom: 16px;
 
@@ -448,8 +414,8 @@ function formatDateTime(dateStr: string) {
         word-break: break-word;
 
         .highlight {
-          background: #fffbe8;
-          color: #e6a23c;
+          background: $warning-bg;
+          color: $warning-text;
           padding: 0 2px;
           border-radius: 2px;
         }
@@ -460,9 +426,9 @@ function formatDateTime(dateStr: string) {
         align-items: center;
         gap: 8px;
 
-        :deep(.el-button) {
+        .el-button {
           padding: 0;
-          color: $primary-color;
+          color: $primary-text;
           font-size: 13px;
         }
       }
@@ -524,10 +490,10 @@ function formatDateTime(dateStr: string) {
       flex-direction: column;
       align-items: stretch;
 
-      :deep(.el-select),
-      :deep(.el-input),
-      :deep(.el-date-picker) {
-        width: 100% !important;
+      .filter-status,
+      .filter-keyword,
+      .filter-date {
+        width: 100%;
       }
 
       :deep(.el-button) {
@@ -537,10 +503,26 @@ function formatDateTime(dateStr: string) {
   }
 }
 
-.elderly-mode .message-center-page {
-  :deep(.el-table) { font-size: 15px !important; }
-  :deep(.el-pagination) { font-size: 14px !important; }
-  .page-header h1 { font-size: 24px !important; }
-  .message-content { font-size: 15px !important; }
+// ============================================================
+// Phase 1：消息中心结构
+// ============================================================
+.message-center-page {
+  .filter-card {
+    margin-bottom: 16px;
+  }
+
+  .filter-status {
+    width: 140px;
+  }
+
+  .filter-keyword,
+  .filter-date {
+    width: 280px;
+  }
+
+  .list-card .pagination {
+    padding: 14px 20px;
+    border-top: 1px solid $border-color-light;
+  }
 }
 </style>

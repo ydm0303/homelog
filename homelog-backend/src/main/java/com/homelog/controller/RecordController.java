@@ -5,6 +5,7 @@ import com.homelog.dto.RecordUpdateRequest;
 import com.homelog.dto.RecordDeleteRequest;
 import com.homelog.dto.RecordDetailRequest;
 import com.homelog.service.RecordService;
+import com.homelog.vo.PageResult;
 import com.homelog.vo.RecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,18 +34,34 @@ public class RecordController {
      * GET /api/records/list?moduleId=1&page=1&size=20&keyword=&tag=
      */
     @GetMapping("/list")
-    public ResponseEntity<List<RecordVO>> list(
+    public ResponseEntity<PageResult<RecordVO>> list(
             @RequestParam Long moduleId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String tag) {
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String creator,
+            @RequestParam(required = false) Boolean privateOnly) {
 
-        log.info("查询记录列表：模块ID={}，页码={}，每页数量={}，关键词={}，标签={}", moduleId, page, size, keyword, tag);
+        log.info("查询记录列表：模块ID={}，页码={}，每页数量={}，关键词={}，标签={}",
+                moduleId, page, size, keyword, tag);
 
-        List<RecordVO> records = recordService.list(moduleId, page, size, keyword, tag);
-        log.info("记录列表查询完成：模块ID={}，记录数={}", moduleId, records.size());
-        return ResponseEntity.ok(records);
+        PageResult<RecordVO> result = recordService.list(
+                moduleId, page, size, keyword, tag, startDate, endDate, creator, privateOnly);
+        log.info("记录列表查询完成：模块ID={}，总数={}，返回数={}",
+                moduleId, result.getTotal(), result.getData().size());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 标签聚合
+     * GET /api/records/tags?moduleId=1（moduleId 可选）
+     */
+    @GetMapping("/tags")
+    public ResponseEntity<List<String>> tags(@RequestParam(required = false) Long moduleId) {
+        return ResponseEntity.ok(recordService.listTags(moduleId));
     }
 
     /**

@@ -1,20 +1,14 @@
 <template>
   <div class="record-edit-page" v-if="module">
     <!-- 页面头部 -->
-    <div class="edit-header">
-      <el-button @click="goBack" class="back-btn">
-        <el-icon><ArrowLeft /></el-icon>
-        返回
-      </el-button>
-
-      <div class="edit-title">
-        <el-tag :type="getModuleTagType(module.moduleKey)" size="medium">
+    <PageHeader :title="isEdit ? '编辑记录' : '新增记录'" back @back="goBack">
+      <template #tag>
+        <el-tag :type="getModuleTagType(module.moduleKey)" size="default">
           {{ module.name }}
         </el-tag>
-        <h1>{{ isEdit ? '编辑记录' : '新增记录' }}</h1>
-      </div>
+      </template>
 
-      <div class="edit-actions">
+      <template #actions>
         <el-button
           v-if="isEdit"
           @click="handleDelete"
@@ -28,15 +22,16 @@
           <el-icon><Check /></el-icon>
           {{ isEdit ? '保存' : '创建' }}
         </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 表单 -->
+    <AppCard class="edit-card">
     <el-form
       ref="formRef"
       :model="formData"
       :rules="validationRules"
-      label-width="120px"
+      label-width="100px"
       class="edit-form"
       @submit.prevent="handleSave"
     >
@@ -83,7 +78,7 @@
       <el-form-item label="标签" prop="tags">
         <el-input
           v-model="formData.tags"
-          placeholder="多个标签用逗号分隔，如：家庭,重要,药品"
+          placeholder="多个标签用逗号分隔，如：家务,重要,药品"
           clearable
         />
       </el-form-item>
@@ -109,6 +104,7 @@
         </el-button>
       </el-form-item>
     </el-form>
+    </AppCard>
 
     <!-- 草稿保存提示 -->
     <el-tooltip
@@ -133,10 +129,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi } from '@/api'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import AppCard from '@/components/ui/AppCard.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import DynamicFieldRenderer from '@/components/DynamicFieldRenderer.vue'
-import { ArrowLeft, Delete, Check } from '@element-plus/icons-vue'
+import { Delete, Check } from '@element-plus/icons-vue'
+import { getModuleTagType } from '@/utils/module'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,7 +160,6 @@ const saving = ref(false)
 const showDraftSaved = ref(false)
 
 const isAdmin = computed(() => authStore.isAdmin)
-const isEditor = computed(() => authStore.isEditor)
 const isReadonly = computed(() => authStore.isReadonly)
 
 const canSave = computed(() => !isReadonly.value)
@@ -211,7 +209,7 @@ function buildValidationRules() {
     if (field.fieldType === 'number') {
       rules[field.fieldKey] = rules[field.fieldKey] || []
       rules[field.fieldKey].push({
-        validator: (rule: any, value: any, callback: any) => {
+        validator: (_rule: any, value: any, callback: any) => {
           if (value !== '' && value !== null && value !== undefined && isNaN(Number(value))) {
             callback(new Error('请输入有效数字'))
           } else {
@@ -406,51 +404,12 @@ onUnmounted(() => {
   clearInterval(autoSaveTimer)
   window.removeEventListener('beforeunload', saveDraft)
 })
-
-function getModuleTagType(moduleKey: string) {
-  const types: Record<string, string> = {
-    drug: 'primary',
-    todo: 'success',
-    note: 'info',
-    idoc: 'warning'
-  }
-  return types[moduleKey] || 'info'
-}
 </script>
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
 
 .record-edit-page {
-  .edit-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid $border-color;
-
-    .back-btn {
-      margin-top: 2px;
-    }
-
-    .edit-title {
-      flex: 1;
-
-      h1 {
-        font-size: 22px;
-        font-weight: 600;
-        color: $text-primary;
-        margin: 8px 0 0;
-      }
-    }
-
-    .edit-actions {
-      display: flex;
-      gap: 12px;
-    }
-  }
-
   .edit-form {
     :deep(.el-form-item) {
       margin-bottom: 20px;
@@ -489,40 +448,10 @@ function getModuleTagType(moduleKey: string) {
 }
 
 // 长辈模式
-.elderly-mode .record-edit-page {
-  .edit-title h1 { font-size: 26px !important; }
-  :deep(.el-form-item__label) { font-size: 16px !important; }
-  :deep(.el-input__inner) { font-size: 16px !important; padding: 14px 16px !important; height: 52px !important; }
-  :deep(.el-textarea__inner) { font-size: 16px !important; padding: 14px 16px !important; }
-  :deep(.el-select__tags) { font-size: 15px !important; }
-  :deep(el-date-picker) { font-size: 16px !important; }
-  :deep(.el-form-item__error) { font-size: 14px !important; }
-  .edit-actions :deep(.el-button) { padding: 14px 28px !important; font-size: 16px !important; height: auto !important; }
-}
-
-// 草稿保存提示样式
-.draft-tooltip :deep(.el-tooltip__content) {
-  background: #67c23a;
-  color: #fff;
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: $border-radius-base;
-
-  .el-tooltip__arrow {
-    &::after {
-      border-top-color: #67c23a;
-    }
-  }
-}
-
-.draft-saved-icon {
-  font-size: 20px;
-  color: #67c23a;
-  animation: popIn 0.3s ease;
-}
-
-@keyframes popIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+// ============================================================
+// Phase 1：编辑页宽度与表单节奏
+// ============================================================
+.edit-card {
+  max-width: 960px;
 }
 </style>

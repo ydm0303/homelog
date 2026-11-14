@@ -1,0 +1,83 @@
+// ============================================================
+// Element Plus 主题桥接
+// ------------------------------------------------------------
+// 作用：把 variables.scss 里的设计 token 映射成 Element Plus 的
+// CSS 变量，让按钮、开关、分页、单选等原生组件与品牌色一致。
+// 引入顺序必须是：element-plus/dist/index.css → 本文件 → index.scss
+// ============================================================
+
+@use 'sass:color';
+@use './variables' as *;
+
+:root {
+  // ---- 主色及派生色阶（Element Plus 用 light-3/5/7/8/9 与 dark-2 计算 hover/禁用/浅底）----
+  --el-color-primary: #{$primary-strong};
+  --el-color-primary-rgb: 184, 85, 47;
+  --el-color-primary-light-3: #{color.mix(#fff, $primary-strong, 30%)};
+  --el-color-primary-light-5: #{color.mix(#fff, $primary-strong, 50%)};
+  --el-color-primary-light-7: #{color.mix(#fff, $primary-strong, 70%)};
+  --el-color-primary-light-8: #{color.mix(#fff, $primary-strong, 80%)};
+  --el-color-primary-light-9: #{color.mix(#fff, $primary-strong, 90%)};
+  --el-color-primary-dark-2: #{color.mix(#000, $primary-strong, 20%)};
+
+  // ---- 语义色（与设计 token 对齐，避免默认蓝绿灰混入）----
+  --el-color-success: #{$success-color};
+  --el-color-success-light-9: #{$success-bg};
+  --el-color-warning: #{$warning-color};
+  --el-color-warning-light-9: #{$warning-bg};
+  --el-color-danger: #{$danger-color};
+  --el-color-danger-light-9: #{$danger-bg};
+  --el-color-error: #{$danger-color};
+  --el-color-error-light-9: #{$danger-bg};
+  --el-color-info: #{$info-color};
+
+  // ---- 文本 ----
+  --el-text-color-primary: #{$text-primary};
+  --el-text-color-regular: #{$text-primary};
+  --el-text-color-secondary: #{$text-tertiary};
+  --el-text-color-placeholder: #{$text-placeholder};
+  --el-text-color-disabled: #{$text-disabled};
+
+  // ---- 边框 / 背景 ----
+  --el-border-color: #{$border-color};
+  --el-border-color-light: #{$border-color-light};
+  --el-border-color-lighter: #{$border-color-light};
+  --el-border-color-extra-light: #{$border-color-light};
+  --el-border-color-dark: #{$border-color};
+  --el-border-color-darker: #{$border-color};
+
+  --el-bg-color: #{$card-bg};
+  --el-bg-color-page: #{$bg-color};
+  --el-bg-color-overlay: #{$card-bg};
+  --el-fill-color: #{$nav-hover-bg};
+  --el-fill-color-light: #{$nav-hover-bg};
+  --el-fill-color-lighter: #{$surface-warm-soft};
+  --el-fill-color-extra-light: #{$surface-warm};
+  --el-fill-color-dark: #{$border-color-light};
+  --el-fill-color-darker: #{$border-color};
+  --el-fill-color-blank: #{$card-bg};
+
+  // ---- 圆角 ----
+  --el-border-radius-base: #{$border-radius-base};
+  --el-border-radius-small: #{$border-radius-sm};
+  --el-border-radius-round: 20px;
+  --el-border-radius-circle: 100%;
+
+  // ---- 阴影 ----
+  --el-box-shadow: #{$shadow-base};
+  --el-box-shadow-light: #{$shadow-sm};
+  --el-box-shadow-lighter: 0 1px 2px rgba(43, 38, 34, 0.04);
+  --el-box-shadow-dark: #{$shadow-lg};
+
+  // ---- 字号与动效 ----
+  --el-font-size-extra-small: #{$font-size-xs};
+  --el-font-size-small: #{$font-size-sm};
+  --el-font-size-base: #{$font-size-base};
+  --el-font-size-medium: #{$font-size-md};
+  --el-font-size-large: #{$font-size-lg};
+  --el-font-size-extra-large: #{$font-size-xl};
+
+  --el-transition-duration: #{$transition-base};
+  --el-transition-duration-fast: #{$transition-fast};
+  --el-transition-function-ease-out: #{$ease-out};
+}

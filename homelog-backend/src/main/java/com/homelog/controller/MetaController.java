@@ -6,13 +6,10 @@ import com.homelog.entity.Field;
 import com.homelog.entity.Module;
 import com.homelog.mapper.ModuleMapper;
 import com.homelog.mapper.FieldMapper;
-import com.homelog.mapper.SpaceMemberMapper;
-import com.homelog.security.JwtTokenProvider;
+import com.homelog.security.CurrentUserService;
 import com.homelog.vo.ModuleMetaVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,43 +27,7 @@ public class MetaController {
 
     private final ModuleMapper moduleMapper;
     private final FieldMapper fieldMapper;
-    private final SpaceMemberMapper spaceMemberMapper;
-    private final JwtTokenProvider jwtTokenProvider;
-
-    /**
-     * 获取当前用户的空间ID（MVP 单空间，默认 space_id=1）
-     */
-    private Long getCurrentSpaceId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return 1L;
-
-        String username = auth.getName();
-        // 从 JWT claims 中获取 space_id，MVP 阶段固定返回 1
-        return 1L;
-    }
-
-    /**
-     * 获取当前用户角色
-     */
-    private Integer getCurrentUserRole(Long spaceId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return 3; // 默认只读
-
-        String username = auth.getName();
-        // 简化：从 authorities 解析角色，实际可查数据库
-        return auth.getAuthorities().stream()
-                .filter(a -> a.getAuthority().startsWith("ROLE_"))
-                .map(a -> a.getAuthority().replace("ROLE_", ""))
-                .map(role -> {
-                    switch (role) {
-                        case "ADMIN": return 1;
-                        case "EDIT": return 2;
-                        default: return 3;
-                    }
-                })
-                .findFirst()
-                .orElse(3);
-    }
+    private final CurrentUserService currentUserService;
 
     /**
      * 获取当前空间启用的模块列表（所有成员可见）
@@ -74,7 +35,7 @@ public class MetaController {
      */
     @GetMapping("/modules/list")
     public List<ModuleMetaVO> getEnabledModules() {
-        Long spaceId = getCurrentSpaceId();
+        Long spaceId = currentUserService.getCurrentSpaceId();
         log.info("查询空间已启用模块：空间ID={}", spaceId);
 
         List<Module> modules = moduleMapper.selectEnabledBySpaceId(spaceId);
@@ -92,8 +53,8 @@ public class MetaController {
      */
     @GetMapping("/modules/all")
     public List<ModuleMetaVO> getAllModules() {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("查询空间全部模块：空间ID={}，用户角色={}", spaceId, role);
 
         // 只有管理员可查看所有模块
@@ -117,7 +78,7 @@ public class MetaController {
      */
     @GetMapping("/modules/detail")
     public ModuleMetaVO getModule(@RequestParam Long moduleId) {
-        Long spaceId = getCurrentSpaceId();
+        Long spaceId = currentUserService.getCurrentSpaceId();
         Module module = moduleMapper.selectById(moduleId);
 
         if (module == null || !module.getSpaceId().equals(spaceId)) {
@@ -135,8 +96,8 @@ public class MetaController {
      */
     @PostMapping("/modules/update")
     public ModuleMetaVO updateModule(@RequestBody ModuleUpdateRequest request) {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("更新模块配置：空间ID={}，模块ID={}", spaceId, request.getModuleId());
 
         if (role != 1) {
@@ -171,8 +132,8 @@ public class MetaController {
      */
     @PostMapping("/modules/create")
     public ModuleMetaVO createModule(@RequestBody ModuleCreateRequest request) {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("创建自定义模块：空间ID={}，模块标识={}，名称={}",
                 spaceId, request.getModuleKey(), request.getName());
 
@@ -204,8 +165,8 @@ public class MetaController {
      */
     @PostMapping("/modules/delete")
     public void deleteModule(@RequestParam Long moduleId) {
-        Long spaceId = getCurrentSpaceId();
-        Integer role = getCurrentUserRole(spaceId);
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Integer role = currentUserService.getCurrentRole();
         log.info("删除模块：空间ID={}，模块ID={}", spaceId, moduleId);
 
         if (role != 1) {

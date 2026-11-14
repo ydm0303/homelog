@@ -11,6 +11,7 @@ import com.homelog.mapper.ModuleMapper;
 import com.homelog.mapper.RecordMapper;
 import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
+import com.homelog.security.CurrentUserService;
 import com.homelog.vo.ExportResultVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,7 @@ public class ExportService {
     private final RecordMapper recordMapper;
     private final SpaceMemberMapper spaceMemberMapper;
     private final UserMapper userMapper;
+    private final CurrentUserService currentUserService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${homelog.storage.local.base-path:./uploads}")
@@ -67,7 +69,7 @@ public class ExportService {
      */
     @Transactional(readOnly = true)
     public ExportResultVO export(ExportRequest request) {
-        Long spaceId = 1L;
+        Long spaceId = currentUserService.getCurrentSpaceId();
 
         if ("module".equals(request.getScope())) {
             return exportSingleModule(spaceId, request.getModuleId());

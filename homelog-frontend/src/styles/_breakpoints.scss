@@ -1,0 +1,33 @@
+// ============================================================
+// 统一断点：640 / 768 / 1024 / 1280
+// ------------------------------------------------------------
+// down($name) 用 max-width 边界 -1px，避免与 up() 规则在边界重叠。
+// 用法：
+//   @use '@/styles/breakpoints' as *;
+//   @include down(md) { ... }
+// ============================================================
+
+@use 'sass:map';
+
+$breakpoints: (
+  sm: 640px,
+  md: 768px,
+  lg: 1024px,
+  xl: 1280px
+);
+
+@function bp($name) {
+  @return map.get($breakpoints, $name);
+}
+
+@mixin up($name) {
+  @media (min-width: bp($name)) {
+    @content;
+  }
+}
+
+@mixin down($name) {
+  @media (max-width: #{bp($name) - 1px}) {
+    @content;
+  }
+}

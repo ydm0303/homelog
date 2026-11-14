@@ -182,7 +182,9 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Plus, Camera } from '@element-plus/icons-vue'
 import { spaceApi, fileApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
+import { resolveFileUrl } from '@/utils/file'
 
 interface Field {
   id: number
@@ -217,10 +219,10 @@ const emit = defineEmits<{
   'update:value': [value: any]
 }>()
 
-// 本地值
-const localValue = ref(props.value)
+const authStore = useAuthStore()
 
-const apiBase = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '')
+// 本地状态
+const localValue = ref(props.value)
 
 // el-upload 的文件列表，通过 v-model:file-list 与组件保持双向同步
 // 每个文件上额外挂 serverPath（服务端相对路径）：file.url 是 blob 预览地址，移除时需要它回写
@@ -274,7 +276,7 @@ watch(() => props.value, (val) => {
     imageList.value = val.map((url: string, idx: number) => ({
       uid: `img-${idx}`,
       name: `image-${idx}.jpg`,
-      url: url.startsWith('http') ? url : `${apiBase}/files${url}`,
+      url: resolveFileUrl(url),
       serverPath: url,
       status: 'success'
     }))
@@ -285,9 +287,13 @@ watch(localValue, (val) => {
   emit('update:value', val)
 })
 
+function emitUpdate() {
+  emit('update:value', localValue.value)
+}
+
 async function fetchSpaceMembers() {
   try {
-    const response = await spaceApi.getMembers(1)
+    const response = await spaceApi.getMembers(authStore.spaceId)
     spaceMembers.value = response.data
   } catch (e) {
     console.error('Failed to fetch space members:', e)
@@ -358,12 +364,12 @@ function handleRemove(_file: any, fileList: any[]) {
     .filter((url: any): url is string => !!url)
 }
 
-function handlePreview(file: any) {
+function handlePreview(_file: any) {
   // 预览由组件自动处理
 }
 
 function handleExceed() {
-  ElMessage.warning('最多只能上传 9 张图片，已忽略多余文件')
+    ElMessage.warning('最多只能上传 9 张图片，已忽略多余文件')
 }
 
 // 移动端拍照
@@ -381,7 +387,7 @@ async function handleCameraCapture(event: Event) {
       {
         uid: `camera-${Date.now()}`,
         name: file.name,
-        url: `${apiBase}/files${url}`,
+        url: resolveFileUrl(url),
         serverPath: url,
         status: 'success'
       }
@@ -410,7 +416,7 @@ async function handleCameraCapture(event: Event) {
       width: 100px;
       height: 100px;
 
-      :deep(.el-upload-list__item-thumbnail) {
+      .el-upload-list__item-thumbnail {
         width: 100%;
         height: 100%;
       }
@@ -424,7 +430,7 @@ async function handleCameraCapture(event: Event) {
       transition: all 0.2s ease;
 
       &:hover {
-        border-color: $primary-color;
+        border-color: $primary-text;
       }
 
       .el-icon {
@@ -456,14 +462,14 @@ async function handleCameraCapture(event: Event) {
     background: $primary-light-bg;
     border: 1px solid $primary-light-border;
     border-radius: $border-radius-base;
-    color: $primary-color;
+    color: $primary-text;
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
       background: $primary-color;
-      color: #fff;
+      color: $card-bg;
     }
 
     el-icon {
@@ -498,8 +504,8 @@ async function handleCameraCapture(event: Event) {
     :deep(.el-textarea__inner),
     :deep(.el-select__tags),
     :deep(.el-date-editor__editor) {
-      font-size: 16px !important;
-      padding: 14px 16px !important;
+      font-size: 16px;
+      padding: 14px 16px;
     }
 
     .image-uploader {
@@ -512,28 +518,4 @@ async function handleCameraCapture(event: Event) {
 }
 
 // 长辈模式
-.elderly-mode .dynamic-field-renderer {
-  :deep(.el-input__inner),
-  :deep(.el-textarea__inner),
-  :deep(.el-select__tags),
-  :deep(.el-date-editor__editor),
-  :deep(.el-radio__label),
-  :deep(.el-checkbox__label) {
-    font-size: 17px !important;
-    padding: 14px 16px !important;
-    height: 52px !important;
-  }
-
-  :deep(.el-input-number) {
-    :deep(.el-input__inner) {
-      font-size: 17px !important;
-      height: 52px !important;
-    }
-  }
-
-  .camera-btn {
-    padding: 14px 24px !important;
-    font-size: 16px !important;
-  }
-}
 </style>

@@ -10,36 +10,58 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const spaceId = ref<number>(1)
   const role = ref<number>(3) // 1=admin, 2=edit, 3=readonly
+  const initialized = ref(false)
+  let initPromise: Promise<void> | null = null
 
   const isLoggedIn = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => role.value === 1)
   const isEditor = computed(() => role.value <= 2)
   const isReadonly = computed(() => role.value === 3)
 
-  // 初始化认证状态
+  // 初始化认证状态（页面刷新时先恢复登录态，路由守卫/布局都要等它完成）
   async function initAuth() {
+    if (initialized.value) return
+    if (initPromise) return initPromise
+
+    initPromise = doInitAuth().finally(() => {
+      initialized.value = true
+      initPromise = null
+    })
+
+    return initPromise
+  }
+
+  async function doInitAuth() {
     const savedToken = localStorage.getItem('access_token')
     const savedRefreshToken = localStorage.getItem('refresh_token')
     const savedUser = localStorage.getItem('user')
     const savedRole = localStorage.getItem('role')
 
-    if (savedToken && savedUser) {
-      token.value = savedToken
-      refreshToken.value = savedRefreshToken
-      user.value = JSON.parse(savedUser)
-      role.value = savedRole ? parseInt(savedRole) : 3
+    if (!savedToken) return
 
-      // 设置 axios 默认头
-      const api = (await import('@/api')).default
-      api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+    token.value = savedToken
+    refreshToken.value = savedRefreshToken
+    role.value = savedRole ? parseInt(savedRole) : 3
 
-      // 验证 token 有效性；401 由 axios 拦截器自动刷新并重试
+    // 先用本地缓存渲染，避免刷新瞬间显示默认占位名
+    if (savedUser) {
       try {
-        await fetchMe()
+        user.value = JSON.parse(savedUser)
       } catch {
-        // 走到这里说明刷新也已失败，清理登录态
-        await logout()
+        localStorage.removeItem('user')
       }
+    }
+
+    // 设置 axios 默认头
+    const api = (await import('@/api')).default
+    api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+
+    // 验证 token 有效性；401 由 axios 拦截器自动刷新并重试
+    try {
+      await fetchMe()
+    } catch {
+      // 走到这里说明刷新也已失败，清理登录态
+      await logout()
     }
   }
 
@@ -77,15 +99,16 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchMe()
   }
 
-  // 获取当前用户信息
+  // 获取当前用户信息（含空间角色）
   async function fetchMe() {
     const response = await authApi.detail()
-    user.value = response.data
-    localStorage.setItem('user', JSON.stringify(response.data))
+    const profile = response.data
+    user.value = profile
+    localStorage.setItem('user', JSON.stringify(profile))
 
-    // 从后端获取角色（简化：这里用固定值，实际应从用户信息或单独接口获取）
-    // 实际项目中可通过 /api/meta/modules/all 判断是否为管理员
-    role.value = 1 // 暂时默认管理员，后续接入真实权限
+    // 后端 /auth/detail 返回当前空间角色，前端不再硬编码管理员
+    role.value = profile.role ?? 3
+    spaceId.value = profile.spaceId ?? 1
     localStorage.setItem('role', role.value.toString())
   }
 

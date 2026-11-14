@@ -10,6 +10,7 @@ import com.homelog.mapper.ModuleMapper;
 import com.homelog.mapper.RecordMapper;
 import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
+import com.homelog.security.CurrentUserService;
 import com.homelog.vo.ImportErrorVO;
 import com.homelog.vo.ImportResultVO;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,7 @@ public class ImportService {
     private final RecordMapper recordMapper;
     private final SpaceMemberMapper spaceMemberMapper;
     private final UserMapper userMapper;
+    private final CurrentUserService currentUserService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${homelog.storage.local.base-path:./uploads}")
@@ -95,7 +97,7 @@ public class ImportService {
         log.info("开始处理 CSV 导入：是否仅预检={}", previewOnly);
 
         // 获取药品模块
-        Long spaceId = 1L;
+        Long spaceId = currentUserService.getCurrentSpaceId();
         Module drugModule = moduleMapper.selectBySpaceAndKey(spaceId, "drug");
         if (drugModule == null) {
             throw new RuntimeException("药品模块不存在，请先初始化");
@@ -271,8 +273,8 @@ public class ImportService {
      * 保存记录
      */
     private void saveRecord(Long moduleId, Map<String, Object> dataJson) {
-        Long spaceId = 1L;
-        Long currentUserId = 1L;
+        Long spaceId = currentUserService.getCurrentSpaceId();
+        Long currentUserId = currentUserService.getCurrentUserId();
 
         // 处理提醒日期（使用有效期）
         LocalDate remindDate = null;

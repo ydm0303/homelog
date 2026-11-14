@@ -1,22 +1,27 @@
 # 家记 - 设计系统规范
 
+> **版本 v1.1（2026-11-14）**
+> 色板已从早期的蓝绿主色调整为线上实际使用的暖陶土色系，并与 `homelog-frontend/src/styles/variables.scss` 对齐。
+> 本文档中的色值、字号、间距以 `variables.scss` 为准；若两者不一致，以代码为唯一事实源。
+> 组件章节里的尺寸示例仍保留早期数值，统一工作放在 [UI 样式优化计划](../UI样式优化计划.md) 的 Phase 1–2。
+
 ## 1. 设计 Token (Design Tokens)
 
 ### 1.1 色板系统
 
 #### 主色调
 ```css
-/* Primary - 品牌主色：温暖可信的蓝绿色 */
---color-primary-50:  #E6F4F1;
---color-primary-100: #CCE8E3;
---color-primary-200: #99D1C7;
---color-primary-300: #66BBAB;
---color-primary-400: #33A58F;
---color-primary-500: #008F73;  /* 主色标准 */
---color-primary-600: #00735C;
---color-primary-700: #005645;
---color-primary-800: #003A2E;
---color-primary-900: #001D17;
+/* Primary - 品牌主色：温暖可信的陶土红 */
+--color-primary-50:  #FDF4EF;
+--color-primary-100: #FBE7DD;
+--color-primary-200: #F6CDBB;
+--color-primary-300: #EFAE94;
+--color-primary-400: #E78F6F;
+--color-primary-500: #DD704E;  /* 主色标准 */
+--color-primary-600: #C25B3C;
+--color-primary-700: #A0492F;
+--color-primary-800: #7D3823;
+--color-primary-900: #5A2718;
 
 /* Primary 语义变量 */
 --color-primary: var(--color-primary-500);
@@ -30,52 +35,52 @@
 #### 语义色
 ```css
 /* Success - 成功/正常/完成 */
---color-success-50:  #F6FFED;
---color-success-500: #52C41A;
---color-success-text: #389E0D;
+--color-success-50:  #EEF6EA;
+--color-success-500: #67C23A;
+--color-success-text: #4E8A4C;
 
 /* Warning - 警告/即将到期/注意 */
---color-warning-50:  #FFFBE6;
---color-warning-500: #FAAD14;
---color-warning-text: #D48806;
+--color-warning-50:  #FFFBE8;
+--color-warning-500: #E6A23C;
+--color-warning-text: #8A5A12;
 
 /* Error/Danger - 错误/危险/已过期/删除 */
---color-error-50:  #FFF1F0;
---color-error-500: #F5222D;
---color-error-text: #CF1322;
+--color-error-50:  #FDECEC;
+--color-error-500: #F56C6C;
+--color-error-text: #C0392B;
 
 /* Info - 信息/提示/进行中 */
---color-info-50:  #E6F7FF;
---color-info-500: #1890FF;
---color-info-text: #096DD9;
+--color-info-50:  #F4F4F5;
+--color-info-500: #909399;
+--color-info-text: #73767A;
 
 /* 优先级色标 */
---color-priority-high:    #F5222D;  /* 高 - 红 */
---color-priority-medium:  #FAAD14;  /* 中 - 黄 */
---color-priority-low:     #52C41A;  /* 低 - 绿 */
---color-priority-none:    #999999;  /* 无 - 灰 */
+--color-priority-high:    #F56C6C;  /* 高 - 红 */
+--color-priority-medium:  #E6A23C;  /* 中 - 黄 */
+--color-priority-low:     #67C23A;  /* 低 - 绿 */
+--color-priority-none:    #9C8D84;  /* 无 - 灰 */
 ```
 
 #### 中性色
 ```css
 /* 文本色 */
---color-text-primary:   #1A1A1A;   /* 主标题/正文 */
---color-text-secondary: #434343;   /* 次要文本/描述 */
---color-text-tertiary:  #8C8C8C;   /* 辅助文本/占位符 */
---color-text-quaternary: #BFBFBF;  /* 禁用/分隔线 */
+--color-text-primary:   #2B2622;   /* 主标题/正文 */
+--color-text-secondary: #7C746D;   /* 次要文本/描述 */
+--color-text-tertiary:  #9C8D84;   /* 辅助文本/占位符 */
+--color-text-quaternary: #D2C5BC;  /* 禁用/分隔线 */
 --color-text-inverse:   #FFFFFF;   /* 深色背景上 */
 
 /* 背景色 */
 --color-bg-base:        #FFFFFF;   /* 页面/卡片背景 */
---color-bg-page:        #F5F5F5;   /* 页面底色 */
+--color-bg-page:        #F7F3ED;   /* 页面底色 */
 --color-bg-elevated:    #FFFFFF;   /* 悬浮层/弹窗 */
---color-bg-hover:       #F5F5F5;   /* Hover 态 */
---color-bg-active:      #E8E8E8;   /* Active/按下态 */
---color-bg-disabled:    #F5F5F5;   /* 禁用态 */
+--color-bg-hover:       #F7F3ED;   /* Hover 态 */
+--color-bg-active:      #F5E2D8;   /* Active/按下态 */
+--color-bg-disabled:    #F7F3ED;   /* 禁用态 */
 --color-bg-mask:        rgba(0,0,0,0.45);  /* 遮罩层 */
 
 /* 边框色 */
---color-border-base:    #D9D9D9;   /* 标准边框 */
+--color-border-base:    #F0E5DD;   /* 标准边框 */
 --color-border-light:   #F0F0F0;   /* 浅分割线 */
 --color-border-focus:   var(--color-primary-500);  /* 聚焦态 */
 --color-border-error:   var(--color-error-500);    /* 错误态 */
@@ -85,10 +90,10 @@
 ```css
 [data-elderly="true"] {
   --color-text-primary:   #000000;
-  --color-text-secondary: #1A1A1A;
-  --color-text-tertiary:  #434343;
-  --color-border-base:    #999999;
-  --color-primary-500:    #006644;  /* 更深的主色，对比度更高 */
+  --color-text-secondary: #2B2622;
+  --color-text-tertiary:  #7C746D;
+  --color-border-base:    #9C8D84;
+  --color-primary-500:    #A0492F;  /* 更深的主色，对比度更高 */
   --color-success-500:    #2E8B00;
   --color-warning-500:    #CC8800;
   --color-error-500:      #CC0000;
@@ -334,18 +339,18 @@
 ├──────────────┬──────────────────────────────────────────────────────────────────────────────────┤
 │ 状态         │ 视觉规范                                                                          │
 ├──────────────┼──────────────────────────────────────────────────────────────────────────────────┤
-│ Default      │ 边框 #D9D9D9，背景白，文字 #1A1A1A，占位符 #BFBFBF                               │
-│ Hover        │ 边框 #999999                                                                      │
-│ Focus        │ 边框 #008F73 + 阴影 0 0 0 2px rgba(0,143,115,0.2)                               │
+│ Default      │ 边框 #F0E5DD，背景白，文字 #2B2622，占位符 #D2C5BC                               │
+│ Hover        │ 边框 #9C8D84                                                                      │
+│ Focus        │ 边框 #DD704E + 阴影 0 0 0 2px rgba(0,143,115,0.2)                               │
 │ Typing       │ 同 Focus，清除按钮显示                                                            │
-│ Error        │ 边框 #F5222D，右侧错误图标 ❌，下方红色错误文本                                  │
-│ Warning      │ 边框 #FAAD14，右侧警告图标 ⚠️                                                   │
-│ Success      │ 边框 #52C41A，右侧成功图标 ✅ (校验通过反馈)                                      │
-│ Disabled     │ 背景 #F5F5F5，边框 #D9D9D9，文字 #8C8C8C，禁用指针                               │
-│ ReadOnly     │ 背景白，边框 #D9D9D9，文字正常，无光标，可选中复制                                │
+│ Error        │ 边框 #F56C6C，右侧错误图标 ❌，下方红色错误文本                                  │
+│ Warning      │ 边框 #E6A23C，右侧警告图标 ⚠️                                                   │
+│ Success      │ 边框 #67C23A，右侧成功图标 ✅ (校验通过反馈)                                      │
+│ Disabled     │ 背景 #F7F3ED，边框 #F0E5DD，文字 #9C8D84，禁用指针                               │
+│ ReadOnly     │ 背景白，边框 #F0E5DD，文字正常，无光标，可选中复制                                │
 ├──────────────┼──────────────────────────────────────────────────────────────────────────────────┤
-│ 前缀/后缀    │ 图标/文字颜色 #8C8C8C，Hover #1A1A1A，背景透明                                   │
-│ 字符计数     │ 右下角 #BFBFBF，超限 #F5222D                                                     │
+│ 前缀/后缀    │ 图标/文字颜色 #9C8D84，Hover #2B2622，背景透明                                   │
+│ 字符计数     │ 右下角 #D2C5BC，超限 #F56C6C                                                     │
 │ 前缀标签     │ 标签在左侧，宽度自适应，冒号对齐                                                  │
 └──────────────┴──────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -357,9 +362,9 @@
 下拉面板：
 - 最大高度 280px，超出滚动
 - 选项高度 32px (长辈 44px)
-- 悬停项背景 #F5F5F5，选中项背景 #E6F4F1 + 主色文字
-- 分组标题：12px #8C8C8C，上边距 12px 下边距 4px
-- 空状态：居中"暂无数据" 14px #BFBFBF
+- 悬停项背景 #F7F3ED，选中项背景 #FDF4EF + 主色文字
+- 分组标题：12px #9C8D84，上边距 12px 下边距 4px
+- 空状态：居中"暂无数据" 14px #D2C5BC
 - 可搜索：顶部搜索框 32px
 ```
 
@@ -382,12 +387,12 @@
 ```
 尺寸：高度 20px (长辈 28px)，内边距 0 8px (长辈 0 12px)，圆角 10px
 类型：
-- Default: 灰底灰字 #F5F5F5 / #8C8C8C
-- Primary: 主色浅底主色字 #E6F4F1 / #008F73
-- Success: 绿色浅底绿字 #F6FFED / #52C41A
-- Warning: 黄色浅底黄字 #FFFBE6 / #FAAD14
-- Danger: 红色浅底红字 #FFF1F0 / #F5222D
-- Info: 蓝色浅底蓝字 #E6F7FF / #1890FF
+- Default: 灰底灰字 #F7F3ED / #9C8D84
+- Primary: 主色浅底主色字 #FDF4EF / #DD704E
+- Success: 绿色浅底绿字 #EEF6EA / #67C23A
+- Warning: 黄色浅底黄字 #FFFBE8 / #E6A23C
+- Danger: 红色浅底红字 #FDECEC / #F56C6C
+- Info: 蓝色浅底蓝字 #F4F4F5 / #909399
 可关闭：右侧 ✕ 16px，Hover 显示背景
 圆点标记：前缀 6px 圆点 + 4px 间距
 ```
@@ -430,8 +435,8 @@ Hover：阴影 var(--shadow-card-hover) + 上浮 -2px
 表头：背景 #FAFAFA，字重 500，底部 1px 分割线
 单元格：内边距 12px 16px，垂直居中
 斑马纹：隔行背景 #FAFAFA (可关闭)
-悬停行：背景 #F5F5F5
-选中行：背景 #E6F4F1
+悬停行：背景 #F7F3ED
+选中行：背景 #FDF4EF
 边框：垂直 #F0F0F0，水平 #F0F0F0
 固定列：左侧阴影 var(--shadow-sm)，右侧阴影镜像
 展开行：展开动画 200ms slide-down
@@ -499,7 +504,7 @@ Steps：
 
 ```
 Skeleton (骨架层)：
-- 动画：脉冲/波浪 #E8E8E8 → #F5F5F5 → #E8E8E8 1.5s 无限循环
+- 动画：脉冲/波浪 #F5E2D8 → #F7F3ED → #F5E2D8 1.5s 无限循环
 - 圆角跟随目标组件
 - 常用模式：卡片列表、表格行、详情页、表单页
 
@@ -508,8 +513,8 @@ Empty (空状态)：
 │                                             │
 │        📭 (插画 120px / 长辈 180px)          │
 │                                             │
-│        暂无数据                             │ ← 18px #434343
-│        调整筛选条件或新增第一条记录           │ ← 14px #8C8C8C
+│        暂无数据                             │ ← 18px #7C746D
+│        调整筛选条件或新增第一条记录           │ ← 14px #9C8D84
 │                                             │
 │        [主操作按钮: 新增/重置/去逛逛]         │
 │                                             │
@@ -519,7 +524,7 @@ Error (错误状态)：
 - 同 Empty，插画 📡/⚠️/😢，主按钮"重试"/"返回首页"
 
 Loading (全屏/局部)：
-- 全屏：居中 Spinner 32px + "加载中..." 14px #8C8C8C
+- 全屏：居中 Spinner 32px + "加载中..." 14px #9C8D84
 - 局部：容器相对定位，绝对居中 Spinner 24px，半透明遮罩
 ```
 

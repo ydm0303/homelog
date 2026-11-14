@@ -7,6 +7,7 @@ import com.homelog.entity.Module;
 import com.homelog.mapper.MessageMapper;
 import com.homelog.mapper.RecordMapper;
 import com.homelog.mapper.ModuleMapper;
+import com.homelog.security.CurrentUserService;
 import com.homelog.vo.MessageVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,29 +32,13 @@ public class MessageService {
     private final MessageMapper messageMapper;
     private final RecordMapper recordMapper;
     private final ModuleMapper moduleMapper;
-
-    /**
-     * 获取当前空间ID（MVP 单空间）
-     */
-    private Long getCurrentSpaceId() {
-        return 1L;
-    }
-
-    /**
-     * 获取当前用户ID（简化：从 SecurityContext 获取，实际应查用户表）
-     */
-    private Long getCurrentUserId() {
-        // 实际项目中应从 JWT 或 SecurityContext 获取用户名，再查用户表得到 ID
-        // 这里简化返回 1L
-        return 1L;
-    }
+    private final CurrentUserService currentUserService;
 
     /**
      * 消息列表查询（分页、筛选）
      */
     public List<MessageVO> list(MessageQueryRequest request) {
-        Long spaceId = getCurrentSpaceId();
-        Long userId = getCurrentUserId();
+        Long userId = currentUserService.getCurrentUserId();
 
         // 计算偏移量
         int offset = (request.getPage() - 1) * request.getSize();
@@ -75,7 +60,7 @@ public class MessageService {
      * 获取消息总数（用于分页）
      */
     public long count(MessageQueryRequest request) {
-        Long userId = getCurrentUserId();
+        Long userId = currentUserService.getCurrentUserId();
         return messageMapper.countByUserIdWithFilters(
                 userId, request.getIsRead(), request.getKeyword(),
                 request.getStartDate(), request.getEndDate()
@@ -87,13 +72,13 @@ public class MessageService {
      */
     @Transactional
     public void markRead(Long messageId) {
-        Long userId = getCurrentUserId();
+        Long userId = currentUserService.getCurrentUserId();
         Message message = messageMapper.selectById(messageId);
         if (message == null) {
             log.warn("Mark message read failed, message not found: messageId={}", messageId);
             return;
         }
-        if (!message.getUserId().equals(userId)) {
+        if (userId == null || !userId.equals(message.getUserId())) {
             log.warn("Mark message read denied, not the owner: messageId={}, userId={}, ownerId={}",
                     messageId, userId, message.getUserId());
             return;
@@ -108,16 +93,36 @@ public class MessageService {
      */
     @Transactional
     public void markAllRead() {
-        Long userId = getCurrentUserId();
+        Long userId = currentUserService.getCurrentUserId();
         messageMapper.updateAllReadByUserId(userId);
         log.info("用户的全部消息已标记为已读：用户ID={}", userId);
+    }
+
+    /**
+     * 删除单条消息（仅限本人）
+     */
+    @Transactional
+    public void deleteMessage(Long messageId) {
+        Long userId = currentUserService.getCurrentUserId();
+        Message message = messageMapper.selectById(messageId);
+        if (message == null) {
+            log.warn("Delete message failed, message not found: messageId={}", messageId);
+            throw new RuntimeException("消息不存在");
+        }
+        if (userId == null || !userId.equals(message.getUserId())) {
+            log.warn("Delete message denied, not the owner: messageId={}, userId={}, ownerId={}",
+                    messageId, userId, message.getUserId());
+            throw new RuntimeException("无权删除该消息");
+        }
+        messageMapper.deleteById(messageId);
+        log.info("消息删除成功：消息ID={}，用户ID={}", messageId, userId);
     }
 
     /**
      * 获取未读数量
      */
     public int getUnreadCount() {
-        Long userId = getCurrentUserId();
+        Long userId = currentUserService.getCurrentUserId();
         return messageMapper.countUnreadByUserId(userId);
     }
 
@@ -127,7 +132,7 @@ public class MessageService {
     @Transactional
     public void createMessage(Long userId, Long recordId, String content, String type) {
         Message message = new Message()
-                .setSpaceId(getCurrentSpaceId())
+                .setSpaceId(currentUserService.getCurrentSpaceId())
                 .setUserId(userId)
                 .setRecordId(recordId)
                 .setContent(content)

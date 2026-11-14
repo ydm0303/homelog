@@ -1,30 +1,31 @@
 <template>
   <div class="global-search-page">
-    <!-- 搜索头部 -->
-    <div class="search-header">
-      <el-input
-        v-model="searchKeyword"
-        :placeholder="`搜索：${initialKeyword || '输入关键词...'}`"
-        :prefix-icon="Search"
-        clearable
-        size="large"
-        @keyup.enter="handleKeywordSearch"
-        class="search-input"
-      >
-        <template #append>
-          <el-button
-            type="primary"
-            :loading="loading"
-            @click="handleKeywordSearch"
-          >
-            搜索
-          </el-button>
-        </template>
-      </el-input>
-    </div>
+    <PageHeader title="全局搜索" description="在全部家庭记录中查找内容、标签和字段" />
 
-    <!-- 筛选栏 -->
-    <el-card class="filter-card" shadow="never">
+    <!-- 搜索与筛选 -->
+    <AppCard class="search-card" padding="sm">
+      <div class="search-header">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="`搜索：${initialKeyword || '输入关键词...'}`"
+          :prefix-icon="Search"
+          clearable
+          size="large"
+          @keyup.enter="handleKeywordSearch"
+          class="search-input"
+        >
+          <template #append>
+            <el-button
+              type="primary"
+              :loading="loading"
+              @click="handleKeywordSearch"
+            >
+              搜索
+            </el-button>
+          </template>
+        </el-input>
+      </div>
+
       <div class="filter-content">
         <div class="filter-group">
           <span class="filter-label">模块：</span>
@@ -32,7 +33,7 @@
             v-model="filterModuleId"
             placeholder="全部模块"
             size="small"
-            style="width: 160px"
+            class="filter-select"
             @change="handleFilterChange"
           >
             <el-option label="全部模块" value="" />
@@ -51,7 +52,7 @@
             v-model="filterTag"
             placeholder="全部标签"
             size="small"
-            style="width: 160px"
+            class="filter-select"
             filterable
             @change="handleFilterChange"
           >
@@ -74,7 +75,7 @@
             start-placeholder="开始"
             end-placeholder="结束"
             size="small"
-            style="width: 260px"
+            class="filter-date"
             @change="handleFilterChange"
             value-format="YYYY-MM-DD"
           />
@@ -89,44 +90,38 @@
           重置筛选
         </el-button>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 结果统计 -->
     <div class="result-stats" v-if="!loading && (results.length > 0 || total > 0)">
       找到 <span class="keyword">{{ total }}</span> 条结果
-      <span v-if="searchKeyword" class="keyword-info">关于 "<em>{{ escapeHtml(searchKeyword) }}</em>"</span>
+      <span v-if="searchKeyword" class="keyword-info">关于 "<em>{{ searchKeyword }}</em>"</span>
       <span class="time">（耗时 {{ searchTime }}ms）</span>
     </div>
 
-    <!-- 加载中 -->
-    <div v-if="loading" class="loading-state">
-      <el-skeleton :rows="8" animated />
-    </div>
-
-    <!-- 空状态 -->
-    <div v-else-if="results.length === 0" class="empty-state">
-      <el-icon class="empty-icon"><Search /></el-icon>
-      <p v-if="searchKeyword">未找到相关记录</p>
-      <p v-else>请输入关键词开始搜索</p>
-      <div class="search-tips" v-if="searchKeyword">
-        <p>尝试以下建议：</p>
-        <ul>
-          <li>检查拼写是否正确</li>
-          <li>尝试不同的关键词</li>
-          <li>减少筛选条件</li>
-          <li>搜索已禁用模块的历史数据</li>
-        </ul>
-      </div>
-    </div>
-
     <!-- 结果列表 -->
-    <el-card v-else class="results-card" shadow="never">
-      <div class="results-list">
+    <AppCard class="results-card" padding="none">
+      <AsyncState
+        :loading="loading"
+        :empty="!loading && results.length === 0"
+        :empty-icon="Search"
+        :empty-title="searchKeyword ? '未找到相关记录' : '输入关键词开始搜索'"
+        :empty-description="
+          searchKeyword
+            ? '检查拼写、尝试其他关键词，或减少筛选条件'
+            : '支持搜索标题、标签、字段内容，以及已禁用模块的历史数据'
+        "
+        min-height="320px"
+      >
+        <div class="results-list">
         <div
           v-for="record in results"
           :key="record.id"
           class="result-item"
+          role="button"
+          tabindex="0"
           @click="goToDetail(record)"
+          @keyup.enter="goToDetail(record)"
         >
           <!-- 模块标识 + 时间 -->
           <div class="result-header">
@@ -141,14 +136,17 @@
           </div>
 
           <!-- 标题/核心内容 -->
-          <h3 class="result-title" v-html="highlightKeyword(record.title || getFirstFieldValue(record))" />
+          <h3 class="result-title">
+            <HighlightText
+              :text="record.title || getFirstFieldValue(record)"
+              :keyword="searchKeyword"
+            />
+          </h3>
 
-          <!-- 高亮片段（后端返回纯文本，需转义后再高亮，不能直接 v-html） -->
-          <div
-            v-if="record.highlightSnippet"
-            class="result-snippet"
-            v-html="highlightKeyword(record.highlightSnippet)"
-          />
+          <!-- 高亮片段（纯文本分段渲染，不使用 v-html） -->
+          <div v-if="record.highlightSnippet" class="result-snippet">
+            <HighlightText :text="record.highlightSnippet" :keyword="searchKeyword" />
+          </div>
 
           <!-- 字段预览 -->
           <div class="result-fields" v-if="Object.keys(getDisplayFields(record)).length > 0">
@@ -158,7 +156,9 @@
               class="field-chip"
             >
               <span class="field-label">{{ key }}：</span>
-              <span class="field-value" v-html="highlightKeyword(String(value))"/>
+              <span class="field-value">
+                <HighlightText :text="String(value)" :keyword="searchKeyword" />
+              </span>
             </span>
           </div>
 
@@ -197,18 +197,24 @@
           @current-change="handlePageChange"
         />
       </div>
-    </el-card>
+      </AsyncState>
+    </AppCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useModuleStore } from '@/stores/module'
-import { searchApi } from '@/api'
+import { recordApi, searchApi } from '@/api'
 import { Search, Refresh, Clock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import dayjs from 'dayjs'
+import HighlightText from '@/components/HighlightText.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import AppCard from '@/components/ui/AppCard.vue'
+import AsyncState from '@/components/ui/AsyncState.vue'
+import { formatDate as formatDateSafe, formatDateTime as formatDateTimeSafe, dayDiffFromToday } from '@/utils/date'
+import { getModuleTagType } from '@/utils/module'
 
 const router = useRouter()
 const route = useRoute()
@@ -248,6 +254,19 @@ const hasActiveFilters = computed(() =>
   filterDateRange.value !== null
 )
 
+// 顶栏搜索在 /search 页面再次提交时只改 query，不会重建组件，这里同步关键词
+watch(
+  () => route.query.q,
+  (value) => {
+    const next = (value as string) || ''
+    if (next !== searchKeyword.value) {
+      searchKeyword.value = next
+      page.value = 1
+      handleSearch()
+    }
+  }
+)
+
 onMounted(async () => {
   await moduleStore.fetchAllModules() // 获取所有模块（含禁用）
   await fetchAllTags()
@@ -260,27 +279,8 @@ onMounted(async () => {
 
 async function fetchAllTags() {
   try {
-    // 获取所有模块的标签（用于筛选下拉）
-    const tagSet = new Set<string>()
-    for (const module of searchableModules.value) {
-      if (!module.id) continue
-      try {
-        const response = await searchApi.global({
-          q: '',
-          moduleId: module.id,
-          page: 1,
-          size: 200
-        })
-        const body = response.data
-        const list = Array.isArray(body?.data) ? body.data : []
-        list.forEach((r: any) => {
-          r.tags?.split(',').forEach((t: string) => t.trim() && tagSet.add(t.trim()))
-        })
-      } catch (e) {
-        // 忽略单模块错误
-      }
-    }
-    allTags.value = Array.from(tagSet).sort()
+    const response = await recordApi.tags()
+    allTags.value = Array.isArray(response.data) ? response.data : []
   } catch (e) {
     console.error('Failed to fetch all tags:', e)
   }
@@ -297,7 +297,7 @@ async function handleSearch() {
   searchStartTime.value = Date.now()
 
   try {
-    const params: Record<string, any> = {
+    const params: any = {
       q: searchKeyword.value.trim(),
       page: page.value,
       size: pageSize.value
@@ -318,7 +318,7 @@ async function handleSearch() {
     searchTime.value = Date.now() - searchStartTime.value
 
     // 更新 URL 不刷新页面
-    const query = { ...route.query }
+    const query: any = { ...route.query }
     query.q = searchKeyword.value || undefined
     query.moduleId = filterModuleId.value || undefined
     query.tag = filterTag.value || undefined
@@ -401,50 +401,26 @@ function getDisplayFields(record: any): Record<string, any> {
   return result
 }
 
-function getModuleTagType(moduleKey: string) {
-  const types: Record<string, string> = {
-    drug: 'primary',
-    todo: 'success',
-    note: 'info',
-    idoc: 'warning'
-  }
-  return types[moduleKey] || 'info'
-}
-
 function getRemindClass(remindDate: string) {
-  const diff = dayjs(remindDate).diff(dayjs(), 'day')
+  const diff = dayDiffFromToday(remindDate)
+  if (diff === null) return ''
   if (diff < 0) return 'remind-overdue'
   if (diff <= 3) return 'remind-soon'
   return ''
 }
 
-function highlightKeyword(text: string) {
-  if (!searchKeyword.value.trim()) return escapeHtml(text)
-  // 用户输入需先转义正则元字符（如 ( [ + \），否则 new RegExp 会抛语法错误导致渲染中断
-  const pattern = escapeHtml(searchKeyword.value.trim()).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return escapeHtml(text).replace(
-    new RegExp(`(${pattern})`, 'gi'),
-    '<mark class="highlight">$1</mark>'
-  )
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
-
 function formatDate(dateStr: string) {
-  return dayjs(dateStr).format('MM-DD')
+  return formatDateSafe(dateStr, 'MM-DD')
 }
 
 function formatDateTime(dateStr: string) {
-  return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
+  return formatDateTimeSafe(dateStr)
 }
 </script>
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
+@use '@/styles/breakpoints' as *;
 
 .global-search-page {
   .search-header {
@@ -473,30 +449,6 @@ function formatDateTime(dateStr: string) {
     }
   }
 
-  .filter-card {
-    margin-bottom: 16px;
-
-    .filter-content {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-      padding: 8px 0;
-
-      .filter-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        .filter-label {
-          font-size: 13px;
-          color: $text-secondary;
-          white-space: nowrap;
-        }
-      }
-    }
-  }
-
   .result-stats {
     display: flex;
     align-items: center;
@@ -507,7 +459,7 @@ function formatDateTime(dateStr: string) {
 
     .keyword {
       font-weight: 600;
-      color: $primary-color;
+      color: $primary-text;
     }
 
     .keyword-info {
@@ -609,8 +561,8 @@ function formatDateTime(dateStr: string) {
           line-height: 1.5;
 
           .highlight {
-            background: #fffbe8;
-            color: #e6a23c;
+            background: $warning-bg;
+            color: $warning-text;
             padding: 0 2px;
             border-radius: 2px;
           }
@@ -627,8 +579,8 @@ function formatDateTime(dateStr: string) {
           border-left: 3px solid $primary-color;
 
           .highlight {
-            background: #fffbe8;
-            color: #e6a23c;
+            background: $warning-bg;
+            color: $warning-text;
             padding: 0 2px;
             border-radius: 2px;
           }
@@ -662,8 +614,8 @@ function formatDateTime(dateStr: string) {
               white-space: nowrap;
 
               .highlight {
-                background: #fffbe8;
-                color: #e6a23c;
+                background: $warning-bg;
+                color: $warning-text;
                 padding: 0 2px;
                 border-radius: 2px;
               }
@@ -686,12 +638,12 @@ function formatDateTime(dateStr: string) {
           color: $text-placeholder;
 
           .remind-overdue {
-            color: #f56c6c;
+            color: $danger-text;
             font-weight: 500;
           }
 
           .remind-soon {
-            color: #e6a23c;
+            color: $warning-text;
             font-weight: 500;
           }
         }
@@ -708,33 +660,85 @@ function formatDateTime(dateStr: string) {
 
 @media (max-width: 767px) {
   .global-search-page {
-    .filter-content {
-      flex-direction: column;
-      align-items: stretch;
-
-      .filter-group {
-        :deep(.el-select),
-        :deep(.el-date-picker) {
-          width: 100% !important;
-        }
-      }
-    }
-
     .search-header .search-input {
       :deep(.el-input__inner) {
-        font-size: 16px !important; // 防止 iOS 缩放
+        font-size: 16px; // 防止 iOS 聚焦时缩放
       }
     }
   }
 }
 
-.elderly-mode .global-search-page {
-  .search-header :deep(.el-input__inner) { font-size: 18px !important; height: 56px !important; }
-  .search-header :deep(.el-button) { font-size: 17px !important; padding: 0 28px !important; height: 56px !important; }
-  .filter-label { font-size: 15px !important; }
-  .result-title { font-size: 18px !important; }
-  .result-snippet { font-size: 15px !important; }
-  .field-chip { font-size: 14px !important; }
-  .result-meta { font-size: 14px !important; }
+// ============================================================
+// Phase 1：搜索页结构
+// ============================================================
+.search-card {
+  margin-bottom: 16px;
+}
+
+.search-card .filter-select {
+  width: 160px;
+}
+
+.search-card .filter-date {
+  width: 260px;
+}
+
+.search-card .search-header {
+  margin-bottom: 0;
+}
+
+.search-card .filter-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid $border-color-light;
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filter-label {
+    font-size: 13px;
+    color: $text-secondary;
+    white-space: nowrap;
+  }
+}
+
+.results-card .pagination {
+  padding: 14px 20px;
+  border-top: 1px solid $border-color-light;
+}
+
+.results-card .results-list {
+  padding: 0 4px;
+}
+
+@include down(md) {
+  .search-card .filter-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .search-card .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .filter-select,
+    .filter-date {
+      flex: 1;
+      width: 100%;
+    }
+  }
+
+  .results-card .pagination {
+    padding: 12px;
+  }
 }
 </style>

@@ -113,9 +113,20 @@ api.interceptors.response.use(
       }
     }
 
-    // 统一错误提示
-    const message = getApiErrorMessage(error, '请求失败')
-    if (error.response?.status !== 401 && !originalRequest._skipErrorToast) {
+    // 统一错误提示：按状态码给出更明确的信息，避免只展示后端原始 message
+    const status = error.response?.status
+    let message = getApiErrorMessage(error, '请求失败')
+    if (status === 403) {
+      message = '无权访问该资源，请联系空间管理员'
+    } else if (status === 404) {
+      message = getApiErrorMessage(error, '请求的资源不存在')
+    } else if (status === 429) {
+      message = '操作过于频繁，请稍后再试'
+    } else if (status !== undefined && status >= 500) {
+      message = getApiErrorMessage(error, '服务器开小差了，请稍后再试')
+    }
+
+    if (status !== 401 && !originalRequest._skipErrorToast) {
       ElMessage.error(message)
     }
 
@@ -129,13 +140,13 @@ export default api
 export const authApi = {
   /** 登录 POST /api/auth/login（错误提示由登录页统一处理，跳过拦截器提示和 token 刷新） */
   login: (username: string, password: string) => {
-    const config = { _skipErrorToast: true, _skipAuthRefresh: true }
+    const config = { _skipErrorToast: true, _skipAuthRefresh: true } as any
     return api.post('/auth/login', { username, password }, config)
   },
 
   /** 注册 POST /api/auth/register（错误提示由注册页统一处理，跳过拦截器提示和 token 刷新） */
   register: (data: { username: string; password: string; email: string; nickName?: string }) => {
-    const config = { _skipErrorToast: true, _skipAuthRefresh: true }
+    const config = { _skipErrorToast: true, _skipAuthRefresh: true } as any
     return api.post('/auth/register', data, config)
   },
 
@@ -163,9 +174,23 @@ export const authApi = {
 
 // ============ 记录相关 API ============
 export const recordApi = {
-  /** 列表查询 GET /api/records/list?moduleId=xxx&page=1&size=20&keyword=&tag= */
-  list: (params: { moduleId: number; page?: number; size?: number; keyword?: string; tag?: string }) =>
+  /** 列表查询 GET /api/records/list?moduleId=xxx&page=1&size=20&keyword=&tag=... */
+  list: (params: {
+    moduleId: number
+    page?: number
+    size?: number
+    keyword?: string
+    tag?: string
+    startDate?: string
+    endDate?: string
+    creator?: string
+    privateOnly?: boolean
+  }) =>
     api.get('/records/list', { params }),
+
+  /** 标签聚合 GET /api/records/tags?moduleId=xxx（moduleId 可选） */
+  tags: (moduleId?: number) =>
+    api.get('/records/tags', { params: moduleId ? { moduleId } : {} }),
 
   /** 详情查询 GET /api/records/detail?recordId=xxx&moduleId=xxx */
   detail: (recordId: number, moduleId: number) =>
@@ -290,7 +315,18 @@ export const messageApi = {
 
   /** 获取未读数量 GET /api/messages/unread-count */
   getUnreadCount: () =>
-    api.get('/messages/unread-count')
+    api.get('/messages/unread-count'),
+
+  /** 删除单条消息 DELETE /api/messages/:id */
+  remove: (id: number) =>
+    api.delete(`/messages/${id}`)
+}
+
+// ============ 首页聚合 API ============
+export const dashboardApi = {
+  /** 首页聚合数据 GET /api/dashboard/summary */
+  summary: () =>
+    api.get('/dashboard/summary')
 }
 
 // ============ 全局搜索 API ============

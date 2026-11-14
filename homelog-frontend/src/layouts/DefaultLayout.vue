@@ -19,24 +19,15 @@
           <span v-if="!sidebarCollapsed">首页</span>
         </router-link>
 
-        <router-link to="/module/drug" class="nav-item" exact-active-class="active">
-          <el-icon><FirstAidKit /></el-icon>
-          <span v-if="!sidebarCollapsed">药品档案</span>
-        </router-link>
-
-        <router-link to="/module/todo" class="nav-item" exact-active-class="active">
-          <el-icon><Checked /></el-icon>
-          <span v-if="!sidebarCollapsed">家庭待办</span>
-        </router-link>
-
-        <router-link to="/module/note" class="nav-item" exact-active-class="active">
-          <el-icon><Picture /></el-icon>
-          <span v-if="!sidebarCollapsed">生活记事相册</span>
-        </router-link>
-
-        <router-link to="/module/idoc" class="nav-item" exact-active-class="active">
-          <el-icon><CreditCard /></el-icon>
-          <span v-if="!sidebarCollapsed">证件档案</span>
+        <router-link
+          v-for="module in enabledModules"
+          :key="module.id"
+          :to="`/module/${module.moduleKey}`"
+          class="nav-item"
+          active-class="active"
+        >
+          <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
+          <span v-if="!sidebarCollapsed">{{ module.name }}</span>
         </router-link>
 
         <router-link v-if="isAdmin" to="/settings" class="nav-item" exact-active-class="active">
@@ -50,36 +41,40 @@
         <div class="user-info">
           <el-avatar :size="36" :src="authStore.user?.avatar" />
           <div class="user-detail">
-            <span class="user-name">{{ authStore.user?.nickName || '杨东铭' }}</span>
-            <span class="user-role">管理员</span>
+            <span class="user-name">{{ displayName }}</span>
+            <span class="user-role">{{ getRoleLabel }}</span>
           </div>
         </div>
       </div>
     </aside>
 
-    <el-drawer v-model="mobileDrawer" direction="ltr" size="78%" :before-close="handleDrawerClose">
+    <el-drawer
+      v-model="mobileDrawer"
+      direction="ltr"
+      size="86%"
+      class="mobile-drawer"
+      modal-class="mobile-drawer-overlay"
+      :before-close="handleDrawerClose"
+    >
       <nav class="mobile-nav">
-        <router-link to="/" class="mobile-nav-item" @click="mobileDrawer = false">
+        <router-link to="/" class="mobile-nav-item" exact-active-class="active" @click="mobileDrawer = false">
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </router-link>
-        <router-link to="/module/drug" class="mobile-nav-item" @click="mobileDrawer = false">
-          <el-icon><FirstAidKit /></el-icon>
-          <span>药品档案</span>
+
+        <router-link
+          v-for="module in enabledModules"
+          :key="module.id"
+          :to="`/module/${module.moduleKey}`"
+          class="mobile-nav-item"
+          active-class="active"
+          @click="mobileDrawer = false"
+        >
+          <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
+          <span>{{ module.name }}</span>
         </router-link>
-        <router-link to="/module/todo" class="mobile-nav-item" @click="mobileDrawer = false">
-          <el-icon><Checked /></el-icon>
-          <span>家庭待办</span>
-        </router-link>
-        <router-link to="/module/note" class="mobile-nav-item" @click="mobileDrawer = false">
-          <el-icon><Picture /></el-icon>
-          <span>生活记事相册</span>
-        </router-link>
-        <router-link to="/module/idoc" class="mobile-nav-item" @click="mobileDrawer = false">
-          <el-icon><CreditCard /></el-icon>
-          <span>证件档案</span>
-        </router-link>
-        <router-link v-if="isAdmin" to="/settings" class="mobile-nav-item" @click="mobileDrawer = false">
+
+        <router-link v-if="isAdmin" to="/settings" class="mobile-nav-item" exact-active-class="active" @click="mobileDrawer = false">
           <el-icon><Setting /></el-icon>
           <span>设置中心</span>
         </router-link>
@@ -87,8 +82,8 @@
         <div class="mobile-user-box">
           <el-avatar :size="42" :src="authStore.user?.avatar" />
           <div>
-            <p>{{ authStore.user?.nickName || '杨东铭' }}</p>
-            <span>管理员</span>
+            <p>{{ displayName }}</p>
+            <span>{{ getRoleLabel }}</span>
           </div>
         </div>
       </nav>
@@ -97,28 +92,28 @@
     <div class="main-content" :class="{ expanded: sidebarCollapsed && !isMobile }">
       <header class="top-bar">
         <div class="top-bar-left">
-          <el-button v-if="!isMobile" class="toggle-btn" @click="sidebarCollapsed = !sidebarCollapsed" circle size="small">
+          <el-button v-if="!isMobile" class="toggle-btn" :aria-label="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="sidebarCollapsed = !sidebarCollapsed" circle size="small">
             <el-icon><Fold v-if="!sidebarCollapsed" /><Expand v-else /></el-icon>
           </el-button>
 
-          <el-button v-if="isMobile" class="menu-btn" @click="mobileDrawer = true" circle size="small">
+          <el-button v-if="isMobile" class="menu-btn" aria-label="打开菜单" @click="mobileDrawer = true" circle size="small">
             <el-icon><Menu /></el-icon>
           </el-button>
         </div>
 
         <div class="top-bar-center" v-show="!isMobile">
-          <el-input v-model="searchKeyword" placeholder="搜索记录、标签、内容..." :prefix-icon="Search" clearable size="small" class="top-search-input" @keyup.enter="handleSearch" @focus="showSearchDrawer = true" @blur="setTimeout(() => showSearchDrawer = false, 200)" />
+          <el-input v-model="searchKeyword" placeholder="搜索记录、标签、内容..." :prefix-icon="Search" clearable size="small" class="top-search-input" @keyup.enter="handleSearch" />
         </div>
 
         <div class="top-bar-right">
-          <el-button v-if="isMobile" class="search-btn" @click="showSearchDrawer = true" circle size="small">
+          <el-button v-if="isMobile" class="search-btn" aria-label="打开全局搜索" @click="goToSearch" circle size="small">
             <el-icon><Search /></el-icon>
           </el-button>
 
           <el-dropdown>
-            <span class="dropdown-link">
+            <span class="dropdown-link" role="button" tabindex="0" aria-label="消息中心">
               <el-icon class="notification-icon"><Bell /></el-icon>
-              <el-badge v-if="unreadCount > 0" :value="unreadCount" max="99" class="notification-badge" />
+              <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="notification-badge" />
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -131,7 +126,7 @@
           <el-dropdown trigger="click" class="user-drop">
             <div class="user-trigger">
               <el-avatar :size="32" :src="authStore.user?.avatar" />
-              <span class="user-trigger-name">{{ authStore.user?.nickName || '杨东铭' }}</span>
+              <span class="user-trigger-name">{{ displayName }}</span>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
@@ -143,7 +138,13 @@
       </header>
 
       <main class="page-content">
-        <router-view />
+        <div class="page-container">
+          <router-view v-slot="{ Component, route: currentRoute }">
+            <transition name="page-fade" mode="out-in" @after-enter="restoreScroll">
+              <component :is="Component" :key="currentRoute.path" />
+            </transition>
+          </router-view>
+        </div>
       </main>
     </div>
 
@@ -157,28 +158,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  HomeFilled, Setting, Fold, Expand, Menu, Bell, Download, Search,
-  FirstAidKit, Checked, Picture, CreditCard
-} from '@element-plus/icons-vue'
+import { HomeFilled, Setting, Fold, Expand, Menu, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { messageApi } from '@/api'
-import { registerSW } from 'virtual:pwa-register'
 import { ElMessage } from 'element-plus'
+import { getModuleIcon } from '@/utils/module'
 
-const route = useRoute()
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const moduleStore = useModuleStore()
+
+// 记录每个路由的滚动位置，返回时恢复（滚动容器是 .page-content，不是 window）
+const scrollPositions = new Map<string, number>()
+let unregisterScrollGuard: (() => void) | null = null
 
 // 响应式状态
 const sidebarCollapsed = ref(false)
 const mobileDrawer = ref(false)
-const elderlyMode = ref(false)
-const showInstallPrompt = ref(false)
 const unreadCount = ref(0)
-const showSearchDrawer = ref(false)
 const searchKeyword = ref('')
 
 // 断点检测
@@ -190,42 +189,75 @@ const checkMobile = () => {
   }
 }
 
+let unreadTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
 
-  // PWA 安装提示
-  registerSW({
-    onNeedRefresh() {
-      showInstallPrompt.value = true
-    },
-    onOfflineReady() {
-      console.log('App ready for offline use')
+  unregisterScrollGuard = router.beforeEach((_to, from) => {
+    const el = document.querySelector<HTMLElement>('.page-content')
+    if (el && from.fullPath) {
+      scrollPositions.set(from.fullPath, el.scrollTop)
     }
   })
 
-  // 恢复长辈模式设置
-  const savedElderly = localStorage.getItem('elderlyMode')
-  if (savedElderly === 'true') {
-    elderlyMode.value = true
-    document.body.classList.add('elderly-mode')
-  }
+  // 加载启用模块，用于动态渲染侧边菜单（直接进入非模块页时也要有菜单）
+  moduleStore.fetchModules().catch((e) => {
+    console.error('Failed to load modules for sidebar:', e)
+  })
 
-  // 获取初始未读数
+  // 恢复长辈模式与高对比度设置（设置页负责写入，刷新后由布局恢复全局样式）
+  restoreElderlySettings()
+
+  // 获取初始未读数并轮询
   fetchUnreadCount()
-
-  // 启动未读数轮询
-  startUnreadPolling()
+  unreadTimer = setInterval(() => {
+    if (!document.hidden) fetchUnreadCount()
+  }, 30000)
 })
 
-function startUnreadPolling() {
-  const timer = setInterval(async () => {
-    if (!document.hidden) {
-      await fetchUnreadCount()
-    }
-  }, 30000)
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+  if (unregisterScrollGuard) unregisterScrollGuard()
+  if (unreadTimer) clearInterval(unreadTimer)
+})
 
-  onUnmounted(() => clearInterval(timer))
+// 页面转场结束后恢复滚动位置
+function restoreScroll() {
+  const el = document.querySelector<HTMLElement>('.page-content')
+  if (el) {
+    el.scrollTop = scrollPositions.get(route.fullPath) ?? 0
+  }
+}
+
+// 恢复适老化 CSS 变量与高对比度标记
+function restoreElderlySettings() {
+  const body = document.body
+  type ElderlySettings = {
+    fontScale?: number
+    buttonScale?: number
+    spacingScale?: number
+    highContrast?: boolean
+  }
+
+  let settings: ElderlySettings = {}
+  try {
+    settings = JSON.parse(localStorage.getItem('elderlySettings') || '{}') as ElderlySettings
+  } catch {
+    settings = {}
+  }
+
+  body.style.setProperty('--elderly-font-scale', String(settings.fontScale ?? 1.3))
+  body.style.setProperty('--elderly-button-scale', String(settings.buttonScale ?? 1.2))
+  body.style.setProperty('--elderly-spacing-scale', String(settings.spacingScale ?? 1.2))
+  body.classList.toggle('high-contrast', Boolean(settings.highContrast))
+  body.dataset.highContrast = String(Boolean(settings.highContrast))
+
+  if (localStorage.getItem('elderlyMode') === 'true') {
+    body.classList.add('elderly-mode')
+    body.dataset.elderly = 'true'
+  }
 }
 
 async function fetchUnreadCount() {
@@ -237,46 +269,14 @@ async function fetchUnreadCount() {
   }
 }
 
-// 页面标题
-const pageTitle = computed(() => {
-  const titles: Record<string, string> = {
-    Dashboard: '首页仪表盘',
-    ModuleList: '模块列表',
-    RecordCreate: '新增记录',
-    RecordDetail: '记录详情',
-    RecordEdit: '编辑记录',
-    Settings: '设置中心',
-    Messages: '消息中心',
-    GlobalSearch: '全局搜索'
-  }
-  return titles[route.name as string] || '家记'
-})
-
 // 启用的模块
 const enabledModules = computed(() => moduleStore.enabledModules)
 
 // 管理员判断
 const isAdmin = computed(() => authStore.isAdmin)
 
-// 模块图标映射
-function getModuleIcon(moduleKey: string) {
-  const icons: Record<string, string> = {
-    drug: 'FirstAidKit',
-    todo: 'Checked',
-    note: 'Picture',
-    idoc: 'CreditCard'
-  }
-  return icons[moduleKey] || 'Grid'
-}
-
-// 角色标签类型
-const getRoleTagType = computed(() => {
-  switch (authStore.role) {
-    case 1: return 'danger'
-    case 2: return 'success'
-    default: return 'info'
-  }
-})
+// 登录人昵称（优先昵称，其次用户名）
+const displayName = computed(() => authStore.user?.nickName || authStore.user?.username || '家人')
 
 // 角色标签文本
 const getRoleLabel = computed(() => {
@@ -286,24 +286,6 @@ const getRoleLabel = computed(() => {
     default: return '只读'
   }
 })
-
-// 切换长辈模式
-function toggleElderlyMode() {
-  localStorage.setItem('elderlyMode', elderlyMode.value.toString())
-  if (elderlyMode.value) {
-    document.body.classList.add('elderly-mode')
-    ElMessage.success('已开启长辈模式')
-  } else {
-    document.body.classList.remove('elderly-mode')
-    ElMessage.success('已关闭长辈模式')
-  }
-}
-
-// 处理安装
-function handleInstall() {
-  ElMessage.success('正在更新应用...')
-  location.reload()
-}
 
 function handleQuickCreate() {
   const firstModule = moduleStore.enabledModules?.[0]
@@ -331,12 +313,15 @@ function goToMessages() {
   router.push('/messages')
 }
 
+function goToSearch() {
+  router.push('/search')
+}
+
 // 搜索处理
 function handleSearch() {
   if (searchKeyword.value.trim()) {
     router.push({ path: '/search', query: { q: searchKeyword.value.trim() } })
     searchKeyword.value = ''
-    showSearchDrawer.value = false
   }
 }
 </script>
@@ -348,7 +333,7 @@ function handleSearch() {
   display: flex;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, #f7f3ed 0%, #f4efe9 100%);
+  background: $bg-color;
 }
 
 // 侧边栏
@@ -356,18 +341,29 @@ function handleSearch() {
   width: 240px;
   min-width: 240px;
   height: 100%;
-  background: linear-gradient(180deg, rgba(255, 250, 245, 0.95), rgba(255, 250, 245, 0.98));
+  background: $sidebar-bg;
   border-right: 1px solid $border-color;
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
-  z-index: 100;
+  z-index: $z-index-sidebar;
   overflow: hidden;
-  box-shadow: inset -1px 0 0 rgba(221, 112, 78, 0.06);
+  box-shadow: inset -1px 0 0 rgba($primary-color, 0.06);
 
   &.collapsed {
     width: 64px;
     min-width: 64px;
+
+    .nav-item {
+      justify-content: center;
+      padding-left: 0;
+      padding-right: 0;
+      gap: 0;
+
+      span {
+        display: none;
+      }
+    }
   }
 }
 
@@ -378,12 +374,12 @@ function handleSearch() {
   justify-content: center;
   padding: 0 16px;
   border-bottom: 1px solid $border-color;
-  background: linear-gradient(180deg, rgba(245, 239, 232, 0.9), rgba(245, 239, 232, 0.76));
+  background: $sidebar-header-bg;
 
   .logo {
     font-size: 20px;
     font-weight: 800;
-    color: $primary-color;
+    color: $primary-text;
     margin: 0;
     white-space: nowrap;
     letter-spacing: 0.04em;
@@ -392,14 +388,14 @@ function handleSearch() {
   .logo-mini {
     font-size: 18px;
     font-weight: 800;
-    color: $primary-color;
+    color: $primary-text;
     width: 34px;
     height: 34px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(221, 112, 78, 0.1);
+    background: rgba($primary-color, 0.1);
   }
 }
 
@@ -407,36 +403,69 @@ function handleSearch() {
   flex: 1;
   padding: 12px 8px;
   overflow-y: auto;
+  background: transparent;
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 44px;
     padding: 10px 12px;
     border-radius: 14px;
-    color: $text-primary;
+    background: transparent;
+    color: $nav-text;
     text-decoration: none;
     transition: all 0.2s ease;
     white-space: nowrap;
     font-weight: 500;
+    border: none;
+    box-shadow: none;
 
     &:hover {
-      background-color: $hover-bg;
-      color: $primary-color;
+      background-color: $nav-hover-bg;
+      color: $primary-text;
       transform: translateX(1px);
     }
 
     &.active {
-      background: linear-gradient(135deg, rgba(221, 112, 78, 0.12), rgba(221, 112, 78, 0.06));
-      color: $primary-color;
-      box-shadow: inset 0 0 0 1px rgba(221, 112, 78, 0.08);
+      background: $hover-bg;
+      color: $primary-text;
       font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba($primary-color, 0.05);
+    }
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      line-height: 1.2;
     }
 
     el-icon {
+      width: 18px;
+      height: 18px;
       font-size: 18px;
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: $nav-text;
+      transition: color 0.2s ease;
     }
+
+    &:hover el-icon,
+    &.active el-icon {
+      color: $primary-text;
+    }
+
+    &:hover el-icon {
+      color: $primary-hover;
+    }
+  }
+
+  .nav-item.active,
+  .nav-item:hover {
+    border: none;
   }
 }
 
@@ -487,16 +516,16 @@ function handleSearch() {
 
 // 顶部栏
 .top-bar {
-  height: 64px;
+  height: calc(64px + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  background: rgba(255, 253, 251, 0.8);
+  padding: env(safe-area-inset-top) 24px 0;
+  background: $topbar-bg;
   border-bottom: 1px solid $border-color;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: $z-index-topbar;
   backdrop-filter: blur(10px);
 
   .top-bar-left {
@@ -530,11 +559,11 @@ function handleSearch() {
         font-size: 14px;
 
         &:hover {
-          border-color: $primary-color;
+          border-color: $primary-text;
         }
 
         &:focus {
-          border-color: $primary-color;
+          border-color: $primary-text;
           box-shadow: 0 0 0 2px $primary-light-bg;
         }
       }
@@ -570,7 +599,7 @@ function handleSearch() {
   }
 
   .install-btn {
-    color: $primary-color;
+    color: $primary-text;
   }
 }
 
@@ -578,16 +607,22 @@ function handleSearch() {
 // 页面内容
 .page-content {
   flex: 1;
-  padding: 24px;
+  padding: 24px 24px calc(88px + env(safe-area-inset-bottom));
   overflow-y: auto;
-  background: linear-gradient(180deg, rgba(247, 243, 237, 0.7), rgba(247, 243, 237, 0.92));
+  background: $bg-color;
+}
+
+.page-container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
 .global-fab {
   position: fixed;
   right: 28px;
-  bottom: 28px;
-  z-index: 1000;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  z-index: $z-index-fab;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -595,18 +630,18 @@ function handleSearch() {
   height: 58px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #dd704e 0%, #d9633d 100%);
-  color: #fff;
+  background: $gradient-primary;
+  color: $card-bg;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  box-shadow: 0 16px 26px rgba(221, 112, 78, 0.28);
+  box-shadow: 0 16px 26px rgba($primary-color, 0.28);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
     transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 18px 30px rgba(221, 112, 78, 0.32);
+    box-shadow: 0 18px 30px rgba($primary-color, 0.32);
   }
 
   &:active {
@@ -634,31 +669,54 @@ function handleSearch() {
 .mobile-nav {
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
   gap: 8px;
+  background: transparent;
 
   .mobile-nav-item {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 14px 12px;
-    border-radius: $border-radius-base;
-    color: $text-primary;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: transparent;
+    color: $nav-text;
     text-decoration: none;
     font-size: 16px;
+    border: none;
 
     &:hover {
-      background-color: $hover-bg;
-      color: $primary-color;
+      background-color: $nav-hover-bg;
+      color: $primary-text;
     }
 
     &.active {
-      background-color: $primary-light-bg;
-      color: $primary-color;
+      background-color: $hover-bg;
+      color: $primary-text;
+    }
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      line-height: 1.2;
     }
 
     el-icon {
-      font-size: 20px;
+      width: 18px;
+      height: 18px;
+      font-size: 18px;
+      color: $nav-text;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    &:hover el-icon,
+    &.active el-icon {
+      color: $primary-text;
     }
   }
 }
@@ -684,42 +742,6 @@ function handleSearch() {
   margin-top: 16px;
 }
 
-// 长辈模式全局样式
-.elderly-mode {
-  font-size: 18px !important;
-
-  .el-button,
-  .el-input,
-  .el-select,
-  .el-tag,
-  .el-breadcrumb {
-    font-size: 18px !important;
-  }
-
-  .el-button {
-    padding: 12px 24px !important;
-    height: auto !important;
-  }
-
-  .el-input__inner {
-    padding: 12px 16px !important;
-    height: 48px !important;
-  }
-
-  .sidebar {
-    width: 280px !important;
-    min-width: 280px !important;
-  }
-
-  .nav-item {
-    padding: 14px 16px !important;
-  }
-
-  .page-content {
-    padding: 32px !important;
-  }
-}
-
 // 响应式
 @media (max-width: 1023px) {
   .sidebar {
@@ -727,8 +749,8 @@ function handleSearch() {
     left: 0;
     top: 0;
     height: 100vh;
-    z-index: 200;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: $z-index-mobile-drawer;
+    box-shadow: 4px 0 20px rgba($text-primary, 0.12);
     transform: translateX(-100%);
     transition: transform 0.3s ease;
 
@@ -746,7 +768,7 @@ function handleSearch() {
   }
 
   .top-bar-center {
-    display: none !important;
+    display: none;
   }
 
   .breadcrumb {
@@ -754,11 +776,35 @@ function handleSearch() {
   }
 
   .page-content {
-    padding: 16px;
+    padding: 16px 16px calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .page-container {
+    max-width: none;
+  }
+
+  .global-fab {
+    right: 16px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .fab-label {
+    display: none;
+  }
+
+  .fab-plus {
+    width: auto;
+    height: auto;
+    background: transparent;
+    font-size: 24px;
   }
 
   .search-btn {
-    display: flex !important;
+    display: flex;
   }
 }
 

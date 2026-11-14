@@ -49,7 +49,7 @@
                 placeholder="请输入用户名或邮箱"
                 :prefix-icon="User"
                 clearable
-                :autocomplete="false"
+                autocomplete="off"
               />
             </el-form-item>
 
@@ -60,7 +60,7 @@
                 placeholder="请输入密码"
                 :prefix-icon="Lock"
                 show-password
-                :autocomplete="false"
+                autocomplete="off"
                 type="password"
               />
             </el-form-item>
@@ -177,6 +177,9 @@ function handleForgotPassword() {
 </script>
 
 <style lang="scss" scoped>
+@use '@/styles/variables' as *;
+@use '@/styles/decorations' as *;
+
 .login-page {
   width: 100%;
   min-height: 100vh;
@@ -184,17 +187,19 @@ function handleForgotPassword() {
   align-items: center;
   justify-content: center;
   padding: 32px 24px;
-  background: linear-gradient(135deg, #f8f4ef 0%, #f4efe7 32%, #f7f3ee 100%);
+  background: $gradient-login-bg;
 }
 
 .login-shell {
-  width: min(1180px, 100%);
+  width: 100%;
+  max-width: 1180px;
+  min-width: 0;
   min-height: 760px;
   display: flex;
   background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(221, 112, 78, 0.12);
+  border: 1px solid rgba($primary-color, 0.12);
   border-radius: 32px;
-  box-shadow: 0 28px 60px rgba(43, 38, 34, 0.08);
+  box-shadow: 0 24px 56px rgba(80, 50, 30, 0.12);
   overflow: hidden;
   backdrop-filter: blur(6px);
 }
@@ -202,8 +207,9 @@ function handleForgotPassword() {
 .brand-panel {
   position: relative;
   flex: 1.2;
+  min-width: 0;
   padding: 54px 52px 34px;
-  background: linear-gradient(180deg, #f7f3ed 0%, #f3efe9 100%);
+  background: $gradient-brand-panel;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -218,7 +224,7 @@ function handleForgotPassword() {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #dd704e;
+  color: $primary-text;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -235,7 +241,7 @@ function handleForgotPassword() {
 
 .eyebrow {
   margin: 0 0 12px;
-  color: #dd704e;
+  color: $primary-text;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -244,7 +250,7 @@ function handleForgotPassword() {
 
 .brand-copy h1 {
   margin: 0;
-  color: #2b2622;
+  color: $text-primary;
   font-size: clamp(2.4rem, 2.8vw, 4rem);
   line-height: 1.08;
   letter-spacing: -0.05em;
@@ -254,18 +260,19 @@ function handleForgotPassword() {
 .description {
   margin: 18px 0 0;
   max-width: 560px;
-  color: rgba(43, 38, 34, 0.75);
+  color: rgba($text-primary, 0.75);
   font-size: 1.08rem;
   line-height: 1.8;
 }
 
 .illustration {
   position: relative;
-  width: min(100%, 540px);
+  width: 100%;
+  max-width: 540px;
   height: 240px;
   margin-top: 32px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.34));
-  border: 1px solid rgba(221, 112, 78, 0.08);
+  border: 1px solid rgba($primary-color, 0.08);
   border-radius: 28px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
@@ -277,9 +284,9 @@ function handleForgotPassword() {
   width: 200px;
   height: 120px;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, #f1c38a 0%, #f2b267 100%);
+  background: $gradient-house;
   border-radius: 22px 22px 18px 18px;
-  box-shadow: 0 18px 24px rgba(122, 87, 44, 0.12);
+  box-shadow: 0 18px 24px $illustration-house-shadow;
 }
 
 .house-scene::before {
@@ -290,7 +297,7 @@ function handleForgotPassword() {
   width: 160px;
   height: 86px;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, #f7b26d 0%, #ed8a5b 100%);
+  background: $gradient-house-roof;
   clip-path: polygon(50% 0, 100% 42%, 100% 100%, 0 100%, 0 42%);
   border-radius: 12px 12px 0 0;
 }
@@ -313,7 +320,7 @@ function handleForgotPassword() {
   width: 56px;
   height: 96px;
   border-radius: 26px 26px 12px 12px;
-  background: linear-gradient(180deg, #e7f4df 0%, #bfd9b7 100%);
+  background: $gradient-plant;
   box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.34);
 }
 
@@ -324,7 +331,7 @@ function handleForgotPassword() {
   bottom: 45px;
   width: 18px;
   height: 54px;
-  background: linear-gradient(180deg, #d9efc9, #a3c98c);
+  background: $gradient-leaf;
   border-radius: 14px;
 }
 
@@ -356,9 +363,9 @@ function handleForgotPassword() {
   padding: 0 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(221, 112, 78, 0.1);
-  color: #dd704e;
-  box-shadow: 0 14px 22px rgba(43, 38, 34, 0.08);
+  border: 1px solid rgba($primary-color, 0.1);
+  color: $primary-text;
+  box-shadow: 0 14px 22px rgba($text-primary, 0.08);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -375,13 +382,14 @@ function handleForgotPassword() {
 
 .brand-foot {
   margin-top: 20px;
-  color: rgba(43, 38, 34, 0.7);
+  color: rgba($text-primary, 0.7);
   font-size: 0.85rem;
   letter-spacing: 0.04em;
 }
 
 .login-panel {
   flex: 0.92;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -390,12 +398,13 @@ function handleForgotPassword() {
 }
 
 .login-card {
-  width: min(100%, 430px);
-  background: #fff;
-  border: 1px solid rgba(43, 38, 34, 0.04);
+  width: 100%;
+  max-width: 430px;
+  background: $card-bg;
+  border: 1px solid rgba($text-primary, 0.04);
   border-radius: 28px;
   padding: 32px 28px 24px;
-  box-shadow: 0 20px 40px rgba(43, 38, 34, 0.08);
+  box-shadow: 0 16px 36px rgba(80, 50, 30, 0.1);
 }
 
 .form-header {
@@ -404,7 +413,7 @@ function handleForgotPassword() {
 
   h2 {
     margin: 0;
-    color: #2b2622;
+    color: $text-primary;
     font-size: clamp(1.8rem, 2vw, 2.5rem);
     line-height: 1.2;
     font-weight: 800;
@@ -413,7 +422,7 @@ function handleForgotPassword() {
 
   p {
     margin: 10px 0 0;
-    color: rgba(43, 38, 34, 0.68);
+    color: rgba($text-primary, 0.68);
     font-size: 0.96rem;
   }
 }
@@ -436,7 +445,7 @@ function handleForgotPassword() {
 .form-label {
   display: block;
   margin-bottom: 8px;
-  color: #2b2622;
+  color: $text-primary;
   font-size: 0.92rem;
   font-weight: 600;
 }
@@ -444,29 +453,29 @@ function handleForgotPassword() {
 :deep(.el-input__wrapper) {
   height: 52px;
   border-radius: 14px;
-  background: #f8f6f3;
-  border: 1px solid rgba(43, 38, 34, 0.06);
+  background: $field-bg;
+  border: 1px solid rgba($text-primary, 0.06);
   box-shadow: none;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: rgba(221, 112, 78, 0.3);
+    border-color: rgba($primary-color, 0.3);
   }
 
   &.is-focus {
-    background: #fff;
-    border-color: rgba(221, 112, 78, 0.7);
-    box-shadow: 0 0 0 4px rgba(221, 112, 78, 0.12);
+    background: $card-bg;
+    border-color: rgba($primary-color, 0.7);
+    box-shadow: 0 0 0 4px rgba($primary-color, 0.12);
   }
 }
 
 :deep(.el-input__inner) {
-  color: #2b2622;
+  color: $text-primary;
   font-size: 0.98rem;
 }
 
 :deep(.el-input__prefix) {
-  color: #9f8b82;
+  color: $text-placeholder;
 }
 
 .form-inline {
@@ -478,14 +487,14 @@ function handleForgotPassword() {
 }
 
 :deep(.el-checkbox) {
-  --el-checkbox-checked-bg-color: #dd704e;
-  --el-checkbox-checked-border-color: #dd704e;
-  color: #2b2622;
+  --el-checkbox-checked-bg-color: #{$primary-color};
+  --el-checkbox-checked-border-color: #{$primary-color};
+  color: $text-primary;
   font-weight: 500;
 }
 
 .forgot-link {
-  color: #dd704e;
+  color: $primary-text;
   font-size: 0.9rem;
   text-decoration: none;
   transition: opacity 0.2s ease;
@@ -500,16 +509,16 @@ function handleForgotPassword() {
   height: 52px;
   border-radius: 14px;
   border: none;
-  background: linear-gradient(135deg, #dd704e 0%, #d9633d 100%);
-  color: #fff;
+  background: $gradient-primary;
+  color: $card-bg;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  box-shadow: 0 14px 24px rgba(221, 112, 78, 0.2);
+  box-shadow: 0 14px 24px rgba($primary-color, 0.2);
 
   &:hover,
   &:focus {
-    background: linear-gradient(135deg, #d66743 0%, #c95533 100%);
+    background: $gradient-primary-hover;
   }
 }
 
@@ -519,13 +528,13 @@ function handleForgotPassword() {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: rgba(43, 38, 34, 0.72);
+  color: rgba($text-primary, 0.72);
   font-size: 0.95rem;
 
   :deep(.el-button) {
     padding: 0;
     height: auto;
-    color: #dd704e;
+    color: $primary-text;
     font-weight: 700;
   }
 }
@@ -533,7 +542,7 @@ function handleForgotPassword() {
 .form-note {
   margin-top: 18px;
   text-align: center;
-  color: rgba(43, 38, 34, 0.5);
+  color: rgba($text-primary, 0.5);
   font-size: 0.75rem;
   line-height: 1.8;
   letter-spacing: 0.02em;
@@ -546,13 +555,13 @@ function handleForgotPassword() {
   gap: 8px;
   margin-top: 16px;
   padding: 10px 12px;
-  background-color: #fff5ee;
+  background-color: $primary-light-bg;
   border-radius: 12px;
-  color: #dd704e;
+  color: $primary-text;
   font-size: 0.82rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
   .login-page {
     padding: 20px 16px;
   }
@@ -573,7 +582,7 @@ function handleForgotPassword() {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639px) {
   .login-page {
     padding: 14px;
   }
@@ -591,7 +600,11 @@ function handleForgotPassword() {
   }
 
   .brand-copy h1 {
-    font-size: 2.3rem;
+    font-size: 1.9rem;
+  }
+
+  .form-header h2 {
+    font-size: 1.55rem;
   }
 
   .description {

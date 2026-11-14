@@ -1,65 +1,151 @@
-// 设计系统变量
-// 色板
-$primary-color: #dd704e;
+// ============================================================
+// 家记设计 Token —— 全站唯一事实源
+// ------------------------------------------------------------
+// 约定：
+//   1. 语义色、字号、间距、圆角、阴影、动效只允许在本文件定义；
+//   2. 页面/组件通过 `@use '@/styles/variables' as *` 引用；
+//   3. 插画与页面装饰色见 `decorations.scss`，不属于设计系统；
+//   4. 需要运行时读取的 token 会同步输出为 CSS 变量（见 index.scss）。
+// ============================================================
+
+// ---------- 1. 品牌色阶 ----------
+$brand-50: #fdf4ef;
+$brand-100: #fbe7dd;
+$brand-200: #f6cdbb;
+$brand-300: #efae94;
+$brand-400: #e78f6f;
+$brand-500: #dd704e; // 品牌主色
+$brand-600: #c25b3c;
+$brand-700: #a0492f;
+$brand-800: #7d3823;
+$brand-900: #5a2718;
+
+$primary-color: $brand-500;
+$primary-hover: $brand-600;
+$primary-active: $brand-700;
+// 可读主色：白字/小字号文字用，白底对比度约 4.8:1
+$primary-strong: #b8552f;
+$primary-strong-hover: #a8492c;
+$primary-text: #a8492c;
 $primary-light-bg: #fff2ec;
 $primary-light-border: #f7cbb6;
+$primary-soft-border: #f5e2d8;
+$primary-gradient-end: #a8492c;
 
+// ---------- 2. 语义色 ----------
 $success-color: #67c23a;
-$warning-color: #e6a23c;
-$danger-color: #f56c6c;
-$info-color: #909399;
+$success-text: #3f7a3d;
+$success-bg: #eef6ea;
 
-// 中性色
+$warning-color: #e6a23c;
+$warning-text: #8a5a12;
+$warning-bg: #fffbe8;
+$warning-border: #fde2a2;
+
+$danger-color: #f56c6c;
+$danger-text: #c0392b;
+$danger-bg: #fdecec;
+
+$info-color: #909399;
+$accent-purple: #8d76d8; // 首页卡片图标点缀色
+
+// 模块标识色（与 utils/module.ts 的 moduleKey 对应）
+$module-todo: #b8552f;
+$module-drug: #3f7a3d;
+$module-note: #3f6bc0;
+$module-idoc: #a94f4f;
+
+// ---------- 3. 中性色 ----------
 $text-primary: #2b2622;
-$text-secondary: rgba(43, 38, 34, 0.72);
-$text-placeholder: #9c8d84;
+$text-secondary: rgba(43, 38, 34, 0.8);
+$text-tertiary: #6f665f;
+$text-placeholder: #8a7b72;
 $text-disabled: #d2c5bc;
 
 $bg-color: #f7f3ed;
 $card-bg: #ffffff;
+$surface-warm: #fffbf7;
+$surface-warm-soft: #fff9f5;
+$field-bg: #f8f6f3;
 $header-bg: #fffdfb;
+$topbar-bg: rgba(255, 253, 251, 0.8);
 $sidebar-bg: #fffaf5;
 $sidebar-header-bg: #f5efe8;
 $hover-bg: #fff0ea;
+$nav-text: #666666;
+$nav-hover-bg: #f7f2ec;
 
 $border-color: #f0e5dd;
 $border-color-light: #f7efe9;
 
-// 边框圆角
+// ---------- 4. 表面与品牌渐变 ----------
+// 页面、侧栏、顶栏使用纯色表面；渐变只保留给品牌按钮与 FAB。
+$gradient-primary: linear-gradient(135deg, $primary-strong 0%, $primary-gradient-end 100%);
+$gradient-primary-hover: linear-gradient(135deg, $primary-strong-hover 0%, #963c24 100%);
+
+// ---------- 5. 圆角 ----------
 $border-radius-sm: 4px;
 $border-radius-base: 8px;
 $border-radius-lg: 12px;
+$border-radius-xl: 16px;
 
-// 阴影
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-base: 0 2px 8px rgba(0, 0, 0, 0.08);
-$shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+// ---------- 6. 阴影（暖灰，不用纯黑） ----------
+$shadow-sm: 0 1px 2px rgba(80, 50, 30, 0.06);
+$shadow-base: 0 2px 8px rgba(80, 50, 30, 0.08);
+$shadow-lg: 0 8px 24px rgba(80, 50, 30, 0.12);
+$shadow-hover: 0 6px 18px rgba(80, 50, 30, 0.1);
 
-// 间距
+// ---------- 7. 间距 ----------
 $spacing-xs: 4px;
 $spacing-sm: 8px;
 $spacing-md: 16px;
 $spacing-lg: 24px;
 $spacing-xl: 32px;
 
-// 字体
-$font-size-xs: 12px;
-$font-size-sm: 13px;
-$font-size-base: 14px;
-$font-size-md: 15px;
-$font-size-lg: 16px;
-$font-size-xl: 18px;
-$font-size-2xl: 20px;
-$font-size-3xl: 24px;
-$font-size-4xl: 28px;
+// ---------- 8. 字体 ----------
+$font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+  'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', 'Noto Sans', sans-serif,
+  'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-// 字重
+// 语义字号（六档）：正文 14，说明 12/13，标题 16/20，展示 28
+$text-caption: 12px;
+$text-label: 13px;
+$text-body: 14px;
+$text-title: 16px;
+$text-heading: 20px;
+$text-display: 28px;
+
+// 兼容旧页面的字阶别名
+$font-size-xs: $text-caption;
+$font-size-sm: $text-label;
+$font-size-base: $text-body;
+$font-size-md: 15px;
+$font-size-lg: $text-title;
+$font-size-xl: 18px;
+$font-size-2xl: $text-heading;
+$font-size-3xl: 24px;
+$font-size-4xl: $text-display;
+
+$line-height-tight: 1.35;
+$line-height-base: 1.6;
+$line-height-loose: 1.75;
+
 $font-weight-normal: 400;
 $font-weight-medium: 500;
 $font-weight-semibold: 600;
 $font-weight-bold: 700;
 
-// Z-Index
+// ---------- 9. 图标 ----------
+$icon-size-sm: 16px;
+$icon-size-base: 18px;
+$icon-size-lg: 20px;
+$icon-size-xl: 24px;
+
+// ---------- 10. 层级 ----------
+$z-index-topbar: 50;
+$z-index-sidebar: 100;
+$z-index-mobile-drawer: 200;
+$z-index-fab: 1000;
 $z-index-dropdown: 2000;
 $z-index-sticky: 1000;
 $z-index-fixed: 1100;
@@ -67,18 +153,21 @@ $z-index-modal: 2000;
 $z-index-popover: 2100;
 $z-index-tooltip: 2200;
 
-// 断点
+// ---------- 10. 断点 ----------
+// 统一边界：640 / 768 / 1024 / 1280；max-width 查询用边界 -1px
+$bp-sm: 640px;
+$bp-md: 768px;
+$bp-lg: 1024px;
+$bp-xl: 1280px;
+
+// 兼容旧页面的 max-width 别名
 $bp-mobile: 767px;
 $bp-tablet: 1023px;
 $bp-desktop: 1279px;
 $bp-wide: 1439px;
 
-// 动效时长
+// ---------- 11. 动效 ----------
 $transition-fast: 150ms;
 $transition-base: 200ms;
 $transition-slow: 300ms;
-
-// 长辈模式默认缩放
-$elderly-font-scale: 1.3;
-$elderly-button-scale: 1.2;
-$elderly-spacing-scale: 1.2;
+$ease-out: cubic-bezier(0, 0, 0.2, 1);

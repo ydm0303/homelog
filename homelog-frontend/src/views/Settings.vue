@@ -1,5 +1,7 @@
 <template>
   <div class="settings-page">
+    <PageHeader title="设置中心" description="管理家庭成员、模块配置、数据导出与适老化选项" />
+
     <el-tabs v-model="activeTab" class="settings-tabs" @tab-click="handleTabClick">
       <!-- 成员管理 -->
       <el-tab-pane label="成员管理" name="members" :disabled="!isAdmin">
@@ -107,20 +109,20 @@
             <el-table-column prop="permission" label="权限项" min-width="200" />
             <el-table-column prop="admin" label="管理员" width="120" align="center">
               <template #default="scope">
-                <el-icon v-if="scope.row.admin"><Check color="#67c23a" /></el-icon>
-                <el-icon v-else><Close color="#f56c6c" /></el-icon>
+                <el-icon v-if="scope.row.admin"><Check color="var(--el-color-success)" /></el-icon>
+                <el-icon v-else><Close color="var(--el-color-danger)" /></el-icon>
               </template>
             </el-table-column>
             <el-table-column prop="editor" label="可编辑" width="120" align="center">
               <template #default="scope">
-                <el-icon v-if="scope.row.editor"><Check color="#67c23a" /></el-icon>
-                <el-icon v-else><Close color="#f56c6c" /></el-icon>
+                <el-icon v-if="scope.row.editor"><Check color="var(--el-color-success)" /></el-icon>
+                <el-icon v-else><Close color="var(--el-color-danger)" /></el-icon>
               </template>
             </el-table-column>
             <el-table-column prop="readonly" label="只读" width="120" align="center">
               <template #default="scope">
-                <el-icon v-if="scope.row.readonly"><Check color="#67c23a" /></el-icon>
-                <el-icon v-else><Close color="#f56c6c" /></el-icon>
+                <el-icon v-if="scope.row.readonly"><Check color="var(--el-color-success)" /></el-icon>
+                <el-icon v-else><Close color="var(--el-color-danger)" /></el-icon>
               </template>
             </el-table-column>
           </el-table>
@@ -180,7 +182,7 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column prop="sortOrder" label="排序值" width="80" align="center" />
+            <el-table-column prop="sortOrder" label="排序号" width="80" align="center" />
             <el-table-column label="操作" width="140" fixed="right">
               <template #default="scope">
                 <el-dropdown size="small">
@@ -206,7 +208,7 @@
             </el-table-column>
           </el-table>
 
-          <!-- 新建自定义表单 -->
+          <!-- 新建自定义表单模块 -->
           <div class="create-custom-module" v-if="isAdmin">
             <el-divider content-position="left">新建自定义表单模块</el-divider>
             <el-form :model="customModuleForm" :rules="customModuleRules" label-width="100px" inline>
@@ -294,7 +296,7 @@
                     :disabled="!importFile"
                   >
                     <el-icon><Upload /></el-icon>
-                    开始导入
+                    开始导出
                   </el-button>
                   <el-button @click="downloadTemplate" style="margin-left: 12px">
                     <el-icon><Download /></el-icon>
@@ -353,19 +355,42 @@
               />
             </el-form-item>
             <el-form-item label="字体放大倍数">
-              <el-slider v-model="elderlyForm.fontScale" :min="1" :max="2" :step="0.1" show-input />
+              <el-slider
+                v-model="elderlyForm.fontScale"
+                :min="1"
+                :max="2"
+                :step="0.1"
+                show-input
+                @change="applyElderlySettings"
+              />
             </el-form-item>
             <el-form-item label="按钮放大倍数">
-              <el-slider v-model="elderlyForm.buttonScale" :min="1" :max="1.5" :step="0.1" show-input />
+              <el-slider
+                v-model="elderlyForm.buttonScale"
+                :min="1"
+                :max="1.5"
+                :step="0.1"
+                show-input
+                @change="applyElderlySettings"
+              />
             </el-form-item>
             <el-form-item label="间距放大倍数">
-              <el-slider v-model="elderlyForm.spacingScale" :min="1" :max="1.5" :step="0.1" show-input />
-            </el-form-item>
-            <el-form-item label="语音播报">
-              <el-switch v-model="elderlyForm.voiceEnabled" active-text="开启" inactive-text="关闭" />
+              <el-slider
+                v-model="elderlyForm.spacingScale"
+                :min="1"
+                :max="1.5"
+                :step="0.1"
+                show-input
+                @change="applyElderlySettings"
+              />
             </el-form-item>
             <el-form-item label="高对比度">
-              <el-switch v-model="elderlyForm.highContrast" active-text="开启" inactive-text="关闭" />
+              <el-switch
+                v-model="elderlyForm.highContrast"
+                active-text="开启"
+                inactive-text="关闭"
+                @change="applyElderlySettings"
+              />
             </el-form-item>
           </el-form>
 
@@ -389,7 +414,7 @@
               <span>家记</span>
             </div>
             <p class="about-slogan">家里的事，都记在这里</p>
-            <p class="about-version">版本：1.0.0 (MVP)</p>
+            <p class="about-version">版本 1.0.0 (MVP)</p>
 
             <el-divider />
 
@@ -439,6 +464,7 @@ import {
   House
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import PageHeader from '@/components/ui/PageHeader.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -507,7 +533,7 @@ const passwordForm = reactive({
 const passwordRules = {
   oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
   newPassword: [{ required: true, message: '请输入新密码', trigger: 'blur' }, { min: 6, max: 64, message: '密码长度 6-64 位', trigger: 'blur' }],
-  confirmPassword: [{ required: true, message: '请确认新密码', trigger: 'blur' }, { validator: (rule: any, value: string, callback: any) => { if (value !== passwordForm.newPassword) callback(new Error('两次输入密码不一致')); else callback() }, trigger: 'blur' }]
+  confirmPassword: [{ required: true, message: '请确认新密码', trigger: 'blur' }, { validator: (_rule: any, value: string, callback: any) => { if (value !== passwordForm.newPassword) callback(new Error('两次输入密码不一致')); else callback() }, trigger: 'blur' }]
 }
 const changingPassword = ref(false)
 
@@ -531,7 +557,7 @@ onMounted(async () => {
 
 async function fetchMembers() {
   try {
-    const response = await spaceApi.getMembers(1)
+    const response = await spaceApi.getMembers(authStore.spaceId)
     members.value = response.data
   } catch (e) {
     console.error(e)
@@ -571,7 +597,7 @@ function getRoleTagType(role: number) {
 
 async function updateMemberRole(member: any, changes: Partial<any>) {
   try {
-    await spaceApi.updateMember({ spaceId: 1, userId: member.userId, ...changes })
+    await spaceApi.updateMember({ spaceId: authStore.spaceId, userId: member.userId, ...changes })
     ElMessage.success('更新成功')
     fetchMembers()
   } catch {
@@ -584,8 +610,8 @@ async function removeMember(member: any) {
     await ElMessageBox.confirm(`确定要将 ${member.nickName || member.username} 移出家庭吗？`, '确认移出', {
       confirmButtonText: '移出', cancelButtonText: '取消', type: 'warning', confirmButtonClass: 'el-button--danger'
     })
-    await spaceApi.deleteMember(1, member.userId)
-    ElMessage.success('已移出')
+    await spaceApi.deleteMember(authStore.spaceId, member.userId)
+    ElMessage.success('已移除')
     fetchMembers()
   } catch (e: any) {
     if (e !== 'cancel') ElMessage.error('操作失败')
@@ -596,7 +622,7 @@ async function confirmAddMember() {
   try {
     addingMember.value = true
     await spaceApi.createMember({
-      spaceId: 1,
+      spaceId: authStore.spaceId,
       email: addMemberForm.email,
       role: addMemberForm.role,
       receiveMail: addMemberForm.receiveMail
@@ -616,7 +642,7 @@ async function confirmAddMember() {
 
 async function updateModule(module: any) {
   try {
-    // 后端按 moduleId 定位模块，且会用请求中的字段整体覆盖，所以要带上整行
+    // 后端用 moduleId 定位模块，且会用请求中的字段整体覆盖，所以要带上整行
     await metaApi.updateModule({ ...module, moduleId: module.id })
     ElMessage.success('更新成功')
   } catch {
@@ -624,7 +650,7 @@ async function updateModule(module: any) {
   }
 }
 
-function goToModuleFields(module: any) {
+function goToModuleFields(_module: any) {
   // TODO: 跳转到字段配置页面
   ElMessage.info('字段配置功能开发中...')
 }
@@ -739,21 +765,39 @@ async function changePassword() {
 function loadElderlySettings() {
   const saved = localStorage.getItem('elderlySettings')
   if (saved) {
-    Object.assign(elderlyForm, JSON.parse(saved))
+    try {
+      Object.assign(elderlyForm, JSON.parse(saved))
+    } catch {
+      // 本地设置损坏时回退默认值
+    }
   }
   elderlyForm.enabled = localStorage.getItem('elderlyMode') === 'true'
+  applyElderlySettings()
+}
+
+// 把设置写入 body class / dataset / CSS 变量，页面样式统一读取变量
+function applyElderlySettings() {
+  const body = document.body
+  const fontScale = Number(elderlyForm.fontScale) || 1.3
+  const buttonScale = Number(elderlyForm.buttonScale) || 1.2
+  const spacingScale = Number(elderlyForm.spacingScale) || 1.2
+
+  body.classList.toggle('elderly-mode', elderlyForm.enabled)
+  body.dataset.elderly = String(elderlyForm.enabled)
+  body.classList.toggle('high-contrast', elderlyForm.highContrast)
+  body.dataset.highContrast = String(elderlyForm.highContrast)
+
+  body.style.setProperty('--elderly-font-scale', fontScale.toFixed(2))
+  body.style.setProperty('--elderly-button-scale', buttonScale.toFixed(2))
+  body.style.setProperty('--elderly-spacing-scale', spacingScale.toFixed(2))
+
+  localStorage.setItem('elderlyMode', String(elderlyForm.enabled))
+  localStorage.setItem('elderlySettings', JSON.stringify(elderlyForm))
 }
 
 function toggleElderlyMode() {
-  localStorage.setItem('elderlyMode', elderlyForm.enabled.toString())
-  localStorage.setItem('elderlySettings', JSON.stringify(elderlyForm))
-  if (elderlyForm.enabled) {
-    document.body.classList.add('elderly-mode')
-    ElMessage.success('已开启长辈模式')
-  } else {
-    document.body.classList.remove('elderly-mode')
-    ElMessage.success('已关闭长辈模式')
-  }
+  applyElderlySettings()
+  ElMessage.success(elderlyForm.enabled ? '已开启长辈模式' : '已关闭长辈模式')
 }
 </script>
 
@@ -823,7 +867,7 @@ function toggleElderlyMode() {
     el-icon {
       flex-shrink: 0;
       margin-top: 2px;
-      color: $primary-color;
+      color: $primary-text;
     }
   }
 
@@ -858,7 +902,7 @@ function toggleElderlyMode() {
       gap: 12px;
       font-size: 32px;
       font-weight: 700;
-      color: $primary-color;
+      color: $primary-text;
       margin-bottom: 16px;
 
       el-icon {
@@ -894,8 +938,8 @@ function toggleElderlyMode() {
       margin: 16px auto 0;
       text-align: left;
       padding: 12px;
-      background: #fffbe8;
-      border: 1px solid #fde2a2;
+      background: $warning-bg;
+      border: 1px solid $warning-border;
       border-radius: $border-radius-base;
     }
 
@@ -924,13 +968,4 @@ function toggleElderlyMode() {
 }
 
 // 长辈模式
-.elderly-mode .settings-page {
-  :deep(.el-tabs__item) { font-size: 17px !important; }
-  :deep(.el-table) { font-size: 15px !important; }
-  :deep(.el-form-item__label) { font-size: 15px !important; }
-  :deep(.el-input__inner) { font-size: 15px !important; padding: 14px 16px !important; height: 52px !important; }
-  .matrix-title { font-size: 16px !important; }
-  .about-slogan { font-size: 20px !important; }
-  .disclaimer { font-size: 15px !important; }
-}
 </style>
