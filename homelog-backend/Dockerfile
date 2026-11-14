@@ -15,7 +15,7 @@ COPY src ./src
 RUN mvn package -DskipTests -B
 
 # 运行阶段
-FROM openjdk:8-jre-slim
+FROM eclipse-temurin:8-jre
 
 WORKDIR /app
 
