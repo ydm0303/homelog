@@ -48,7 +48,7 @@
       <!-- 动态字段渲染 -->
       <template v-for="field in visibleFields" :key="field.id">
         <el-form-item
-          :label="field.fieldLabel + (field.isRequired === 1 ? ' *' : '')"
+          :label="field.fieldLabel"
           :prop="field.fieldKey"
           :rules="getFieldRules(field)"
         >
@@ -93,15 +93,6 @@
           active-text="仅管理员可见"
           inactive-text="正常可见"
         />
-      </el-form-item>
-
-      <!-- 底部操作栏 -->
-      <el-form-item class="form-actions">
-        <el-button @click="goBack">取消</el-button>
-        <el-button type="primary" @click="handleSave" :loading="saving" :disabled="!canSave">
-          <el-icon><Check /></el-icon>
-          {{ isEdit ? '保存' : '创建' }}
-        </el-button>
       </el-form-item>
     </el-form>
     </AppCard>
@@ -413,15 +404,6 @@ onUnmounted(() => {
   .edit-form {
     :deep(.el-form-item) {
       margin-bottom: 20px;
-
-      &.form-actions {
-        margin-top: 32px;
-        padding-top: 24px;
-        border-top: 1px solid $border-color;
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-      }
     }
 
     :deep(.el-form-item__label) {

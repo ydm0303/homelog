@@ -2,7 +2,7 @@
   <div class="dashboard-page">
     <section class="welcome-block">
       <div class="welcome-topline">
-        <span class="welcome-badge">✦</span>
+        <span class="welcome-badge"><el-icon><Sunny /></el-icon></span>
         <span>{{ greetingText }} · {{ weekdayText }} · 和家人一起慢慢来</span>
       </div>
 
@@ -31,7 +31,7 @@
       />
     </div>
 
-    <div class="panel-grid upper-grid">
+    <div v-loading="loading" class="panel-grid upper-grid">
       <section class="soft-card todo-card">
         <header class="card-header">
           <div class="title-wrap">
@@ -47,7 +47,7 @@
           </div>
         </header>
 
-        <div v-if="todoList.length === 0" class="empty-state">
+        <div v-if="!loading && todoList.length === 0" class="empty-state">
           <div class="empty-figure">
             <EmptyIllustration variant="todo" :size="170" />
           </div>
@@ -89,7 +89,7 @@
           <button type="button" class="text-link" @click="goToModule('drug')">查看全部</button>
         </header>
 
-        <div v-if="expiringList.length === 0" class="empty-state">
+        <div v-if="!loading && expiringList.length === 0" class="empty-state">
           <div class="empty-figure">
             <EmptyIllustration variant="alert" :size="170" />
           </div>
@@ -121,7 +121,7 @@
       </section>
     </div>
 
-    <div class="panel-grid lower-grid">
+    <div v-loading="loading" class="panel-grid lower-grid">
       <section class="soft-card recent-card-panel">
         <header class="card-header recent-header">
           <div class="title-wrap">
@@ -144,9 +144,7 @@
           </el-select>
         </header>
 
-        <div v-if="recentRecords.length === 0" class="empty-state compact-empty">
-          <h3>暂无记录</h3>
-        </div>
+        <EmptyState v-if="!loading && recentRecords.length === 0" compact title="暂无记录" description="新记录会显示在这里" />
 
         <div v-else class="record-list">
           <article
@@ -226,13 +224,14 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi, dashboardApi } from '@/api'
-import { Checked, AlarmClock, Clock } from '@element-plus/icons-vue'
+import { Checked, AlarmClock, Clock, Sunny } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { formatDateTime, dayDiffFromToday } from '@/utils/date'
 import { getModuleIcon, getModuleColorClass } from '@/utils/module'
 import StatCard from '@/components/ui/StatCard.vue'
 import EmptyIllustration from '@/components/ui/EmptyIllustration.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -243,6 +242,7 @@ const todoList = ref<any[]>([])
 const expiringList = ref<any[]>([])
 const recentRecords = ref<any[]>([])
 const recentModuleFilter = ref('')
+const loading = ref(false)
 
 const showCreateDialog = ref(false)
 const createDialogModule = ref('')
@@ -286,6 +286,7 @@ onMounted(async () => {
 })
 
 async function fetchDashboardData() {
+  loading.value = true
   try {
     todoList.value = []
     expiringList.value = []
@@ -310,6 +311,8 @@ async function fetchDashboardData() {
     }))
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -437,20 +440,21 @@ onUnmounted(() => {
 }
 
 .welcome-badge {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba($primary-color, 0.08);
-  color: $primary-text;
-  font-size: 12px;
+  background: rgba($primary-color, 0.12);
+  color: $primary-color;
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .welcome-row {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
 }
@@ -458,15 +462,15 @@ onUnmounted(() => {
 .welcome-copy {
   h1 {
     margin: 0;
-    font-size: clamp(2.25rem, 2.5vw, 3.1rem);
-    line-height: 1.08;
-    letter-spacing: -0.05em;
-    font-weight: 800;
+    font-size: $text-display;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: $font-weight-bold;
     color: $text-primary;
   }
 
   p {
-    margin: 10px 0 0;
+    margin: 8px 0 0;
     color: $text-tertiary;
     font-size: 15px;
   }
@@ -475,8 +479,8 @@ onUnmounted(() => {
 .date-card {
   min-width: 162px;
   background: $surface-warm;
-  border: 1px solid rgba($text-primary, 0.05);
-  border-radius: 16px;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-lg;
   padding: 14px 18px;
   display: flex;
   flex-direction: column;
@@ -527,8 +531,8 @@ onUnmounted(() => {
 
 .soft-card {
   background: $surface-warm;
-  border: 1px solid rgba($text-primary, 0.04);
-  border-radius: 16px;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-lg;
   padding: 18px 20px;
 }
 
@@ -561,12 +565,12 @@ onUnmounted(() => {
   }
 
   &.purple {
-    background: rgba(153, 129, 255, 0.12);
+    background: rgba($accent-purple, 0.12);
     color: $accent-purple;
   }
 
   &.blue {
-    background: rgba(84, 150, 255, 0.12);
+    background: rgba($module-note, 0.12);
     color: $module-note;
   }
 }
@@ -719,12 +723,12 @@ onUnmounted(() => {
   font-weight: 700;
 
   &.warning {
-    background: rgba(230, 162, 60, 0.14);
+    background: rgba($warning-color, 0.14);
     color: $warning-text;
   }
 
   &.danger {
-    background: rgba(245, 108, 108, 0.14);
+    background: rgba($danger-color, 0.14);
     color: $danger-text;
   }
 }

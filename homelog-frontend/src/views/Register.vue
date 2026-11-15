@@ -1,187 +1,150 @@
 <template>
-  <div class="login-page">
-    <div class="login-shell">
-      <aside class="brand-panel">
-        <div class="brand-header">
-          <div class="logo-mark">
-            <el-icon class="brand-icon"><House /></el-icon>
-            <span>家记</span>
-          </div>
-        </div>
-
-        <div class="brand-copy">
-          <p class="eyebrow">把日子，认真收好</p>
-          <h1>家里的事，都记在这里</h1>
-          <p class="description">
-            日常的点滴、重要的计划，还有那些值得珍藏的小事，都有一个温暖的归处。
-          </p>
-        </div>
-
-        <div class="illustration" aria-hidden="true">
-          <div class="house-scene"></div>
-          <div class="plant plant-left"></div>
-          <div class="plant plant-right"></div>
-          <div class="todo-bubble todo-bubble-one">待办</div>
-          <div class="todo-bubble todo-bubble-two">清单</div>
-        </div>
-
-        <div class="brand-foot">只属于你和家人的私密空间</div>
-      </aside>
-
-      <main class="login-panel">
-        <div class="login-card">
-          <div class="form-header">
-            <h2>创建账号</h2>
-            <p>注册后自动创建家庭空间，邀请家人共同记录</p>
-          </div>
-
-          <el-form
-            ref="registerFormRef"
-            :model="registerForm"
-            :rules="registerRules"
-            class="login-form"
-            @submit.prevent="handleRegister"
-          >
-            <div class="form-label">用户名</div>
-            <el-form-item prop="username">
-              <el-input
-                v-model="registerForm.username"
-                placeholder="用户名（字母数字下划线，3-20位）"
-                :prefix-icon="User"
-                clearable
-                autocomplete="off"
-              />
-            </el-form-item>
-
-            <div class="form-label">邮箱</div>
-            <el-form-item prop="email">
-              <el-input
-                v-model="registerForm.email"
-                placeholder="邮箱（用于接收提醒、找回密码）"
-                :prefix-icon="Message"
-                clearable
-                autocomplete="off"
-              />
-            </el-form-item>
-
-            <div class="form-label">昵称</div>
-            <el-form-item prop="nickName">
-              <el-input
-                v-model="registerForm.nickName"
-                placeholder="昵称（家人看到的名字）"
-                :prefix-icon="UserFilled"
-                clearable
-                autocomplete="off"
-                maxlength="32"
-              />
-            </el-form-item>
-
-            <div class="form-label">密码</div>
-            <el-form-item prop="password">
-              <el-input
-                v-model="registerForm.password"
-                placeholder="密码（6-64位）"
-                :prefix-icon="Lock"
-                show-password
-                autocomplete="off"
-                type="password"
-              />
-            </el-form-item>
-
-            <div class="form-label">确认密码</div>
-            <el-form-item prop="confirmPassword">
-              <el-input
-                v-model="registerForm.confirmPassword"
-                placeholder="请再次输入密码"
-                :prefix-icon="Lock"
-                show-password
-                autocomplete="off"
-                type="password"
-              />
-            </el-form-item>
-
-            <el-form-item prop="agreeTerms">
-              <el-checkbox v-model="registerForm.agreeTerms">
-                我已阅读并同意 <a href="javascript:void(0)" @click="showTerms = true">《用户协议与隐私政策》</a>
-              </el-checkbox>
-            </el-form-item>
-
-            <el-form-item>
-              <el-button
-                class="submit-btn"
-                type="primary"
-                block
-                :loading="loading"
-                native-type="submit"
-                size="default"
-              >
-                立即注册
-              </el-button>
-            </el-form-item>
-          </el-form>
-
-          <div class="register-line">
-            <span>已有账号？</span>
-            <el-button type="text" @click="goLogin">立即登录</el-button>
-          </div>
-
-          <div class="form-note">让家的每一刻，都有迹可循｜你的家庭记录仅对你可见</div>
-
-          <div class="pwa-hint" v-if="isMobile">
-            <el-icon><Download /></el-icon>
-            <span>支持添加到手机桌面，像原生 APP 一样使用</span>
-          </div>
-        </div>
-      </main>
+  <AuthLayout>
+    <div class="form-header">
+      <h2>创建账号</h2>
+      <p>注册后自动创建家庭空间，邀请家人共同记录</p>
     </div>
 
-    <el-dialog
-      v-model="showTerms"
-      title="用户协议与隐私政策"
-      width="700px"
-      :close-on-click-modal="false"
+    <el-form
+      ref="registerFormRef"
+      :model="registerForm"
+      :rules="registerRules"
+      class="login-form"
+      @submit.prevent="handleRegister"
     >
-      <div class="terms-content">
-        <h3>家记 用户协议与隐私政策</h3>
-        <p class="terms-update">更新日期：2026-11-03</p>
+      <div class="form-label">用户名</div>
+      <el-form-item prop="username">
+        <el-input
+          v-model="registerForm.username"
+          placeholder="用户名（字母数字下划线，3-20位）"
+          :prefix-icon="User"
+          clearable
+          autocomplete="off"
+        />
+      </el-form-item>
 
-        <h4>一、服务说明</h4>
-        <p>家记是一个私有家庭记录工具，旨在帮助家庭成员收纳药品、待办、记事、证件等零散信息。本服务为个人自建部署，数据存储在您自行配置的数据库中，开发者无法访问您的数据。</p>
+      <div class="form-label">邮箱</div>
+      <el-form-item prop="email">
+        <el-input
+          v-model="registerForm.email"
+          placeholder="邮箱（用于接收提醒、找回密码）"
+          :prefix-icon="Message"
+          clearable
+          autocomplete="off"
+        />
+      </el-form-item>
 
-        <h4>二、数据所有权</h4>
-        <p>您创建的所有记录、上传的图片、配置的模块字段等数据，归您（家庭空间）所有。我们不主张对您数据的任何所有权。</p>
+      <div class="form-label">昵称</div>
+      <el-form-item prop="nickName">
+        <el-input
+          v-model="registerForm.nickName"
+          placeholder="昵称（家人看到的名字）"
+          :prefix-icon="UserFilled"
+          clearable
+          autocomplete="off"
+          maxlength="32"
+        />
+      </el-form-item>
 
-        <h4>三、隐私保护</h4>
-        <ul>
-          <li>注册时收集的用户名、邮箱、昵称仅用于账号识别、邮件提醒发送、家庭成员展示</li>
-          <li>密码采用 BCrypt 加密存储，明文不落库，我们无法知晓您的密码</li>
-          <li>不收集任何超出功能必要范围的个人信息，不进行用户画像、广告推送</li>
-        </ul>
+      <div class="form-label">密码</div>
+      <el-form-item prop="password">
+        <el-input
+          v-model="registerForm.password"
+          placeholder="密码（6-64位）"
+          :prefix-icon="Lock"
+          show-password
+          autocomplete="off"
+          type="password"
+        />
+      </el-form-item>
 
-        <h4>四、医疗免责声明</h4>
-        <p class="disclaimer">
-          <strong>重要：</strong>本工具中的药品档案、用药记录仅作存档参考，不提供医疗诊断建议，不替代医生处方。
-          请遵医嘱用药，勿依赖本工具做医疗决策。因使用本工具导致的任何后果，开发者不承担责任。
-        </p>
+      <div class="form-label">确认密码</div>
+      <el-form-item prop="confirmPassword">
+        <el-input
+          v-model="registerForm.confirmPassword"
+          placeholder="请再次输入密码"
+          :prefix-icon="Lock"
+          show-password
+          autocomplete="off"
+          type="password"
+        />
+      </el-form-item>
 
-        <h4>五、数据备份与导出</h4>
-        <p>管理员可随时导出全空间数据（Excel + 图片压缩包），建议定期备份。数据删除后不可恢复，请谨慎操作。</p>
+      <el-form-item prop="agreeTerms">
+        <el-checkbox v-model="registerForm.agreeTerms">
+          我已阅读并同意 <a href="javascript:void(0)" @click="showTerms = true">《用户协议与隐私政策》</a>
+        </el-checkbox>
+      </el-form-item>
 
-        <h4>六、服务终止</h4>
-        <p>如您停止使用本服务，可自行导出数据后删除部署实例。我们不保留您的任何数据副本。</p>
-      </div>
-      <template #footer>
-        <el-button @click="showTerms = false">我知道了</el-button>
-      </template>
-    </el-dialog>
-  </div>
+      <el-form-item>
+        <el-button
+          class="submit-btn"
+          type="primary"
+          block
+          :loading="loading"
+          native-type="submit"
+          size="default"
+        >
+          立即注册
+        </el-button>
+      </el-form-item>
+    </el-form>
+
+    <div class="register-line">
+      <span>已有账号？</span>
+      <el-button type="text" @click="goLogin">立即登录</el-button>
+    </div>
+
+    <div class="form-note">让家的每一刻，都有迹可循｜你的家庭记录仅对你可见</div>
+  </AuthLayout>
+
+  <el-dialog
+    v-model="showTerms"
+    title="用户协议与隐私政策"
+    width="700px"
+    :close-on-click-modal="false"
+  >
+    <div class="terms-content">
+      <h3>家记 用户协议与隐私政策</h3>
+      <p class="terms-update">更新日期：2026-11-03</p>
+
+      <h4>一、服务说明</h4>
+      <p>家记是一个私有家庭记录工具，旨在帮助家庭成员收纳药品、待办、记事、证件等零散信息。本服务为个人自建部署，数据存储在您自行配置的数据库中，开发者无法访问您的数据。</p>
+
+      <h4>二、数据所有权</h4>
+      <p>您创建的所有记录、上传的图片、配置的模块字段等数据，归您（家庭空间）所有。我们不主张对您数据的任何所有权。</p>
+
+      <h4>三、隐私保护</h4>
+      <ul>
+        <li>注册时收集的用户名、邮箱、昵称仅用于账号识别、邮件提醒发送、家庭成员展示</li>
+        <li>密码采用 BCrypt 加密存储，明文不落库，我们无法知晓您的密码</li>
+        <li>不收集任何超出功能必要范围的个人信息，不进行用户画像、广告推送</li>
+      </ul>
+
+      <h4>四、医疗免责声明</h4>
+      <p class="disclaimer">
+        <strong>重要：</strong>本工具中的药品档案、用药记录仅作存档参考，不提供医疗诊断建议，不替代医生处方。
+        请遵医嘱用药，勿依赖本工具做医疗决策。因使用本工具导致的任何后果，开发者不承担责任。
+      </p>
+
+      <h4>五、数据备份与导出</h4>
+      <p>管理员可随时导出全空间数据（Excel + 图片压缩包），建议定期备份。数据删除后不可恢复，请谨慎操作。</p>
+
+      <h4>六、服务终止</h4>
+      <p>如您停止使用本服务，可自行导出数据后删除部署实例。我们不保留您的任何数据副本。</p>
+    </div>
+    <template #footer>
+      <el-button @click="showTerms = false">我知道了</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Message, Lock, UserFilled, Download, House } from '@element-plus/icons-vue'
+import { User, Message, Lock, UserFilled } from '@element-plus/icons-vue'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getFriendlyAuthErrorMessage } from '@/api'
 
@@ -191,7 +154,6 @@ const authStore = useAuthStore()
 
 const registerFormRef = ref<InstanceType<typeof import('element-plus').ElForm> | null>(null)
 const loading = ref(false)
-const isMobile = ref(false)
 const showTerms = ref(false)
 
 const registerForm = reactive({
@@ -245,20 +207,10 @@ const registerRules = {
 }
 
 onMounted(() => {
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-
-  // 检查是否已登录
   if (authStore.isLoggedIn) {
     router.push(route.query.redirect as string || '/')
   }
 })
-
-function checkMobile() {
-  isMobile.value = window.innerWidth < 768
-}
-
-onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
 async function handleRegister() {
   if (!registerFormRef.value) return
@@ -291,390 +243,12 @@ function goLogin() {
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
-@use '@/styles/decorations' as *;
-
-.login-page {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  background: $gradient-login-bg;
-}
-
-.login-shell {
-  width: 100%;
-  max-width: 1180px;
-  min-width: 0;
-  min-height: 760px;
-  display: flex;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba($primary-color, 0.12);
-  border-radius: 32px;
-  box-shadow: 0 24px 56px rgba(80, 50, 30, 0.12);
-  overflow: hidden;
-  backdrop-filter: blur(6px);
-}
-
-.brand-panel {
-  position: relative;
-  flex: 1.2;
-  min-width: 0;
-  padding: 54px 52px 34px;
-  background: $gradient-brand-panel;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.brand-header {
-  display: flex;
-  align-items: center;
-}
-
-.logo-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: $primary-text;
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.brand-icon {
-  font-size: 2.2rem;
-}
-
-.brand-copy {
-  max-width: 560px;
-  padding-top: 18px;
-}
-
-.eyebrow {
-  margin: 0 0 12px;
-  color: $primary-text;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.brand-copy h1 {
-  margin: 0;
-  color: $text-primary;
-  font-size: clamp(2.4rem, 2.8vw, 4rem);
-  line-height: 1.08;
-  letter-spacing: -0.05em;
-  font-weight: 800;
-}
-
-.description {
-  margin: 18px 0 0;
-  max-width: 560px;
-  color: rgba($text-primary, 0.75);
-  font-size: 1.08rem;
-  line-height: 1.8;
-}
-
-.illustration {
-  position: relative;
-  width: 100%;
-  max-width: 540px;
-  height: 240px;
-  margin-top: 32px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.34));
-  border: 1px solid rgba($primary-color, 0.08);
-  border-radius: 28px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.house-scene {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  width: 200px;
-  height: 120px;
-  transform: translateX(-50%);
-  background: $gradient-house;
-  border-radius: 22px 22px 18px 18px;
-  box-shadow: 0 18px 24px $illustration-house-shadow;
-}
-
-.house-scene::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -56px;
-  width: 160px;
-  height: 86px;
-  transform: translateX(-50%);
-  background: $gradient-house-roof;
-  clip-path: polygon(50% 0, 100% 42%, 100% 100%, 0 100%, 0 42%);
-  border-radius: 12px 12px 0 0;
-}
-
-.house-scene::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 16px;
-  width: 118px;
-  height: 54px;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.32);
-  border-radius: 12px;
-}
-
-.plant {
-  position: absolute;
-  bottom: 18px;
-  width: 56px;
-  height: 96px;
-  border-radius: 26px 26px 12px 12px;
-  background: $gradient-plant;
-  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.34);
-}
-
-.plant::before,
-.plant::after {
-  content: '';
-  position: absolute;
-  bottom: 45px;
-  width: 18px;
-  height: 54px;
-  background: $gradient-leaf;
-  border-radius: 14px;
-}
-
-.plant::before {
-  left: 8px;
-  transform: rotate(-18deg);
-}
-
-.plant::after {
-  right: 8px;
-  transform: rotate(18deg);
-}
-
-.plant-left {
-  left: 92px;
-}
-
-.plant-right {
-  right: 92px;
-}
-
-.todo-bubble {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 86px;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba($primary-color, 0.1);
-  color: $primary-text;
-  box-shadow: 0 14px 22px rgba($text-primary, 0.08);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.todo-bubble-one {
-  top: 26px;
-  right: 78px;
-}
-
-.todo-bubble-two {
-  left: 72px;
-  bottom: 18px;
-}
-
-.brand-foot {
-  margin-top: 20px;
-  color: rgba($text-primary, 0.7);
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
-}
-
-.login-panel {
-  flex: 0.92;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 42px 36px;
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.login-card {
-  width: 100%;
-  max-width: 430px;
-  background: $card-bg;
-  border: 1px solid rgba($text-primary, 0.04);
-  border-radius: 28px;
-  padding: 32px 28px 24px;
-  box-shadow: 0 16px 36px rgba(80, 50, 30, 0.1);
-}
-
-.form-header {
-  text-align: left;
-  margin-bottom: 28px;
-
-  h2 {
-    margin: 0;
-    color: $text-primary;
-    font-size: clamp(1.8rem, 2vw, 2.5rem);
-    line-height: 1.2;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-  }
-
-  p {
-    margin: 10px 0 0;
-    color: rgba($text-primary, 0.68);
-    font-size: 0.96rem;
-  }
-}
-
-.login-form {
-  :deep(.el-form-item) {
-    margin-bottom: 18px;
-  }
-
-  :deep(.el-form-item__content) {
-    display: block;
-  }
-
-  :deep(.el-form-item__error) {
-    margin-top: 6px;
-    font-size: 12px;
-  }
-
-  :deep(.el-checkbox__label) {
-    color: rgba($text-primary, 0.7);
-    font-size: 13px;
-
-    a {
-      color: $primary-text;
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-  }
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  color: $text-primary;
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-:deep(.el-input__wrapper) {
-  height: 52px;
-  border-radius: 14px;
-  background: $field-bg;
-  border: 1px solid rgba($text-primary, 0.06);
-  box-shadow: none;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: rgba($primary-color, 0.3);
-  }
-
-  &.is-focus {
-    background: $card-bg;
-    border-color: rgba($primary-color, 0.7);
-    box-shadow: 0 0 0 4px rgba($primary-color, 0.12);
-  }
-}
-
-:deep(.el-input__inner) {
-  color: $text-primary;
-  font-size: 0.98rem;
-}
-
-:deep(.el-input__prefix) {
-  color: $text-placeholder;
-}
-
-:deep(.el-checkbox) {
-  --el-checkbox-checked-bg-color: #{$primary-color};
-  --el-checkbox-checked-border-color: #{$primary-color};
-  --el-checkbox-checked-text-color: #{$text-primary};
-  color: $text-primary;
-  font-weight: 500;
-}
-
-.submit-btn {
-  width: 100%;
-  height: 52px;
-  border-radius: 14px;
-  border: none;
-  background: $gradient-primary;
-  color: $card-bg;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  box-shadow: 0 14px 24px rgba($primary-color, 0.2);
-
-  &:hover,
-  &:focus {
-    background: $gradient-primary-hover;
-  }
-}
-
-.register-line {
-  margin-top: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: rgba($text-primary, 0.72);
-  font-size: 0.95rem;
-
-  :deep(.el-button) {
-    padding: 0;
-    height: auto;
-    color: $primary-text;
-    font-weight: 700;
-  }
-}
-
-.form-note {
-  margin-top: 18px;
-  text-align: center;
-  color: rgba($text-primary, 0.5);
-  font-size: 0.75rem;
-  line-height: 1.8;
-  letter-spacing: 0.02em;
-}
-
-.pwa-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 10px 12px;
-  background-color: $primary-light-bg;
-  border-radius: 12px;
-  color: $primary-text;
-  font-size: 0.82rem;
-}
 
 .terms-content {
   max-height: 60vh;
   overflow-y: auto;
   padding: 8px 0;
-  font-size: 14px;
+  font-size: $text-body;
   line-height: 1.8;
   color: rgba($text-primary, 0.7);
 
@@ -686,15 +260,15 @@ function goLogin() {
 
   .terms-update {
     text-align: center;
-    font-size: 12px;
+    font-size: $text-caption;
     color: rgba($text-primary, 0.5);
     margin: 0 0 24px;
-    font-weight: normal;
+    font-weight: $font-weight-normal;
   }
 
   h4 {
-    font-size: 15px;
-    font-weight: 700;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
     color: $text-primary;
     margin: 24px 0 12px;
   }
@@ -716,85 +290,8 @@ function goLogin() {
     padding: 16px;
     background: $warning-bg;
     border: 1px solid $warning-border;
-    border-radius: 12px;
+    border-radius: $border-radius-lg;
     color: $warning-text;
-  }
-}
-
-@media (max-width: 1023px) {
-  .login-page {
-    padding: 20px 16px;
-  }
-
-  .login-shell {
-    min-height: auto;
-    flex-direction: column;
-    border-radius: 24px;
-  }
-
-  .brand-panel {
-    min-height: 360px;
-    padding: 32px 24px 24px;
-  }
-
-  .login-panel {
-    padding: 24px 20px 30px;
-  }
-}
-
-@media (max-width: 639px) {
-  .login-page {
-    padding: 14px;
-  }
-
-  .login-shell {
-    border-radius: 20px;
-  }
-
-  .brand-panel {
-    padding: 24px 18px 18px;
-  }
-
-  .logo-mark {
-    font-size: 1.7rem;
-  }
-
-  .brand-copy h1 {
-    font-size: 1.9rem;
-  }
-
-  .form-header h2 {
-    font-size: 1.55rem;
-  }
-
-  .description {
-    font-size: 0.94rem;
-  }
-
-  .illustration {
-    height: 180px;
-  }
-
-  .plant-left {
-    left: 36px;
-  }
-
-  .plant-right {
-    right: 36px;
-  }
-
-  .house-scene {
-    width: 160px;
-    height: 96px;
-  }
-
-  .login-card {
-    padding: 24px 18px 20px;
-    border-radius: 20px;
-  }
-
-  .form-label {
-    font-size: 0.86rem;
   }
 }
 </style>

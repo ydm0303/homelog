@@ -16,7 +16,7 @@
             </div>
           </template>
 
-          <el-table :data="members" border stripe style="width: 100%">
+          <el-table :data="members" border stripe class="w-full">
             <el-table-column prop="nickName" label="昵称" min-width="120" />
             <el-table-column prop="username" label="账号" min-width="140" />
             <el-table-column prop="email" label="邮箱" min-width="200" />
@@ -80,7 +80,7 @@
 
         <!-- 添加成员对话框 -->
         <el-dialog v-model="showAddMember" title="添加家庭成员" width="500px">
-          <el-form :model="addMemberForm" :rules="addMemberRules" label-width="80px">
+          <el-form :model="addMemberForm" :rules="addMemberRules" label-width="100px">
             <el-form-item label="邮箱" prop="email">
               <el-input v-model="addMemberForm.email" placeholder="输入成员邮箱" clearable />
             </el-form-item>
@@ -105,7 +105,7 @@
       <el-tab-pane label="权限矩阵" name="permissions" :disabled="!isAdmin">
         <el-card class="tab-card" shadow="never">
           <h4 class="matrix-title">角色权限对照表</h4>
-          <el-table :data="permissionMatrix" border stripe style="width: 100%">
+          <el-table :data="permissionMatrix" border stripe class="w-full">
             <el-table-column prop="permission" label="权限项" min-width="200" />
             <el-table-column prop="admin" label="管理员" width="120" align="center">
               <template #default="scope">
@@ -140,7 +140,7 @@
             :data="allModules"
             border
             stripe
-            style="width: 100%"
+            class="w-full"
             row-key="id"
           >
             <el-table-column type="index" label="排序" width="60" align="center" />
@@ -296,7 +296,7 @@
                     :disabled="!importFile"
                   >
                     <el-icon><Upload /></el-icon>
-                    开始导出
+                    导入
                   </el-button>
                   <el-button @click="downloadTemplate" style="margin-left: 12px">
                     <el-icon><Download /></el-icon>
@@ -344,7 +344,7 @@
       <el-tab-pane label="适老化设置" name="elderly">
         <el-card class="tab-card" shadow="never">
           <h4>长辈模式</h4>
-          <el-form :model="elderlyForm" label-width="120px">
+          <el-form :model="elderlyForm" label-width="100px">
             <el-form-item label="长辈模式">
               <el-switch
                 v-model="elderlyForm.enabled"
@@ -805,6 +805,10 @@ function toggleElderlyMode() {
 @use '@/styles/variables' as *;
 
 .settings-page {
+  .w-full {
+    width: 100%;
+  }
+
   .settings-tabs {
     :deep(.el-tabs__nav) {
       border-bottom: 1px solid $border-color;

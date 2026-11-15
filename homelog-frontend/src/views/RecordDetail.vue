@@ -585,15 +585,12 @@ function formatDateTime(dateStr: string) {
   }
 
   .field-item {
-    padding: 12px 16px;
-    background: $bg-color;
-    border: 1px solid $border-color-light;
-    border-radius: $border-radius-base;
+    min-width: 0;
 
     .field-label {
       display: block;
-      font-size: 13px;
-      font-weight: 500;
+      font-size: $text-label;
+      font-weight: $font-weight-medium;
       color: $text-secondary;
       margin-bottom: 6px;
     }
@@ -677,13 +674,10 @@ function formatDateTime(dateStr: string) {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 12px 16px;
-    background: $bg-color;
-    border: 1px solid $border-color-light;
-    border-radius: $border-radius-base;
+    min-width: 0;
 
     .meta-label {
-      font-size: 12px;
+      font-size: $text-caption;
       color: $text-secondary;
     }
 
@@ -724,8 +718,8 @@ function formatDateTime(dateStr: string) {
     justify-content: center;
     gap: 16px;
     padding: 16px;
-    color: $card-bg;
-    font-size: 14px;
+    color: $text-primary;
+    font-size: $text-body;
   }
 }
 

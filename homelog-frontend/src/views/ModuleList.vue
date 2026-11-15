@@ -893,10 +893,6 @@ function formatDateTime(dateStr: string) {
 // Phase 1：列表页结构、表格与移动端卡片
 // ============================================================
 .module-list-page {
-  .filter-card {
-    margin-bottom: 16px;
-  }
-
   .filter-search {
     width: 320px;
     max-width: 100%;
@@ -971,7 +967,7 @@ function formatDateTime(dateStr: string) {
   .record-summary {
     overflow: hidden;
     color: $text-tertiary;
-    font-size: 12px;
+    font-size: $text-label;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -984,7 +980,7 @@ function formatDateTime(dateStr: string) {
 
   .cell-muted {
     color: $text-tertiary;
-    font-size: 12px;
+    font-size: $text-label;
   }
 
   .row-actions {

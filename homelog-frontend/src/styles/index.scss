@@ -13,7 +13,7 @@
   --color-primary-border: #{$primary-light-border};
 
   --color-text: #{$text-primary};
-  --color-text-secondary: #{$text-tertiary};
+  --color-text-secondary: #{$text-secondary};
   --color-text-placeholder: #{$text-placeholder};
 
   --color-bg: #{$bg-color};
@@ -223,6 +223,7 @@ h4 {
     letter-spacing: 0.03em;
     color: $text-tertiary;
     background: $bg-color;
+    padding: 10px 0;
   }
 
   .el-table__row {
@@ -231,10 +232,6 @@ h4 {
 
   .el-table__cell {
     padding: 11px 0;
-  }
-
-  th.el-table__cell {
-    padding: 10px 0;
   }
 }
 

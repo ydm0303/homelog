@@ -52,7 +52,7 @@ withDefaults(
   justify-content: center;
   width: 56px;
   height: 56px;
-  margin-bottom: 16px;
+  margin-bottom: $spacing-md;
   border-radius: 50%;
   font-size: 24px;
 
@@ -82,7 +82,7 @@ withDefaults(
 
 .empty-description {
   max-width: 420px;
-  margin: 8px 0 0;
+  margin: $spacing-sm 0 0;
   font-size: $text-label;
   line-height: $line-height-base;
   color: $text-tertiary;
@@ -94,7 +94,7 @@ withDefaults(
   justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: $spacing-lg;
 }
 
 .empty-state--compact {

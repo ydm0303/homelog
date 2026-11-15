@@ -8,7 +8,6 @@
           </div>
           <div v-if="!sidebarCollapsed" class="brand-text">
             <h1 class="logo">家记</h1>
-            <span class="brand-subtitle">家庭空间</span>
           </div>
         </div>
       </div>
@@ -37,7 +36,13 @@
       </nav>
 
       <div v-if="!sidebarCollapsed" class="sidebar-footer">
-        <p class="footer-note">把平凡日子 过成温柔的纪念</p>
+        <p class="footer-note">
+          <span class="footer-note-heart" aria-hidden="true">♥</span>
+          <span class="footer-note-text">
+            <span>把平凡日子</span>
+            <span>过成温柔的纪念</span>
+          </span>
+        </p>
         <div class="user-info">
           <el-avatar :size="36" :src="authStore.user?.avatar" />
           <div class="user-detail">
@@ -99,6 +104,8 @@
           <el-button v-if="isMobile" class="menu-btn" aria-label="打开菜单" @click="mobileDrawer = true" circle size="small">
             <el-icon><Menu /></el-icon>
           </el-button>
+
+          <span v-if="!isMobile" class="page-title">{{ pageTitle }}</span>
         </div>
 
         <div class="top-bar-center" v-show="!isMobile">
@@ -112,8 +119,9 @@
 
           <el-dropdown>
             <span class="dropdown-link" role="button" tabindex="0" aria-label="消息中心">
-              <el-icon class="notification-icon"><Bell /></el-icon>
-              <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="notification-badge" />
+              <el-badge is-dot :hidden="unreadCount === 0">
+                <el-icon class="notification-icon"><Bell /></el-icon>
+              </el-badge>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -123,15 +131,28 @@
             </template>
           </el-dropdown>
 
-          <el-dropdown trigger="click" class="user-drop">
+          <el-dropdown ref="userDropdownRef" trigger="click" class="user-drop" popper-class="user-menu-popper">
             <div class="user-trigger">
-              <el-avatar :size="32" :src="authStore.user?.avatar" />
+              <el-avatar :size="32" class="user-avatar">{{ avatarText }}</el-avatar>
               <span class="user-trigger-name">{{ displayName }}</span>
+              <el-icon class="user-trigger-caret"><ArrowDown /></el-icon>
             </div>
             <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
+              <div class="user-menu-card">
+                <div class="user-menu-header">
+                  <span class="user-menu-name">{{ displayName }}</span>
+                  <span class="user-menu-role">{{ getRoleLabel }}·家庭空间</span>
+                </div>
+                <div class="user-menu-divider"></div>
+                <button class="user-menu-item user-menu-item-primary" @click="goToSettings">
+                  <el-icon><Setting /></el-icon>
+                  <span>个人设置</span>
+                </button>
+                <button class="user-menu-item" @click="handleLogout">
+                  <el-icon><SwitchButton /></el-icon>
+                  <span>退出登录</span>
+                </button>
+              </div>
             </template>
           </el-dropdown>
         </div>
@@ -158,7 +179,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Setting, Fold, Expand, Menu, Bell, Search } from '@element-plus/icons-vue'
+import { HomeFilled, Setting, Fold, Expand, Menu, Bell, Search, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { messageApi } from '@/api'
@@ -278,6 +299,12 @@ const isAdmin = computed(() => authStore.isAdmin)
 // 登录人昵称（优先昵称，其次用户名）
 const displayName = computed(() => authStore.user?.nickName || authStore.user?.username || '家人')
 
+// 头像占位首字
+const avatarText = computed(() => displayName.value.charAt(0) || '家')
+
+// 用户下拉实例（用于手动关闭）
+const userDropdownRef = ref<InstanceType<typeof import('element-plus').ElDropdown> | null>(null)
+
 // 角色标签文本
 const getRoleLabel = computed(() => {
   switch (authStore.role) {
@@ -285,6 +312,25 @@ const getRoleLabel = computed(() => {
     case 2: return '可编辑'
     default: return '只读'
   }
+})
+
+// 顶栏当前页标题（层级定位）
+const pageTitle = computed(() => {
+  const path = route.path
+  if (path === '/') return '首页'
+  if (path.startsWith('/settings')) return '设置中心'
+  if (path.startsWith('/messages')) return '消息中心'
+  if (path.startsWith('/search')) return '搜索'
+
+  const actionMatch = path.match(/^\/module\/[^/]+\/(create|edit)$/)
+  if (actionMatch) return actionMatch[1] === 'create' ? '新增记录' : '编辑记录'
+
+  const moduleMatch = path.match(/^\/module\/([^/]+)/)
+  if (moduleMatch) {
+    return moduleStore.getModuleByKey(moduleMatch[1])?.name || moduleMatch[1]
+  }
+
+  return '家记'
 })
 
 function handleQuickCreate() {
@@ -303,9 +349,16 @@ function handleDrawerClose() {
 
 // 退出登录
 function handleLogout() {
+  userDropdownRef.value?.handleClose()
   authStore.logout()
   ElMessage.success('已退出登录')
   router.push('/login')
+}
+
+// 跳转个人设置
+function goToSettings() {
+  userDropdownRef.value?.handleClose()
+  router.push('/settings')
 }
 
 // 跳转消息中心
@@ -376,26 +429,41 @@ function handleSearch() {
   border-bottom: 1px solid $border-color;
   background: $sidebar-header-bg;
 
-  .logo {
-    font-size: 20px;
-    font-weight: 800;
-    color: $primary-text;
-    margin: 0;
-    white-space: nowrap;
-    letter-spacing: 0.04em;
-  }
-
-  .logo-mini {
-    font-size: 18px;
-    font-weight: 800;
-    color: $primary-text;
-    width: 34px;
-    height: 34px;
-    border-radius: 12px;
+  .brand-block {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: rgba($primary-color, 0.1);
+    gap: 10px;
+    min-width: 0;
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: $border-radius-lg;
+      background: $primary-light-bg;
+      color: $brand-400;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+
+      .logo {
+        font-size: 20px;
+        font-weight: 800;
+        color: $primary-text;
+        margin: 0;
+        white-space: nowrap;
+        letter-spacing: 0.04em;
+        line-height: 1;
+      }
+    }
   }
 }
 
@@ -473,31 +541,66 @@ function handleSearch() {
   padding: 12px;
   border-top: 1px solid $border-color;
 
+  .footer-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.6;
+    letter-spacing: 0.08em;
+    color: $text-tertiary;
+    background: $surface-warm;
+    border: 1px solid $border-color-light;
+    border-radius: $border-radius-lg;
+
+    .footer-note-heart {
+      flex-shrink: 0;
+      color: $brand-400;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .footer-note-text {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      span {
+        display: block;
+        white-space: nowrap;
+      }
+    }
+  }
+
   .user-info {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 12px;
 
     .user-detail {
       display: flex;
       flex-direction: column;
+      gap: 2px;
       min-width: 0;
 
       .user-name {
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         color: $text-primary;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
-    }
-  }
 
-  .logout-btn {
-    width: 100%;
-    justify-content: center;
+      .user-role {
+        font-size: 11px;
+        color: $text-placeholder;
+        white-space: nowrap;
+      }
+    }
   }
 }
 
@@ -539,6 +642,10 @@ function handleSearch() {
       color: $text-primary;
       margin: 0;
       letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
     }
   }
 
@@ -553,27 +660,34 @@ function handleSearch() {
       width: 100%;
       max-width: 480px;
 
-      :deep(.el-input__inner) {
+      :deep(.el-input__wrapper) {
         height: 36px;
-        padding: 0 12px 0 36px;
-        font-size: 14px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: $field-bg;
+        border: 1px solid transparent;
+        box-shadow: none;
+        transition: all 0.2s ease;
 
         &:hover {
-          border-color: $primary-text;
+          background: $card-bg;
+          border-color: $border-color;
         }
 
-        &:focus {
-          border-color: $primary-text;
-          box-shadow: 0 0 0 2px $primary-light-bg;
+        &.is-focus {
+          background: $card-bg;
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba($primary-color, 0.12);
         }
+      }
+
+      :deep(.el-input__inner) {
+        height: 34px;
+        font-size: 14px;
+        color: $text-primary;
       }
 
       :deep(.el-input__prefix) {
-        color: $text-placeholder;
-        font-size: 16px;
-      }
-
-      :deep(.el-input__suffix) {
         color: $text-placeholder;
       }
     }
@@ -588,22 +702,80 @@ function handleSearch() {
   .toggle-btn,
   .menu-btn,
   .search-btn {
-    color: $text-secondary;
+    color: $text-tertiary;
+    background: transparent;
+    border: none;
+    transition: color 0.2s ease;
+
+    &:hover,
+    &:focus {
+      color: $primary-color;
+      background: transparent;
+      border: none;
+    }
   }
 
   .notification-icon {
     font-size: 20px;
-    color: $text-secondary;
+    color: $text-tertiary;
     cursor: pointer;
     position: relative;
-  }
+    transition: color 0.2s ease;
 
-  .install-btn {
-    color: $primary-text;
+    &:hover {
+      color: $primary-color;
+    }
   }
 }
 
-// 面包屑
+// 顶栏用户入口
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: $hover-bg;
+
+    .user-trigger-name {
+      color: $primary-color;
+    }
+
+    .user-trigger-caret {
+      color: $primary-color;
+    }
+  }
+
+  .user-avatar {
+    background: $primary-light-bg;
+    color: $primary-text;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-trigger-name {
+    max-width: 120px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s ease;
+  }
+
+  .user-trigger-caret {
+    font-size: 12px;
+    color: $text-placeholder;
+    transition: color 0.2s ease;
+  }
+}
+
 // 页面内容
 .page-content {
   flex: 1;
@@ -721,27 +893,6 @@ function handleSearch() {
   }
 }
 
-.mobile-divider {
-  margin: 16px 0;
-}
-
-.mobile-user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-
-  div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-.mobile-logout {
-  margin-top: 16px;
-}
-
 // 响应式
 @media (max-width: 1023px) {
   .sidebar {
@@ -769,10 +920,6 @@ function handleSearch() {
 
   .top-bar-center {
     display: none;
-  }
-
-  .breadcrumb {
-    padding: 8px 16px;
   }
 
   .page-content {
@@ -811,6 +958,86 @@ function handleSearch() {
 @media (min-width: 1024px) {
   .search-btn {
     display: none;
+  }
+}
+</style>
+
+<style lang="scss">
+@use '@/styles/variables' as *;
+
+// 用户下拉卡片（teleported 到 body，需全局样式覆盖 Element 默认）
+.el-popper.is-light.user-menu-popper {
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-lg;
+  background: $card-bg;
+  padding: 0;
+
+  .el-popper__arrow {
+    display: none;
+  }
+
+  .user-menu-card {
+    width: 224px;
+    padding: 8px;
+  }
+
+  .user-menu-header {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 12px 12px;
+  }
+
+  .user-menu-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  .user-menu-role {
+    font-size: 12px;
+    color: $text-tertiary;
+  }
+
+  .user-menu-divider {
+    height: 1px;
+    margin: 0 8px 8px;
+    background: $border-color-light;
+  }
+
+  .user-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    background: transparent;
+    border-radius: $border-radius-base;
+    font-size: 13px;
+    color: $text-primary;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    .el-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: $hover-bg;
+    }
+  }
+
+  .user-menu-item-primary {
+    color: $primary-text;
+    font-weight: 600;
+
+    &:hover {
+      color: $primary-hover;
+    }
   }
 }
 </style>

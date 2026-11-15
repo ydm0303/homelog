@@ -65,7 +65,7 @@ withDefaults(
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: $text-stat;
   font-weight: $font-weight-bold;
   line-height: $line-height-tight;
   color: $text-primary;
@@ -118,7 +118,7 @@ withDefaults(
   }
 
   .stat-value {
-    font-size: 20px;
+    font-size: $text-heading;
   }
 }
 </style>

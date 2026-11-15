@@ -48,7 +48,7 @@ function goBack() {
   background: $surface-warm;
   border: 1px solid rgba(43, 38, 34, 0.05);
   border-radius: 20px;
-  box-shadow: 0 16px 30px rgba(221, 112, 78, 0.06);
+  box-shadow: $shadow-lg;
 }
 
 .error-code {

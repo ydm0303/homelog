@@ -12,9 +12,9 @@
 $gradient-login-bg: linear-gradient(135deg, #f8f4ef 0%, #f4efe7 32%, #f7f3ee 100%);
 $gradient-brand-panel: linear-gradient(180deg, #f7f3ed 0%, #f3efe9 100%);
 
-// 房屋插画
-$gradient-house: linear-gradient(180deg, #f1c38a 0%, #f2b267 100%);
-$gradient-house-roof: linear-gradient(180deg, #f7b26d 0%, #ed8a5b 100%);
+// 房屋插画（对齐品牌暖陶土）
+$gradient-house: linear-gradient(180deg, $brand-300 0%, $brand-400 100%);
+$gradient-house-roof: linear-gradient(180deg, $brand-500 0%, $brand-600 100%);
 $illustration-house-shadow: rgba(122, 87, 44, 0.12);
 
 // 植物插画
