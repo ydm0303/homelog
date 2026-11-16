@@ -7,7 +7,7 @@
 --   1. 单文件可直接 flyway migrate 执行
 --   2. 包含全部业务表结构 + 4 个内置预制模块的种子数据（模块+字段）
 --   3. 种子数据使用 INSERT IGNORE 保证幂等性（重复跑不报错）
---   4. MVP 范围：单空间（space_id=1），前端隐藏切换器；证件字段仅权限控制，不加密
+--   4. 范围：单空间（space_id=1），前端隐藏切换器；证件字段仅权限控制，不加密
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -156,7 +156,7 @@ CREATE TABLE `jj_message` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='消息中心表';
 
 -- ============================================================================
--- 5. MVP 专用：预制模块种子数据（内置 4 个模块 + 字段定义）
+-- 5. 预制模块种子数据（内置 4 个模块 + 字段定义）
 -- 使用 INSERT IGNORE 保证幂等性（重复执行不报错）
 -- 假设默认空间 space_id = 1（用户注册后自动创建）
 -- ============================================================================
@@ -213,7 +213,7 @@ VALUES
     (36, 3, 'is_private',     '是否私密',      'boolean',     0, 0, NULL, 70);
 
 -- 5.6 插入证件档案模块字段 (module_id=4)
--- 注意：证件号字段 is_private=1（仅管理员可见），MVP 不做字段加密，仅权限控制
+-- 注意：证件号字段 is_private=1（仅管理员可见），不做字段加密，仅权限控制
 INSERT IGNORE INTO `jj_field` (`id`, `module_id`, `field_key`, `field_label`, `field_type`, `is_required`, `is_private`, `options_json`, `sort_order`)
 VALUES
     (40, 4, 'doc_type',       '证件类型',      'select',      1, 0,
@@ -247,7 +247,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 --    ✅ jj_record: idx_space_module(核心列表查询), idx_remind(到期扫描), idx_creator(我的记录),
 --           idx_created(时间倒序), idx_space_module_remind(模块内按提醒日期查)
 --    ✅ jj_message: idx_user(用户未读列表), idx_space_user(空间内用户消息), idx_record(记录关联消息)
---    结论：覆盖所有高频查询模式，避免全表扫描。MVP 数据量小（家庭级），索引维护成本可接受。
+--    结论：覆盖所有高频查询模式，避免全表扫描。数据量小（家庭级），索引维护成本可接受。
 --
 -- 2. 字段类型合理性
 --    ✅ VARCHAR 长度：username/email 64/128 足够；module_key/field_key 64 支持英文标识；
@@ -262,10 +262,10 @@ SET FOREIGN_KEY_CHECKS = 1;
 --       且家庭场景写入并发低、数据量小，显式 FK 会增加迁移/回滚/测试数据准备复杂度。
 --       代码层已保证：space_id 隔离、module_id 归属校验、creator_id 存在性校验。
 --    ✅ UNIQUE 约束充分：uk_username、uk_space_user、uk_module、uk_field 均防止重复脏数据。
---    结论：MVP 阶段以应用层约束为主，数据库层保留唯一约束；v1.1 可按需补 FK。
+--    结论：现阶段以应用层约束为主，数据库层保留唯一约束；后续可按需补 FK。
 --
 -- 4. 分区/归档策略
---    ⚠️ jj_record 暂不分区：MVP 预估单家庭 3 年 < 5 万行，单表性能足够。
+--    ⚠️ jj_record 暂不分区：预估单家庭 3 年 < 5 万行，单表性能足够。
 --       预留方案：按年/月 RANGE 分区 remind_date 或 created_at；归档策略：迁移 3 年前数据到 jj_record_archive 表。
 --    结论：当前不分区，预留 idx_remind/idx_created 支持未来分区裁剪。
 --
@@ -280,12 +280,12 @@ SET FOREIGN_KEY_CHECKS = 1;
 --    ✅ 模块/字段 ID 显式指定，保证跨环境 ID 一致（便于前端硬编码 key 映射）。
 --    结论：满足 Flyway 重复迁移、多环境部署幂等要求。
 --
--- 7. MVP 范围边界确认
+-- 7. 范围边界确认
 --    ✅ 无多空间切换表/UI：jj_space 仅 1 条默认数据，前端隐藏切换器。
 --    ✅ 无证件加密字段：jj_field.is_private=1 做权限控制，无加密列、无密钥管理表。
 --    ✅ 无通用导入相关表：仅药品模块 CSV 导入（后端硬编码映射），无导入任务/映射/错误表。
 --    ✅ 无浏览器推送表：仅消息中心 jj_message + 邮件发送记录（可扩展日志表）。
---    结论：严格对齐 PRD MVP 范围，无过度设计。
+--    结论：严格对齐 PRD 范围，无过度设计。
 --
 -- ============================================================================
 -- END OF V1__init.sql

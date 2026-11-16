@@ -49,7 +49,7 @@
       <template v-for="field in visibleFields" :key="field.id">
         <el-form-item
           :label="field.fieldLabel"
-          :prop="field.fieldKey"
+          :prop="`dataJson.${field.fieldKey}`"
           :rules="getFieldRules(field)"
         >
           <DynamicFieldRenderer
@@ -62,8 +62,8 @@
         </el-form-item>
       </template>
 
-      <!-- 提醒日期 -->
-      <el-form-item label="提醒日期" prop="remindDate">
+      <!-- 提醒日期（药品模块由有效期自动派生，不单独展示） -->
+      <el-form-item v-if="moduleKey !== 'drug'" label="提醒日期" prop="remindDate">
         <el-date-picker
           v-model="formData.remindDate"
           type="date"
@@ -155,7 +155,7 @@ const isReadonly = computed(() => authStore.isReadonly)
 
 const canSave = computed(() => !isReadonly.value)
 
-const hasTitleField = computed(() => true) // 所有模块都有标题
+const hasTitleField = computed(() => moduleKey !== 'drug') // 药品模块标题由药品名派生，不单独展示
 
 const allFields = computed(() => module.value?.fields || [])
 
@@ -226,6 +226,20 @@ function initDefaultValues() {
       formData.value.dataJson[field.fieldKey] = dayjs().format('YYYY-MM-DD')
     }
   })
+
+  // 药品模块专属默认值
+  if (moduleKey === 'drug') {
+    if (!formData.value.dataJson.unit) {
+      formData.value.dataJson.unit = '盒'
+    }
+    if (formData.value.dataJson.min_stock === undefined || formData.value.dataJson.min_stock === null) {
+      formData.value.dataJson.min_stock = 2
+    }
+    // 有效期默认今天 + 2 年
+    if (!formData.value.dataJson.expire_date) {
+      formData.value.dataJson.expire_date = dayjs().add(2, 'year').format('YYYY-MM-DD')
+    }
+  }
 }
 
 async function fetchRecord() {
@@ -249,7 +263,7 @@ function updateFieldValue(key: string, value: any) {
   formData.value.dataJson = { ...formData.value.dataJson, [key]: value }
   // 触发表单验证
   nextTick(() => {
-    formRef.value?.validateField(key).catch(() => {})
+    formRef.value?.validateField(`dataJson.${key}`).catch(() => {})
   })
 }
 

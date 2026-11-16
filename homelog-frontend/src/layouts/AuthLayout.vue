@@ -31,11 +31,6 @@
       <main class="login-panel">
         <div class="login-card">
           <slot />
-
-          <div class="pwa-hint" v-if="isMobile">
-            <el-icon><Download /></el-icon>
-            <span>支持添加到手机桌面，像原生 APP 一样使用</span>
-          </div>
         </div>
       </main>
     </div>
@@ -43,21 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { House, Download } from '@element-plus/icons-vue'
-
-const isMobile = ref(false)
-
-function checkMobile() {
-  isMobile.value = window.innerWidth < 1024
-}
-
-onMounted(() => {
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-})
-
-onUnmounted(() => window.removeEventListener('resize', checkMobile))
+import { House } from '@element-plus/icons-vue'
 </script>
 
 <style lang="scss" scoped>
@@ -289,19 +270,6 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
   border-radius: $border-radius-xl;
   padding: 32px 28px 24px;
   box-shadow: 0 16px 36px rgba(80, 50, 30, 0.1);
-}
-
-.pwa-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 10px 12px;
-  background-color: $primary-light-bg;
-  border-radius: $border-radius-lg;
-  color: $primary-text;
-  font-size: $text-label;
 }
 
 @media (max-width: 1023px) {

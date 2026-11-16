@@ -1,10 +1,12 @@
 package com.homelog.task;
 
 import com.homelog.entity.Message;
+import com.homelog.entity.Module;
 import com.homelog.entity.Record;
 import com.homelog.entity.SpaceMember;
 import com.homelog.entity.User;
 import com.homelog.mapper.MessageMapper;
+import com.homelog.mapper.ModuleMapper;
 import com.homelog.mapper.RecordMapper;
 import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
@@ -36,6 +38,7 @@ public class RemindTask {
     private final SpaceMemberMapper spaceMemberMapper;
     private final UserMapper userMapper;
     private final MessageMapper messageMapper;
+    private final ModuleMapper moduleMapper;
     private final MailService mailService;
 
     @Value("${homelog.remind.lead-days:7,1,0}")
@@ -186,23 +189,19 @@ public class RemindTask {
     }
 
     /**
-     * 获取记录类型标签
+     * 获取记录类型标签（模块显示名，如"药品档案"）
      */
     private String getRecordTypeLabel(Record record) {
-        // 实际应查模块表，这里简化处理
-        return "记录";
+        Module module = record.getModuleId() != null ? moduleMapper.selectById(record.getModuleId()) : null;
+        return module != null && module.getName() != null ? module.getName() : "记录";
     }
 
     /**
      * 获取模块 Key
      */
     private String getModuleKey(Long moduleId) {
-        // 实际应查模块表，这里简化映射
-        int id = moduleId.intValue();
-        if (id == 1) return "drug";
-        if (id == 2) return "todo";
-        if (id == 3) return "note";
-        if (id == 4) return "idoc";
-        return "unknown";
+        if (moduleId == null) return "unknown";
+        Module module = moduleMapper.selectById(moduleId);
+        return module != null && module.getModuleKey() != null ? module.getModuleKey() : "unknown";
     }
 }

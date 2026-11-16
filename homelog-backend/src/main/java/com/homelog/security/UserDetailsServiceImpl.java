@@ -26,7 +26,7 @@ import java.util.List;
 @Slf4j
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    /** MVP 单空间：默认空间 ID */
+    /** 单空间：默认空间 ID */
     private static final long DEFAULT_SPACE_ID = 1L;
 
     private final UserMapper userMapper;

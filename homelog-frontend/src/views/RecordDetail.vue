@@ -52,6 +52,34 @@
 
     <!-- 详情内容 -->
     <el-card class="detail-card" shadow="never">
+      <!-- 药品专属：有效期状态 + 库存 + 快捷操作 -->
+      <div v-if="isDrugModule" class="drug-panel">
+        <div class="drug-status" :class="expiryStatusClass">
+          <span class="drug-status-label">有效期</span>
+          <span class="drug-status-date">
+            {{ record.dataJson.expire_date ? formatDate(record.dataJson.expire_date) : '未设置' }}
+          </span>
+          <span v-if="expiryStatusText" class="drug-status-days">{{ expiryStatusText }}</span>
+        </div>
+        <div class="drug-stock" :class="{ 'stock-low': isLowStock }">
+          <span class="drug-status-label">库存</span>
+          <span class="drug-status-value">
+            {{ record.dataJson.quantity ?? '—' }} {{ record.dataJson.unit || '' }}
+          </span>
+          <span v-if="isLowStock" class="drug-status-days">库存不足</span>
+        </div>
+        <div v-if="canEdit" class="drug-actions">
+          <el-button size="small" :disabled="busy" @click="adjustQuantity(-1)">
+            <el-icon><Minus /></el-icon>
+            已服用
+          </el-button>
+          <el-button size="small" type="primary" plain :disabled="busy" @click="adjustQuantity(1)">
+            <el-icon><Plus /></el-icon>
+            补货
+          </el-button>
+        </div>
+      </div>
+
       <!-- 图片画廊 -->
       <div v-if="record.imagesJson && record.imagesJson.length > 0" class="image-gallery">
         <h3 class="section-title">
@@ -267,13 +295,14 @@ import { useModuleStore } from '@/stores/module'
 import { recordApi, spaceApi } from '@/api'
 import {
   ArrowLeft, ArrowDown, Edit, Delete, Lock, Unlock, Download,
-  Picture, Document, PriceTag, InfoFilled, ZoomIn, ArrowRight
+  Picture, Document, PriceTag, InfoFilled, ZoomIn, ArrowRight, Minus, Plus
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { formatDate as formatDateSafe, formatDateTime as formatDateTimeSafe, dayDiffFromToday } from '@/utils/date'
 import { resolveFileUrl } from '@/utils/file'
 import { getModuleTagType } from '@/utils/module'
+import { getExpiryState } from '@/utils/drug'
 
 const route = useRoute()
 const router = useRouter()
@@ -285,6 +314,7 @@ const moduleKey = route.params.moduleKey as string
 
 const record = ref<any>(null)
 const loading = ref(true)
+const busy = ref(false)
 
 const imagePreviewVisible = ref(false)
 const currentPreviewIndex = ref(0)
@@ -305,6 +335,31 @@ const canDelete = computed(() => isAdmin.value)
 
 const currentModule = computed(() => moduleStore.getModuleByKey(moduleKey))
 const allFields = computed(() => currentModule.value?.fields || [])
+
+const isDrugModule = computed(() => moduleKey === 'drug')
+
+// 药品有效期状态（列表/详情共用 getExpiryState，避免各写各的）
+const expiryState = computed(() =>
+  isDrugModule.value ? getExpiryState(record.value?.dataJson?.expire_date) : null
+)
+const expiryStatusClass = computed(() => {
+  const s = expiryState.value
+  if (!s) return ''
+  return s.status === 'expired' ? 'expired' : s.status === 'soon' ? 'soon' : 'normal'
+})
+const expiryStatusText = computed(() => {
+  const s = expiryState.value
+  if (!s) return ''
+  if (s.status === 'expired') return `已过期 ${Math.abs(s.days)} 天`
+  if (s.days === 0) return '今天到期'
+  return `剩余 ${s.days} 天`
+})
+const isLowStock = computed(() => {
+  const q = Number(record.value?.dataJson?.quantity)
+  const min = Number(record.value?.dataJson?.min_stock)
+  if (Number.isNaN(q) || Number.isNaN(min)) return false
+  return q < min
+})
 
 // 可见字段（过滤私密字段）
 const visibleFields = computed(() => {
@@ -432,6 +487,30 @@ async function togglePrivate(isPrivate: boolean) {
 function exportRecord() {
   // TODO: 实现单条记录导出
   ElMessage.info('单条记录导出功能开发中...')
+}
+
+async function adjustQuantity(delta: number) {
+  const moduleId = currentModule.value?.id
+  if (!moduleId) return
+
+  const current = Number(record.value?.dataJson?.quantity ?? 0)
+  const next = Math.max(0, current + delta)
+  if (next === current) return
+
+  busy.value = true
+  try {
+    await recordApi.update({
+      recordId: Number(recordId),
+      moduleId,
+      dataJson: { ...record.value.dataJson, quantity: next }
+    })
+    record.value.dataJson.quantity = next
+    ElMessage.success(delta > 0 ? '已补货 +1' : '已服用 -1')
+  } catch {
+    ElMessage.error('操作失败')
+  } finally {
+    busy.value = false
+  }
 }
 
 function openImagePreview(index: number) {
@@ -575,6 +654,81 @@ function formatDateTime(dateStr: string) {
       &:hover .image-overlay {
         opacity: 1;
       }
+    }
+  }
+
+  .drug-panel {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px;
+    margin-bottom: 24px;
+    background: $surface-warm;
+    border: 1px solid $border-color-light;
+    border-radius: $border-radius-base;
+
+    .drug-status,
+    .drug-stock {
+      flex: 1;
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 16px;
+      border-radius: $border-radius-base;
+      background: $card-bg;
+
+      .drug-status-label {
+        font-size: $text-caption;
+        color: $text-secondary;
+      }
+
+      .drug-status-date,
+      .drug-status-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      .drug-status-days {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      &.expired {
+        .drug-status-date,
+        .drug-status-days {
+          color: $danger-text;
+        }
+      }
+
+      &.soon {
+        .drug-status-date,
+        .drug-status-days {
+          color: $warning-text;
+        }
+      }
+
+      &.normal {
+        .drug-status-date,
+        .drug-status-days {
+          color: $success-text;
+        }
+      }
+
+      &.stock-low {
+        .drug-status-value,
+        .drug-status-days {
+          color: $danger-text;
+        }
+      }
+    }
+
+    .drug-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
   }
 

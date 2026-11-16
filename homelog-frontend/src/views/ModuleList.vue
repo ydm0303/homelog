@@ -43,12 +43,30 @@
           class="view-segment"
           @change="handleViewModeChange"
         />
+
+        <el-button
+          class="advanced-toggle"
+          :class="{ 'is-active': showAdvancedFilter }"
+          text
+          @click="showAdvancedFilter = !showAdvancedFilter"
+        >
+          高级筛选
+          <el-icon><ArrowUp v-if="showAdvancedFilter" /><ArrowDown v-else /></el-icon>
+        </el-button>
+      </div>
+
+      <!-- 药品专属：过期状态快捷筛选 tab -->
+      <div v-if="isDrugModule" class="drug-tabs">
+        <el-segmented
+          v-model="expiryFilter"
+          :options="expiryFilterOptions"
+          class="expiry-tabs"
+        />
       </div>
 
       <!-- 高级筛选 -->
       <el-collapse-transition>
         <div v-show="showAdvancedFilter" class="advanced-filter">
-          <el-divider direction="horizontal" />
           <div class="advanced-filter-content">
             <el-date-picker
               v-model="filterDateRange"
@@ -75,14 +93,6 @@
           </div>
         </div>
       </el-collapse-transition>
-
-      <div class="filter-actions">
-        <el-button link @click="showAdvancedFilter = !showAdvancedFilter">
-          <el-icon><ArrowDown /></el-icon>
-          高级筛选
-        </el-button>
-        <span class="result-count">共 {{ total }} 条记录</span>
-      </div>
     </AppCard>
 
     <!-- 列表内容 -->
@@ -91,7 +101,7 @@
       <div v-if="viewMode === 'list'" v-loading="loading" class="list-view">
         <div class="mobile-record-list">
           <article
-            v-for="record in records"
+            v-for="record in displayRecords"
             :key="`mobile-${record.id}`"
             class="mobile-record"
             role="button"
@@ -117,7 +127,7 @@
           </article>
 
           <EmptyState
-            v-if="records.length === 0 && !loading"
+            v-if="displayRecords.length === 0 && !loading"
             compact
             :icon="hasActiveFilters ? Search : Document"
             :title="emptyTitle"
@@ -126,30 +136,31 @@
             <template #actions>
               <el-button v-if="hasActiveFilters" @click="resetFilter">清空筛选</el-button>
               <el-button v-else-if="canCreate" type="primary" @click="handleCreate">
-                创建第一条记录
+                {{ emptyActionText }}
               </el-button>
             </template>
           </EmptyState>
         </div>
 
         <el-table
-          :data="records"
+          :data="displayRecords"
           class="record-table"
           style="width: 100%"
           :default-sort="{ prop: 'createdAt', order: 'descending' }"
-          row-class-name="record-row"
+          :row-class-name="getRowClass"
           @row-click="goToDetail"
         >
-          <el-table-column label="记录" min-width="300">
+          <el-table-column :label="isDrugModule ? '药品名' : '记录'" min-width="260">
             <template #default="scope">
               <div class="record-cell">
                 <span class="record-title">{{ scope.row.title || getDisplayValue(scope.row) }}</span>
-                <span class="record-summary">{{ getDisplayValue(scope.row) || '暂无摘要' }}</span>
+                <span v-if="isDrugModule" class="record-summary">{{ getDrugSummary(scope.row) || '暂无摘要' }}</span>
+                <span v-else class="record-summary">{{ getDisplayValue(scope.row) || '暂无摘要' }}</span>
               </div>
             </template>
           </el-table-column>
 
-          <el-table-column label="标签" width="180">
+          <el-table-column v-if="!isDrugModule" label="标签" width="180">
             <template #default="scope">
               <div v-if="scope.row.tags" class="tag-list">
                 <el-tag
@@ -165,7 +176,35 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="提醒" width="120">
+          <el-table-column v-if="isDrugModule" label="有效期" width="150">
+            <template #default="scope">
+              <div v-if="getExpireDate(scope.row)" class="expiry-cell" :class="expiryClass(scope.row)">
+                <span class="expiry-date">{{ formatDateSafe(getExpireDate(scope.row), 'YYYY-MM-DD') }}</span>
+                <span class="expiry-status">{{ expiryText(scope.row) }}</span>
+              </div>
+              <span v-else class="cell-muted">—</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column v-if="isDrugModule" label="库存" width="120">
+            <template #default="scope">
+              <div class="stock-cell" :class="getStockState(scope.row)">
+                <span class="stock-qty">
+                  {{ getDrugStock(scope.row) }}<span class="stock-unit">{{ getDrugUnit(scope.row) }}</span>
+                </span>
+                <el-tag v-if="getStockState(scope.row) === 'out'" size="small" type="danger" effect="dark">缺货</el-tag>
+                <el-tag v-else-if="getStockState(scope.row) === 'low'" size="small" type="warning" effect="dark">库存不足</el-tag>
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column v-if="isDrugModule" label="存放位置" width="120">
+            <template #default="scope">
+              <span class="cell-muted">{{ recordLocation(scope.row) || '—' }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column v-if="!isDrugModule" label="提醒" width="120">
             <template #default="scope">
               <span
                 v-if="scope.row.remindDate"
@@ -178,13 +217,13 @@
             </template>
           </el-table-column>
 
-          <el-table-column prop="creatorName" label="创建人" width="100">
+          <el-table-column v-if="!isDrugModule" prop="creatorName" label="创建人" width="100">
             <template #default="scope">
               <span class="cell-muted">{{ scope.row.creatorName }}</span>
             </template>
           </el-table-column>
 
-          <el-table-column label="创建时间" width="150">
+          <el-table-column v-if="!isDrugModule" label="创建时间" width="150">
             <template #default="scope">
               <span class="cell-muted">{{ formatDateTime(scope.row.createdAt) }}</span>
             </template>
@@ -256,7 +295,7 @@
       <div v-else-if="viewMode === 'card'" v-loading="loading" class="card-view">
         <div class="card-grid">
           <div
-            v-for="record in records"
+            v-for="record in displayRecords"
             :key="record.id"
             class="record-card"
             role="button"
@@ -314,7 +353,7 @@
       <div v-else-if="viewMode === 'timeline'" v-loading="loading" class="timeline-view">
         <el-timeline>
           <el-timeline-item
-            v-for="record in records"
+            v-for="record in displayRecords"
             :key="record.id"
             :timestamp="formatDateTime(record.createdAt)"
             :type="getModuleTagType(record.moduleKey)"
@@ -357,8 +396,8 @@
         </EmptyState>
       </div>
 
-      <!-- 分页 -->
-      <div class="pagination" v-if="total > pageSize">
+      <!-- 分页（药品模块拉全量，无需分页） -->
+      <div class="pagination" v-if="!isDrugModule && total > pageSize">
         <el-pagination
           :current-page="page"
           :page-size="pageSize"
@@ -380,7 +419,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi } from '@/api'
 import {
-  Search, Plus, ArrowDown, View, Edit, Delete, Lock, Unlock,
+  Search, Plus, ArrowDown, ArrowUp, View, Edit, Delete, Lock, Unlock,
   User, Document, Clock, MoreFilled
 } from '@element-plus/icons-vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -389,6 +428,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDate as formatDateSafe, formatDateTime as formatDateTimeSafe, dayDiffFromToday } from '@/utils/date'
 import { getModuleIcon, getModuleTagType } from '@/utils/module'
+import { getExpiryState } from '@/utils/drug'
 
 const route = useRoute()
 const router = useRouter()
@@ -404,6 +444,7 @@ const loading = ref(false)
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
+const DRUG_LIST_MAX = 1000 // 药箱体量小，一次拉全量做客户端过期筛选/计数
 const searchKeyword = ref('')
 const selectedTag = ref('')
 const viewMode = ref('list')
@@ -411,12 +452,49 @@ const showAdvancedFilter = ref(false)
 const filterDateRange = ref<[string, string] | null>(null)
 const filterCreator = ref('')
 const showPrivateOnly = ref(false)
+const expiryFilter = ref<'all' | 'expired' | 'soon' | 'normal'>('all')
 const allTags = ref<string[]>([])
 
 const currentModule = computed(() => moduleStore.getModuleByKey(currentModuleKey.value))
 const currentModuleName = computed(() => currentModule.value?.name || '')
 const currentModuleId = computed(() => currentModule.value?.id)
 const fields = computed(() => currentModule.value?.fields || [])
+const isDrugModule = computed(() => currentModuleKey.value === 'drug')
+
+// 药品模块：按有效期升序（最早过期在前）+ 客户端过期状态筛选（数据量小，前端排序即可）
+const displayRecords = computed(() => {
+  if (!isDrugModule.value) return records.value
+  let list = [...records.value]
+  if (expiryFilter.value !== 'all') {
+    list = list.filter(r => getDrugExpiryState(r)?.status === expiryFilter.value)
+  }
+  list.sort((a, b) => {
+    const da = getExpireDate(a)
+    const db = getExpireDate(b)
+    if (!da && !db) return 0
+    if (!da) return 1
+    if (!db) return -1
+    return da.localeCompare(db)
+  })
+  return list
+})
+
+// 过期状态计数（用于筛选 tab，基于已加载的全量药品记录）
+const expiryCounts = computed(() => {
+  const counts = { all: records.value.length, expired: 0, soon: 0, normal: 0 }
+  records.value.forEach((r) => {
+    const s = getDrugExpiryState(r)
+    if (s) counts[s.status]++
+  })
+  return counts
+})
+
+const expiryFilterOptions = computed(() => [
+  { label: `全部 ${expiryCounts.value.all}`, value: 'all' },
+  { label: `已过期 ${expiryCounts.value.expired}`, value: 'expired' },
+  { label: `即将过期 ${expiryCounts.value.soon}`, value: 'soon' },
+  { label: `正常 ${expiryCounts.value.normal}`, value: 'normal' }
+])
 
 const isAdmin = computed(() => authStore.isAdmin)
 const isEditor = computed(() => authStore.isEditor)
@@ -435,14 +513,22 @@ const hasActiveFilters = computed(() =>
       selectedTag.value ||
       filterDateRange.value ||
       filterCreator.value.trim() ||
-      showPrivateOnly.value
+      showPrivateOnly.value ||
+      expiryFilter.value !== 'all'
   )
 )
 
-const emptyTitle = computed(() => (hasActiveFilters.value ? '没有符合条件的记录' : '还没有记录'))
-const emptyDescription = computed(() =>
-  hasActiveFilters.value ? '换个关键词，或清空筛选后再看看' : '把家里的小事记下来，之后随时能找到'
-)
+const emptyTitle = computed(() => {
+  if (hasActiveFilters.value) return '没有符合条件的记录'
+  if (isDrugModule.value) return '药箱还是空的'
+  return '还没有记录'
+})
+const emptyDescription = computed(() => {
+  if (hasActiveFilters.value) return '换个关键词，或清空筛选后再看看'
+  if (isDrugModule.value) return '记录家里有哪些药，快过期或库存不足时会提醒你'
+  return '把家里的小事记下来，之后随时能找到'
+})
+const emptyActionText = computed(() => (isDrugModule.value ? '添加第一种药' : '创建第一条记录'))
 const pageDescription = computed(() =>
   total.value > 0 ? `共 ${total.value} 条记录` : '查看和管理这个模块下的所有记录'
 )
@@ -478,8 +564,8 @@ async function fetchRecords() {
   try {
     const params: any = {
       moduleId: currentModuleId.value,
-      page: page.value,
-      size: pageSize.value
+      page: isDrugModule.value ? 1 : page.value,
+      size: isDrugModule.value ? DRUG_LIST_MAX : pageSize.value
     }
 
     if (searchKeyword.value) params.keyword = searchKeyword.value
@@ -597,6 +683,7 @@ function clearFilterState() {
   filterDateRange.value = null
   filterCreator.value = ''
   showPrivateOnly.value = false
+  expiryFilter.value = 'all'
   page.value = 1
 }
 
@@ -643,6 +730,71 @@ function getRemindClass(remindDate: string) {
   return ''
 }
 
+function getExpireDate(record: any): string | null {
+  const val = record.dataJson?.expire_date
+  return val ? String(val) : null
+}
+
+function getDrugExpiryState(record: any) {
+  return getExpiryState(getExpireDate(record))
+}
+
+function expiryClass(record: any) {
+  const state = getDrugExpiryState(record)
+  if (!state) return ''
+  if (state.status === 'expired') return 'remind-overdue'
+  if (state.status === 'soon') return 'remind-soon'
+  return ''
+}
+
+function expiryText(record: any) {
+  const state = getDrugExpiryState(record)
+  if (!state) return ''
+  if (state.status === 'expired') return `已过期${Math.abs(state.days)}天`
+  if (state.days === 0) return '今天到期'
+  if (state.status === 'soon') return `${state.days}天后到期`
+  return '正常'
+}
+
+function getDrugStock(record: any): string {
+  const q = record.dataJson?.quantity
+  return q === null || q === undefined || q === '' ? '—' : String(q)
+}
+
+function getDrugUnit(record: any): string {
+  return record.dataJson?.unit || ''
+}
+
+// 库存状态：缺货(≤0) / 低库存(低于最低库存) / 正常
+function getStockState(record: any): 'out' | 'low' | 'ok' | null {
+  const q = Number(record.dataJson?.quantity)
+  if (Number.isNaN(q)) return null
+  if (q <= 0) return 'out'
+  const min = Number(record.dataJson?.min_stock)
+  if (!Number.isNaN(min) && q < min) return 'low'
+  return 'ok'
+}
+
+// 药品列表行高亮（过期/即将过期加左侧色条）
+function getRowClass({ row }: { row: any }) {
+  let cls = 'record-row'
+  if (!isDrugModule.value) return cls
+  const state = getDrugExpiryState(row)
+  if (state?.status === 'expired') return `${cls} row-expired`
+  if (state?.status === 'soon') return `${cls} row-soon`
+  return cls
+}
+
+// 药品摘要：优先显示用法用量/适用症状，避免重复药品名
+function getDrugSummary(record: any): string {
+  const d = record.dataJson || {}
+  return d.usage_dosage || d.indications || ''
+}
+
+function recordLocation(record: any): string {
+  return record.dataJson?.location || ''
+}
+
 function formatDate(dateStr: string) {
   return formatDateSafe(dateStr, 'MM-DD')
 }
@@ -668,26 +820,32 @@ function formatDateTime(dateStr: string) {
       padding: 8px 0;
     }
 
+    .drug-tabs {
+      padding-top: 8px;
+    }
+
+    .advanced-toggle {
+      color: $text-secondary;
+      transition: color $transition-fast $ease-out;
+
+      &.is-active,
+      &:hover {
+        color: $primary-text;
+      }
+    }
+
     .advanced-filter {
-      padding-top: 16px;
       margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1px solid $border-color-light;
     }
 
     .advanced-filter-content {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
-      padding: 16px 0 8px;
-    }
-
-    .filter-actions {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 8px;
-      color: $text-secondary;
-      font-size: 13px;
+      padding: 4px 0;
     }
   }
 
@@ -981,6 +1139,100 @@ function formatDateTime(dateStr: string) {
   .cell-muted {
     color: $text-tertiary;
     font-size: $text-label;
+  }
+
+  .expiry-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .expiry-date {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: $text-primary;
+
+      &::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+    }
+
+    .expiry-status {
+      font-size: 12px;
+      font-weight: 500;
+      color: $text-secondary;
+    }
+
+    &.remind-overdue {
+      .expiry-date,
+      .expiry-status {
+        color: $danger-text;
+      }
+    }
+
+    &.remind-soon {
+      .expiry-date,
+      .expiry-status {
+        color: $warning-text;
+      }
+    }
+  }
+
+  .stock-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .stock-qty {
+      font-size: 14px;
+      font-weight: 600;
+      color: $text-primary;
+
+      .stock-unit {
+        margin-left: 2px;
+        font-size: 12px;
+        font-weight: 400;
+        color: $text-secondary;
+      }
+    }
+
+    &.out .stock-qty {
+      color: $danger-text;
+    }
+
+    &.low .stock-qty {
+      color: $warning-text;
+    }
+  }
+
+  :deep(.el-table__row.row-expired) > td.el-table__cell {
+    background-color: $danger-bg;
+  }
+
+  :deep(.el-table__row.row-expired) > td.el-table__cell:first-child {
+    box-shadow: inset 3px 0 0 $danger-text;
+  }
+
+  :deep(.el-table__row.row-expired:hover) > td.el-table__cell {
+    background-color: $danger-bg;
+  }
+
+  :deep(.el-table__row.row-soon) > td.el-table__cell {
+    background-color: $warning-bg;
+  }
+
+  :deep(.el-table__row.row-soon) > td.el-table__cell:first-child {
+    box-shadow: inset 3px 0 0 $warning-text;
+  }
+
+  :deep(.el-table__row.row-soon:hover) > td.el-table__cell {
+    background-color: $warning-bg;
   }
 
   .row-actions {

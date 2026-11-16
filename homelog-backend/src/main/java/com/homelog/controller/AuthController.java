@@ -39,7 +39,7 @@ import java.time.LocalDateTime;
 @Validated
 public class AuthController {
 
-    /** MVP 单空间：默认空间 ID，与 UserDetailsServiceImpl / MetaController / RecordService 保持一致 */
+    /** 单空间：默认空间 ID，与 UserDetailsServiceImpl / MetaController / RecordService 保持一致 */
     private static final long DEFAULT_SPACE_ID = 1L;
 
     private final AuthenticationManager authenticationManager;
@@ -109,7 +109,7 @@ public class AuthController {
         userMapper.insert(user);
         log.info("用户创建成功：用户ID={}，用户名={}", user.getId(), user.getUsername());
 
-        // 加入默认空间（MVP 单空间）：不再为每个新用户新建空间。
+        // 加入默认空间（单空间）：不再为每个新用户新建空间。
         // 内置模块、记录等都挂在默认空间下，若注册时另建空间，会导致
         // 用户所属空间(如 id=2)与模块/数据所在空间(id=1)不一致，菜单与数据全部落空。
         log.info("加入默认空间");

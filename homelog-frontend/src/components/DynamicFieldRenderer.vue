@@ -26,7 +26,7 @@
       v-model.number="localValue"
       :placeholder="`请输入${field.fieldLabel}`"
       :controls="true"
-      :precision="2"
+      :precision="numberPrecision"
       @change="emitUpdate"
     />
 
@@ -237,6 +237,11 @@ const parsedOptions = computed<Option[]>(() => {
     return []
   }
 })
+
+// 数量/库存类字段用整数步进，其余保留小数
+const numberPrecision = computed(() =>
+  ['quantity', 'min_stock'].includes(props.field.fieldKey) ? 0 : 2
+)
 
 // 标签输入相关
 const tagArray = computed<string[]>({

@@ -23,7 +23,7 @@ public interface RecordMapper extends BaseMapper<Record> {
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND module_id = #{moduleId} AND id = #{id}")
     Record selectByIdAndSpaceAndModule(@Param("spaceId") Long spaceId, @Param("moduleId") Long moduleId, @Param("id") Long id);
 
-    @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND remind_date IS NOT NULL AND remind_date <= #{date} ORDER BY remind_date")
+    @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND remind_date = #{date} ORDER BY remind_date")
     List<Record> selectDueRecords(@Param("spaceId") Long spaceId, @Param("date") String date);
 
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND title LIKE CONCAT('%', #{keyword}, '%') ORDER BY created_at DESC")

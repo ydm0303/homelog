@@ -362,19 +362,15 @@ public class RecordService {
         // 验证必填字段
         validateRequiredFields(module.getId(), request.getDataJson());
 
-        // 处理提醒日期
-        LocalDate remindDate = null;
-        if (request.getRemindDate() != null && !request.getRemindDate().trim().isEmpty()) {
-            remindDate = LocalDate.parse(request.getRemindDate(), DateTimeFormatter.ISO_LOCAL_DATE);
-        }
+        // 提醒日期与标题：显式优先，药品模块回退到 expire_date / drug_name
+        LocalDate remindDate = deriveRemindDate(module, request.getDataJson(), request.getRemindDate());
 
         Record record = new Record()
                 .setSpaceId(spaceId)
                 .setModuleId(module.getId())
-                .setTitle(request.getTitle())
+                .setTitle(deriveTitle(module, request.getDataJson(), request.getTitle(), null))
                 .setCreatorId(currentUserId)
-                .setIsPrivate(request.getDataJson().get("is_private") != null ?
-                        (Boolean.TRUE.equals(request.getDataJson().get("is_private")) ? 1 : 0) : 0)
+                .setIsPrivate(isTruthy(request.getDataJson().get("is_private")) ? 1 : 0)
                 .setTags(request.getTags())
                 .setRemindDate(remindDate)
                 .setDataJson(toJsonString(request.getDataJson()))
@@ -426,15 +422,14 @@ public class RecordService {
             dataJson.putAll(request.getDataJson());
         }
 
-        LocalDate remindDate = record.getRemindDate();
-        if (request.getRemindDate() != null && !request.getRemindDate().trim().isEmpty()) {
-            remindDate = LocalDate.parse(request.getRemindDate(), DateTimeFormatter.ISO_LOCAL_DATE);
-        }
+        // 提醒日期：显式优先，药品模块回退到有效期（expire_date）
+        LocalDate remindDate = deriveRemindDate(module, dataJson, request.getRemindDate());
 
-        record.setTitle(request.getTitle() != null ? request.getTitle() : record.getTitle())
+        record.setTitle(deriveTitle(module, dataJson, request.getTitle(), record.getTitle()))
                 .setDataJson(toJsonString(dataJson))
                 .setTags(request.getTags() != null ? request.getTags() : record.getTags())
                 .setRemindDate(remindDate)
+                .setIsPrivate(isTruthy(dataJson.get("is_private")) ? 1 : 0)
                 .setUpdatedAt(LocalDateTime.now());
 
         // 仅在请求显式携带图片列表时才更新，避免未传 imagesJson 时把已有图片覆盖掉
@@ -492,6 +487,48 @@ public class RecordService {
                 }
             }
         }
+    }
+
+    /**
+     * 派生提醒日期：显式传入优先；药品模块回退到有效期（expire_date），与 CSV 导入行为一致。
+     */
+    private LocalDate deriveRemindDate(Module module, Map<String, Object> dataJson, String explicitRemindDate) {
+        String source = explicitRemindDate;
+        if ((source == null || source.trim().isEmpty()) && "drug".equals(module.getModuleKey()) && dataJson != null) {
+            Object expire = dataJson.get("expire_date");
+            source = expire != null ? expire.toString() : null;
+        }
+        if (source == null || source.trim().isEmpty()) {
+            return null;
+        }
+        return LocalDate.parse(source.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
+    /**
+     * 派生标题：显式传入优先；药品模块回退到药品名（drug_name），避免标题与药品名重复录入。
+     */
+    private String deriveTitle(Module module, Map<String, Object> dataJson, String explicitTitle, String fallbackTitle) {
+        if (explicitTitle != null && !explicitTitle.trim().isEmpty()) {
+            return explicitTitle;
+        }
+        if ("drug".equals(module.getModuleKey()) && dataJson != null) {
+            Object name = dataJson.get("drug_name");
+            if (name != null && !name.toString().trim().isEmpty()) {
+                return name.toString();
+            }
+        }
+        return explicitTitle != null ? explicitTitle : fallbackTitle;
+    }
+
+    /**
+     * 兼容布尔/数字/字符串的真值判定（前端 is_private 传数字 1/0）。
+     */
+    private boolean isTruthy(Object value) {
+        if (value == null) return false;
+        if (value instanceof Boolean) return (Boolean) value;
+        if (value instanceof Number) return ((Number) value).intValue() == 1;
+        String s = value.toString().trim();
+        return "1".equals(s) || "true".equalsIgnoreCase(s);
     }
 
     /**
