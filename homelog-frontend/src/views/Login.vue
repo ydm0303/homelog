@@ -2,7 +2,6 @@
   <AuthLayout>
     <div class="form-header">
       <h2>欢迎回来，登录你的家记</h2>
-      <p>登录后继续管理家庭记录</p>
     </div>
 
     <el-form

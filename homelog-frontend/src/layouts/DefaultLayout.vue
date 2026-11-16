@@ -421,7 +421,7 @@ function handleSearch() {
 }
 
 .sidebar-header {
-  height: 72px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;

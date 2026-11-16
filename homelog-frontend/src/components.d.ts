@@ -10,7 +10,6 @@ declare module 'vue' {
     AppCard: typeof import('./components/ui/AppCard.vue')['default']
     AsyncState: typeof import('./components/ui/AsyncState.vue')['default']
     DynamicFieldRenderer: typeof import('./components/DynamicFieldRenderer.vue')['default']
-    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBadge: typeof import('element-plus/es')['ElBadge']
     ElButton: typeof import('element-plus/es')['ElButton']

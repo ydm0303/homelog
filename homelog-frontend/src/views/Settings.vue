@@ -405,50 +405,6 @@
         </el-card>
       </el-tab-pane>
 
-      <!-- 关于版本 -->
-      <el-tab-pane label="关于版本" name="about">
-        <el-card class="tab-card" shadow="never">
-          <div class="about-content">
-            <div class="about-logo">
-              <el-icon><House /></el-icon>
-              <span>家记</span>
-            </div>
-            <p class="about-slogan">家里的事，都记在这里</p>
-            <p class="about-version">版本 1.0.0 (MVP)</p>
-
-            <el-divider />
-
-            <h4>技术栈</h4>
-            <div class="tech-stack">
-              <el-tag effect="plain">Vue 3</el-tag>
-              <el-tag effect="plain">TypeScript</el-tag>
-              <el-tag effect="plain">Vite</el-tag>
-              <el-tag effect="plain">Pinia</el-tag>
-              <el-tag effect="plain">Element Plus</el-tag>
-              <el-tag effect="plain">PWA</el-tag>
-              <el-tag effect="plain">Spring Boot 2.7</el-tag>
-              <el-tag effect="plain">Java 8</el-tag>
-              <el-tag effect="plain">MySQL 8.0</el-tag>
-              <el-tag effect="plain">MyBatis-Plus</el-tag>
-              <el-tag effect="plain">JWT</el-tag>
-            </div>
-
-            <el-divider />
-
-            <h4>免责声明</h4>
-            <p class="disclaimer">
-              本项目为个人自建工具，仅用于家庭内部记录，不提供医疗诊断建议，药品信息仅作存档参考。
-              请遵医嘱用药，勿依赖本工具做医疗决策。
-            </p>
-
-            <el-divider />
-
-            <p class="copyright">
-              家记 · 家里的事，都记在这里 | 私有家庭记录工具 · 数据自主可控
-            </p>
-          </div>
-        </el-card>
-      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -460,8 +416,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { authApi, metaApi, spaceApi, exportApi } from '@/api'
 import {
-  Plus, ArrowDown, Check, Close, Delete, Setting, Upload, Download, InfoFilled,
-  House
+  Plus, ArrowDown, Check, Close, Delete, Setting, Upload, Download, InfoFilled
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -893,64 +848,6 @@ function toggleElderlyMode() {
 
     .preview-input {
       width: 300px;
-    }
-  }
-
-  .about-content {
-    text-align: center;
-    padding: 32px 24px;
-
-    .about-logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 32px;
-      font-weight: 700;
-      color: $primary-text;
-      margin-bottom: 16px;
-
-      el-icon {
-        font-size: 36px;
-      }
-    }
-
-    .about-slogan {
-      font-size: 18px;
-      color: $text-secondary;
-      margin: 0 0 24px;
-    }
-
-    .about-version {
-      font-size: 14px;
-      color: $text-placeholder;
-      margin: 0 0 16px;
-    }
-
-    .tech-stack {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-      margin: 16px 0;
-    }
-
-    .disclaimer {
-      font-size: 13px;
-      color: $text-secondary;
-      line-height: 1.8;
-      max-width: 600px;
-      margin: 16px auto 0;
-      text-align: left;
-      padding: 12px;
-      background: $warning-bg;
-      border: 1px solid $warning-border;
-      border-radius: $border-radius-base;
-    }
-
-    .copyright {
-      margin-top: 24px;
-      font-size: 12px;
-      color: $text-placeholder;
     }
   }
 }
