@@ -17,6 +17,9 @@ RUN mvn package -DskipTests -B
 # 运行阶段
 FROM eclipse-temurin:8-jre
 
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 
 # 安装必要工具
