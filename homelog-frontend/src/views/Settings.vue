@@ -672,7 +672,7 @@ function handleImportFileChange(file: any) {
 function downloadTemplate() {
   // 生成 CSV 模板
   const headers = ['药品名', '有效期', '存放位置', '用法用量', '适用症状', '禁忌', '购买日期', '剩余数量', '绑定成员邮箱']
-  const csv = [headers.join(',')].join('\n')
+  const csv = '\uFEFF' + [headers.join(',')].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = window.URL.createObjectURL(blob)
   const a = document.createElement('a')
