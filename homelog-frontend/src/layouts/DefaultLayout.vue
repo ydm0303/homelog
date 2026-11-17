@@ -98,14 +98,12 @@
       <header class="top-bar">
         <div class="top-bar-left">
           <el-button v-if="!isMobile" class="toggle-btn" :aria-label="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="sidebarCollapsed = !sidebarCollapsed" circle size="small">
-            <el-icon><Fold v-if="!sidebarCollapsed" /><Expand v-else /></el-icon>
+            <el-icon><Menu /></el-icon>
           </el-button>
 
           <el-button v-if="isMobile" class="menu-btn" aria-label="打开菜单" @click="mobileDrawer = true" circle size="small">
             <el-icon><Menu /></el-icon>
           </el-button>
-
-          <span v-if="!isMobile" class="page-title">{{ pageTitle }}</span>
         </div>
 
         <div class="top-bar-center" v-show="!isMobile">
@@ -119,7 +117,7 @@
 
           <el-dropdown>
             <span class="dropdown-link" role="button" tabindex="0" aria-label="消息中心">
-              <el-badge is-dot :hidden="unreadCount === 0">
+              <el-badge is-dot :hidden="unreadCount === 0" class="notification-badge">
                 <el-icon class="notification-icon"><Bell /></el-icon>
               </el-badge>
             </span>
@@ -179,7 +177,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Setting, Fold, Expand, Menu, Bell, Search, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
+import { HomeFilled, Setting, Menu, Bell, Search, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { messageApi } from '@/api'
@@ -314,25 +312,6 @@ const getRoleLabel = computed(() => {
   }
 })
 
-// 顶栏当前页标题（层级定位）
-const pageTitle = computed(() => {
-  const path = route.path
-  if (path === '/') return '首页'
-  if (path.startsWith('/settings')) return '设置中心'
-  if (path.startsWith('/messages')) return '消息中心'
-  if (path.startsWith('/search')) return '搜索'
-
-  const actionMatch = path.match(/^\/module\/[^/]+\/(create|edit)$/)
-  if (actionMatch) return actionMatch[1] === 'create' ? '新增记录' : '编辑记录'
-
-  const moduleMatch = path.match(/^\/module\/([^/]+)/)
-  if (moduleMatch) {
-    return moduleStore.getModuleByKey(moduleMatch[1])?.name || moduleMatch[1]
-  }
-
-  return '家记'
-})
-
 function handleQuickCreate() {
   const firstModule = moduleStore.enabledModules?.[0]
   if (firstModule?.moduleKey) {
@@ -442,8 +421,8 @@ function handleSearch() {
       width: 36px;
       height: 36px;
       border-radius: $border-radius-lg;
-      background: $primary-light-bg;
-      color: $brand-400;
+      background: $primary-color;
+      color: $card-bg;
       font-size: 20px;
       flex-shrink: 0;
     }
@@ -635,30 +614,18 @@ function handleSearch() {
     display: flex;
     align-items: center;
     gap: 12px;
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0;
-      letter-spacing: -0.02em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 280px;
-    }
   }
 
   .top-bar-center {
     flex: 1;
     display: flex;
-    justify-content: center;
-    max-width: 600px;
-    margin: 0 24px;
+    justify-content: flex-start;
+    max-width: 560px;
+    margin: 0 20px 0 16px;
 
     .top-search-input {
       width: 100%;
-      max-width: 480px;
+      max-width: 420px;
 
       :deep(.el-input__wrapper) {
         height: 36px;
@@ -726,6 +693,15 @@ function handleSearch() {
       color: $primary-color;
     }
   }
+
+  // 未读点用主色，替换 Element 默认的红色
+  .notification-badge {
+    :deep(.el-badge__content.is-dot) {
+      background-color: $primary-color;
+      width: 7px;
+      height: 7px;
+    }
+  }
 }
 
 // 顶栏用户入口
@@ -779,14 +755,14 @@ function handleSearch() {
 // 页面内容
 .page-content {
   flex: 1;
-  padding: 24px 24px calc(88px + env(safe-area-inset-bottom));
+  padding: 24px clamp(24px, 5vw, 88px) calc(88px + env(safe-area-inset-bottom));
   overflow-y: auto;
   background: $bg-color;
 }
 
 .page-container {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1320px;
   margin: 0 auto;
 }
 

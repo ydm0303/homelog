@@ -20,19 +20,8 @@
       </div>
     </section>
 
-    <div v-if="enabledModules.length > 0" class="stats-row">
-      <StatCard
-        v-for="module in enabledModules"
-        :key="module.id"
-        :label="module.name"
-        :value="getModuleCount(module.moduleKey)"
-        :icon="getModuleIcon(module.moduleKey)"
-        :tone="getStatTone(module.moduleKey)"
-      />
-    </div>
-
     <div v-loading="loading" class="panel-grid upper-grid">
-      <section class="soft-card todo-card">
+      <section class="soft-card todo-card" :class="{ 'is-collapsed': todoCollapsed }">
         <header class="card-header">
           <div class="title-wrap">
             <div class="mini-icon orange"><el-icon><Checked /></el-icon></div>
@@ -43,36 +32,57 @@
           </div>
 
           <div class="header-right">
-            <button type="button" class="text-link" @click="goToModule('todo')">查看全部</button>
+            <div v-if="statChips.length > 0" class="stat-chips">
+              <span v-for="chip in statChips" :key="chip.key" class="stat-chip">
+                <span class="stat-chip-dot" :class="chip.key"></span>
+                <span class="stat-chip-label">{{ chip.label }}</span>
+                <span class="stat-chip-count">{{ chip.count }}</span>
+              </span>
+            </div>
+            <div class="header-actions">
+              <button type="button" class="text-link" @click="goToModule('todo')">查看全部 <span class="link-arrow" aria-hidden="true">›</span></button>
+              <button
+                type="button"
+                class="collapse-btn"
+                :class="{ collapsed: todoCollapsed }"
+                :aria-expanded="!todoCollapsed"
+                aria-label="收起今日待办"
+                @click="todoCollapsed = !todoCollapsed"
+              >
+                <el-icon><ArrowUp /></el-icon>
+              </button>
+            </div>
           </div>
         </header>
 
-        <div v-if="!loading && todoList.length === 0" class="empty-state">
-          <div class="empty-figure">
-            <EmptyIllustration variant="todo" :size="170" />
-          </div>
-          <h3>还没有今日待办</h3>
-          <p>把家务、采购、家人约定记在这里，不错过重要小事</p>
-          <button class="primary-btn" type="button" @click="goToModule('todo')">添加第一个待办</button>
-        </div>
-
-        <div v-else class="simple-list">
-          <article
-            v-for="item in todoList"
-            :key="item.id"
-            class="simple-item"
-            role="button"
-            tabindex="0"
-            @click="goToDetail(item)"
-            @keyup.enter="goToDetail(item)"
-          >
-            <span class="simple-dot"></span>
-            <div class="simple-item-body">
-              <h3>{{ item.title || getFirstFieldValue(item) }}</h3>
-              <p>{{ getRecordSummary(item) }}</p>
+        <div v-show="!todoCollapsed" class="card-body">
+          <div v-if="!loading && todoList.length === 0" class="empty-state">
+            <div class="empty-figure">
+              <EmptyIllustration variant="todo" :size="170" />
             </div>
-            <span class="simple-arrow">›</span>
-          </article>
+            <h3>还没有今日待办</h3>
+            <p>把家务、采购、家人约定记在这里，不错过重要小事</p>
+            <button class="primary-btn" type="button" @click="goToModule('todo')">添加第一个待办</button>
+          </div>
+
+          <div v-else class="simple-list">
+            <article
+              v-for="item in todoList"
+              :key="item.id"
+              class="simple-item"
+              role="button"
+              tabindex="0"
+              @click="goToDetail(item)"
+              @keyup.enter="goToDetail(item)"
+            >
+              <span class="simple-dot"></span>
+              <div class="simple-item-body">
+                <h3>{{ item.title || getFirstFieldValue(item) }}</h3>
+                <p>{{ getRecordSummary(item) }}</p>
+              </div>
+              <span class="simple-arrow">›</span>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -86,7 +96,7 @@
             </div>
           </div>
 
-          <button type="button" class="text-link" @click="goToModule('drug')">查看全部</button>
+          <button type="button" class="text-link" @click="goToModule('drug')">查看全部 <span class="link-arrow" aria-hidden="true">›</span></button>
         </header>
 
         <div v-if="!loading && expiringList.length === 0" class="empty-state">
@@ -171,7 +181,7 @@
         </div>
       </section>
 
-      <aside class="soft-card shortcut-panel">
+      <aside class="soft-card shortcut-panel" :class="{ 'is-collapsed': shortcutCollapsed }">
         <header class="card-header shortcut-header-row">
           <div class="title-wrap">
             <div class="mini-icon blue"><el-icon><Grid /></el-icon></div>
@@ -180,24 +190,37 @@
               <small>常用的家庭空间</small>
             </div>
           </div>
+
+          <button
+            type="button"
+            class="collapse-circle"
+            :class="{ collapsed: shortcutCollapsed }"
+            :aria-expanded="!shortcutCollapsed"
+            aria-label="收起快捷入口"
+            @click="shortcutCollapsed = !shortcutCollapsed"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+          </button>
         </header>
 
-        <div class="shortcut-grid">
-          <button v-for="module in homeModules" :key="module.id" class="shortcut-item" type="button" @click="goToModule(module.moduleKey)">
-            <span class="shortcut-icon" :class="module.moduleKey">
-              <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
-            </span>
-            <span class="shortcut-name">{{ module.name }}</span>
-            <span class="shortcut-arrow">›</span>
-          </button>
+        <div v-show="!shortcutCollapsed" class="shortcut-body">
+          <div class="shortcut-grid">
+            <button v-for="module in homeModules" :key="module.id" class="shortcut-item" type="button" @click="goToModule(module.moduleKey)">
+              <span class="shortcut-icon" :class="module.moduleKey">
+                <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
+              </span>
+              <span class="shortcut-name">{{ module.name }}</span>
+              <span class="shortcut-arrow">›</span>
+            </button>
 
-          <button class="shortcut-item add-shortcut" type="button" @click="showCreateDialog = true">
-            <span class="add-box">＋</span>
-            <span class="shortcut-name">新增记录</span>
-          </button>
+            <button class="shortcut-item add-shortcut" type="button" @click="showCreateDialog = true">
+              <span class="add-box">＋</span>
+              <span class="shortcut-name">新增记录</span>
+            </button>
+          </div>
+
+          <p class="shortcut-footer">每一份用心，都是家的小小光亮。</p>
         </div>
-
-        <p class="shortcut-footer">每一份用心，都是家的小小光亮。</p>
       </aside>
     </div>
 
@@ -224,12 +247,11 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi, dashboardApi } from '@/api'
-import { Checked, AlarmClock, Clock, Sunny } from '@element-plus/icons-vue'
+import { Checked, AlarmClock, Clock, Sunny, ArrowUp, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { formatDateTime, dayDiffFromToday } from '@/utils/date'
 import { getModuleIcon, getModuleColorClass } from '@/utils/module'
-import StatCard from '@/components/ui/StatCard.vue'
 import EmptyIllustration from '@/components/ui/EmptyIllustration.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 
@@ -246,6 +268,10 @@ const loading = ref(false)
 
 const showCreateDialog = ref(false)
 const createDialogModule = ref('')
+
+// 卡片收起状态：标题栏按钮直接折叠，不弹确认
+const todoCollapsed = ref(false)
+const shortcutCollapsed = ref(false)
 
 const enabledModules = computed(() => moduleStore.enabledModules)
 const homeModules = computed(() => moduleStore.homeModules)
@@ -270,7 +296,24 @@ const greetingText = computed(() => {
 // 登录人昵称（优先昵称，其次用户名）
 const displayName = computed(() => authStore.user?.nickName || authStore.user?.username || '家人')
 
+// 「今日待办」头部计数胶囊的文案后缀，内置模块用固定量词，自定义模块退化为「数量」
+const CHIP_LABELS: Record<string, string> = {
+  todo: '待办总数',
+  drug: '药品数量',
+  note: '记录条数',
+  idoc: '证件数量'
+}
+
 const moduleCounts = ref<Record<string, number>>({})
+
+const statChips = computed(() =>
+  enabledModules.value.map((module) => ({
+    key: module.moduleKey,
+    label: CHIP_LABELS[module.moduleKey] || `${module.name}数量`,
+    count: moduleCounts.value[module.moduleKey] || 0
+  }))
+)
+
 let clockTimer: ReturnType<typeof setInterval> | null = null
 
 function refreshNow() {
@@ -334,25 +377,6 @@ async function fetchRecentRecords() {
   }
   recentRecords.value.sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)))
   recentRecords.value = recentRecords.value.slice(0, 8)
-}
-
-function getModuleCount(moduleKey: string) {
-  return moduleCounts.value[moduleKey] || 0
-}
-
-type StatTone = 'primary' | 'success' | 'warning' | 'info' | 'neutral'
-
-function getStatTone(moduleKey: string): StatTone {
-  switch (moduleKey) {
-    case 'drug':
-      return 'success'
-    case 'note':
-      return 'info'
-    case 'idoc':
-      return 'warning'
-    default:
-      return 'primary'
-  }
 }
 
 function goToModule(moduleKey: string) {
@@ -440,15 +464,11 @@ onUnmounted(() => {
 }
 
 .welcome-badge {
-  width: 22px;
-  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: rgba($primary-color, 0.12);
   color: $primary-color;
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
@@ -508,20 +528,14 @@ onUnmounted(() => {
   }
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
 .panel-grid {
   display: grid;
   gap: 20px;
 }
 
 .upper-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  // 今日待办承载计数胶囊，横向空间需求更大，故比「即将到期」更宽
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
   margin-bottom: 20px;
 }
 
@@ -532,15 +546,20 @@ onUnmounted(() => {
 .soft-card {
   background: $surface-warm;
   border: 1px solid $border-color;
-  border-radius: $border-radius-lg;
+  border-radius: 18px;
   padding: 18px 20px;
+
+  // 收起后标题栏不再保留下边距，避免卡片底部多出一条空隙
+  &.is-collapsed .card-header {
+    margin-bottom: 0;
+  }
 }
 
 .card-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -589,15 +608,72 @@ onUnmounted(() => {
     margin-top: 4px;
     font-size: 12px;
     color: $text-tertiary;
+    white-space: nowrap;
   }
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  min-width: 0;
+
+  // 胶囊组与操作区之间用细分隔线区隔，避免文字链接贴在胶囊边缘
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-left: 14px;
+    border-left: 1px solid $border-color-light;
+  }
+}
+
+// 模块计数胶囊：以圆点 + 文案 + 数字的紧凑形式承载各模块记录数
+.stat-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid $border-color-light;
+  background: $card-bg;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: $text-tertiary;
+}
+
+.stat-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: $primary-color;
+
+  &.todo { background: $primary-color; }
+  &.drug { background: $module-drug; }
+  &.note { background: $module-note; }
+  &.idoc { background: $module-idoc; }
+}
+
+.stat-chip-label {
+  color: $text-tertiary;
+}
+
+.stat-chip-count {
+  font-weight: 700;
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
 }
 
 .text-link {
@@ -607,6 +683,73 @@ onUnmounted(() => {
   font-size: 12px;
   cursor: pointer;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+
+  .link-arrow {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  &:hover {
+    color: $primary-hover;
+  }
+}
+
+// 「今日待办」标题栏的折叠 chevron
+.collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: $text-placeholder;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    background: $hover-bg;
+    color: $primary-text;
+  }
+
+  &.collapsed {
+    transform: rotate(180deg);
+  }
+}
+
+// 「快捷入口」标题栏的收起圆钮
+.collapse-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid $border-color-light;
+  border-radius: 50%;
+  background: $card-bg;
+  color: $text-placeholder;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: $hover-bg;
+    border-color: rgba($primary-color, 0.3);
+    color: $primary-text;
+  }
+
+  &.collapsed {
+    transform: rotate(180deg);
+  }
 }
 
 .empty-figure {
@@ -738,7 +881,7 @@ onUnmounted(() => {
 }
 
 .filter-select {
-  width: 140px;
+  width: 90px;
 
   :deep(.el-input__wrapper) {
     height: 32px;
@@ -993,6 +1136,23 @@ onUnmounted(() => {
 
   .date-card {
     width: 100%;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-right {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  // 窄屏换行后上下堆叠，分隔线失去分隔意义，改为靠右对齐
+  .header-actions {
+    padding-left: 0;
+    border-left: none;
+    margin-left: auto;
   }
 
   .stat-chips {

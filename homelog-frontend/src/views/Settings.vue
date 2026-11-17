@@ -33,7 +33,7 @@
                   v-model="scope.row.receiveMail"
                   :active-value="1"
                   :inactive-value="0"
-                  @change="val => updateMemberRole(scope.row, { receiveMail: val ? 1 : 0 })"
+                  @change="(val: string | number | boolean) => updateMemberRole(scope.row, { receiveMail: val ? 1 : 0 })"
                   :disabled="scope.row.userId === authStore.user?.id"
                 />
               </template>
@@ -168,7 +168,7 @@
                   v-model="scope.row.isEnable"
                   :active-value="1"
                   :inactive-value="0"
-                  @change="val => updateModule({ ...scope.row, isEnable: val ? 1 : 0 })"
+                  @change="(val: string | number | boolean) => updateModule({ ...scope.row, isEnable: val ? 1 : 0 })"
                 />
               </template>
             </el-table-column>
@@ -178,7 +178,7 @@
                   v-model="scope.row.showInHome"
                   :active-value="1"
                   :inactive-value="0"
-                  @change="val => updateModule({ ...scope.row, showInHome: val ? 1 : 0 })"
+                  @change="(val: string | number | boolean) => updateModule({ ...scope.row, showInHome: val ? 1 : 0 })"
                 />
               </template>
             </el-table-column>
