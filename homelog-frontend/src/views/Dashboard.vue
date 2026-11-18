@@ -1,13 +1,13 @@
 <template>
   <div class="dashboard-page">
     <section class="welcome-block">
-      <div class="welcome-topline">
-        <span class="welcome-badge"><el-icon><Sunny /></el-icon></span>
-        <span>{{ greetingText }} · {{ weekdayText }} · 和家人一起慢慢来</span>
-      </div>
-
       <div class="welcome-row">
         <div class="welcome-copy">
+          <div class="welcome-topline">
+            <span class="welcome-badge"><el-icon><Sunny /></el-icon></span>
+            <span>{{ greetingText }} · {{ weekdayText }} · 和家人一起慢慢来</span>
+          </div>
+
           <h1>欢迎回家，{{ displayName }}</h1>
           <p>把家里的小事，一件一件安心收好。</p>
         </div>
@@ -21,7 +21,7 @@
     </section>
 
     <div v-loading="loading" class="panel-grid upper-grid">
-      <section class="soft-card todo-card" :class="{ 'is-collapsed': todoCollapsed }">
+      <section class="soft-card todo-card">
         <header class="card-header">
           <div class="title-wrap">
             <div class="mini-icon orange"><el-icon><Checked /></el-icon></div>
@@ -31,31 +31,10 @@
             </div>
           </div>
 
-          <div class="header-right">
-            <div v-if="statChips.length > 0" class="stat-chips">
-              <span v-for="chip in statChips" :key="chip.key" class="stat-chip">
-                <span class="stat-chip-dot" :class="chip.key"></span>
-                <span class="stat-chip-label">{{ chip.label }}</span>
-                <span class="stat-chip-count">{{ chip.count }}</span>
-              </span>
-            </div>
-            <div class="header-actions">
-              <button type="button" class="text-link" @click="goToModule('todo')">查看全部 <span class="link-arrow" aria-hidden="true">›</span></button>
-              <button
-                type="button"
-                class="collapse-btn"
-                :class="{ collapsed: todoCollapsed }"
-                :aria-expanded="!todoCollapsed"
-                aria-label="收起今日待办"
-                @click="todoCollapsed = !todoCollapsed"
-              >
-                <el-icon><ArrowUp /></el-icon>
-              </button>
-            </div>
-          </div>
+          <button type="button" class="text-link" @click="goToModule('todo')">查看全部 <span class="link-arrow" aria-hidden="true">›</span></button>
         </header>
 
-        <div v-show="!todoCollapsed" class="card-body">
+        <div class="card-body">
           <div v-if="!loading && todoList.length === 0" class="empty-state">
             <div class="empty-figure">
               <EmptyIllustration variant="todo" :size="170" />
@@ -247,7 +226,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi, dashboardApi } from '@/api'
-import { Checked, AlarmClock, Clock, Sunny, ArrowUp, ArrowLeft } from '@element-plus/icons-vue'
+import { Checked, AlarmClock, Clock, Sunny, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { formatDateTime, dayDiffFromToday } from '@/utils/date'
@@ -270,7 +249,6 @@ const showCreateDialog = ref(false)
 const createDialogModule = ref('')
 
 // 卡片收起状态：标题栏按钮直接折叠，不弹确认
-const todoCollapsed = ref(false)
 const shortcutCollapsed = ref(false)
 
 const enabledModules = computed(() => moduleStore.enabledModules)
@@ -296,24 +274,6 @@ const greetingText = computed(() => {
 // 登录人昵称（优先昵称，其次用户名）
 const displayName = computed(() => authStore.user?.nickName || authStore.user?.username || '家人')
 
-// 「今日待办」头部计数胶囊的文案后缀，内置模块用固定量词，自定义模块退化为「数量」
-const CHIP_LABELS: Record<string, string> = {
-  todo: '待办总数',
-  drug: '药品数量',
-  note: '记录条数',
-  idoc: '证件数量'
-}
-
-const moduleCounts = ref<Record<string, number>>({})
-
-const statChips = computed(() =>
-  enabledModules.value.map((module) => ({
-    key: module.moduleKey,
-    label: CHIP_LABELS[module.moduleKey] || `${module.name}数量`,
-    count: moduleCounts.value[module.moduleKey] || 0
-  }))
-)
-
 let clockTimer: ReturnType<typeof setInterval> | null = null
 
 function refreshNow() {
@@ -334,17 +294,10 @@ async function fetchDashboardData() {
     todoList.value = []
     expiringList.value = []
     recentRecords.value = []
-    moduleCounts.value = {}
 
-    // 首页聚合接口：一次请求拿模块计数、待办、到期、最近记录
+    // 首页聚合接口：一次请求拿待办、到期、最近记录
     const response = await dashboardApi.summary()
     const summary = response.data || {}
-
-    const counts: Record<string, number> = {}
-    for (const module of summary.modules || []) {
-      counts[module.moduleKey] = module.count
-    }
-    moduleCounts.value = counts
 
     todoList.value = summary.todos || []
     expiringList.value = summary.expiring || []
@@ -612,70 +565,6 @@ onUnmounted(() => {
   }
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  min-width: 0;
-
-  // 胶囊组与操作区之间用细分隔线区隔，避免文字链接贴在胶囊边缘
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    padding-left: 14px;
-    border-left: 1px solid $border-color-light;
-  }
-}
-
-// 模块计数胶囊：以圆点 + 文案 + 数字的紧凑形式承载各模块记录数
-.stat-chips {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid $border-color-light;
-  background: $card-bg;
-  font-size: 11px;
-  line-height: 1.5;
-  white-space: nowrap;
-  color: $text-tertiary;
-}
-
-.stat-chip-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: $primary-color;
-
-  &.todo { background: $primary-color; }
-  &.drug { background: $module-drug; }
-  &.note { background: $module-note; }
-  &.idoc { background: $module-idoc; }
-}
-
-.stat-chip-label {
-  color: $text-tertiary;
-}
-
-.stat-chip-count {
-  font-weight: 700;
-  color: $text-primary;
-  font-variant-numeric: tabular-nums;
-}
-
 .text-link {
   border: none;
   background: transparent;
@@ -695,32 +584,6 @@ onUnmounted(() => {
 
   &:hover {
     color: $primary-hover;
-  }
-}
-
-// 「今日待办」标题栏的折叠 chevron
-.collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: $text-placeholder;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-
-  &:hover {
-    background: $hover-bg;
-    color: $primary-text;
-  }
-
-  &.collapsed {
-    transform: rotate(180deg);
   }
 }
 
@@ -1141,22 +1004,6 @@ onUnmounted(() => {
   .card-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .header-right {
-    justify-content: flex-start;
-    gap: 10px;
-  }
-
-  // 窄屏换行后上下堆叠，分隔线失去分隔意义，改为靠右对齐
-  .header-actions {
-    padding-left: 0;
-    border-left: none;
-    margin-left: auto;
-  }
-
-  .stat-chips {
-    justify-content: flex-start;
   }
 
   .shortcut-grid {
