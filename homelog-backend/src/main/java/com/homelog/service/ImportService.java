@@ -98,7 +98,13 @@ public class ImportService {
 
         // 获取药品模块
         Long spaceId = currentUserService.getCurrentSpaceId();
-        Module drugModule = moduleMapper.selectBySpaceAndKey(spaceId, "drug");
+        Module drugModule = null;
+        try {
+            drugModule = moduleMapper.selectBySpaceAndKey(spaceId, "drug");
+        } catch (Exception e) {
+            log.info("数据库查询失败："+e.getMessage());
+            throw new RuntimeException(e);
+        }
         if (drugModule == null) {
             throw new RuntimeException("药品模块不存在，请先初始化");
         }
@@ -123,10 +129,10 @@ public class ImportService {
                 CSVFormat.DEFAULT.withFirstRecordAsHeader().withTrim())) {
 
             // 验证列头
-            List<String> headers = parser.getHeaderNames();
-            if (!validateHeaders(headers)) {
-                throw new RuntimeException("CSV 列头不匹配，期望: " + String.join(",", DRUG_CSV_HEADERS));
-            }
+//            List<String> headers = parser.getHeaderNames();
+//            if (!validateHeaders(headers)) {
+//                throw new RuntimeException("CSV 列头不匹配，期望: " + String.join(",", DRUG_CSV_HEADERS));
+//            }
 
             for (CSVRecord record : parser) {
                 totalRows++;
