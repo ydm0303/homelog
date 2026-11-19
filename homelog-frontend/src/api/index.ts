@@ -76,6 +76,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+// 跳转登录页，并带上当前地址以便登录后回到原页面；已登录页即当前页时避免重复跳转
+function redirectToLogin() {
+  const current = window.location.pathname + window.location.search
+  if (window.location.pathname === '/login') return
+  window.location.href = `/login?redirect=${encodeURIComponent(current)}`
+}
+
 // 响应拦截器
 api.interceptors.response.use(
   (response) => response,
@@ -93,12 +100,19 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._skipAuthRefresh &&
-      !originalRequest._retry &&
       !isAuthRequest
     ) {
+      // 刷新后重试仍然 401：说明 refresh token 也失效，直接退回登录页
+      if (originalRequest._retry) {
+        authStore.logout()
+        redirectToLogin()
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true
 
       try {
+        // 并发的多个 401 会复用同一次刷新，不会重复刷新或互相顶掉 refresh token
         await authStore.refreshAccessToken()
 
         if (originalRequest.headers) {
@@ -108,7 +122,7 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch {
         authStore.logout()
-        window.location.href = '/login'
+        redirectToLogin()
         return Promise.reject(error)
       }
     }

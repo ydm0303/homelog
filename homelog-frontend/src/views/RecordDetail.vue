@@ -361,10 +361,14 @@ const isLowStock = computed(() => {
   return q < min
 })
 
-// 可见字段（过滤私密字段）
+// 可见字段（过滤私密字段；药品模块标题由标题栏展示，详情里不再重复 title 字段）
 const visibleFields = computed(() => {
-  if (isAdmin.value) return allFields.value
-  return allFields.value.filter(f => f.isPrivate !== 1)
+  const fields = isAdmin.value
+    ? allFields.value
+    : allFields.value.filter(f => f.isPrivate !== 1)
+
+  if (isDrugModule.value) return fields
+  return fields.filter(f => f.fieldKey !== 'title')
 })
 
 const hasPrivateFields = computed(() => {

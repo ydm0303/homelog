@@ -7,22 +7,6 @@
           {{ module.name }}
         </el-tag>
       </template>
-
-      <template #actions>
-        <el-button
-          v-if="isEdit"
-          @click="handleDelete"
-          type="danger"
-          :disabled="saving"
-        >
-          <el-icon><Delete /></el-icon>
-          删除
-        </el-button>
-        <el-button @click="handleSave" type="primary" :loading="saving" :disabled="!canSave">
-          <el-icon><Check /></el-icon>
-          {{ isEdit ? '保存' : '创建' }}
-        </el-button>
-      </template>
     </PageHeader>
 
     <!-- 表单 -->
@@ -95,6 +79,24 @@
         />
       </el-form-item>
     </el-form>
+
+    <template #footer v-if="canSave">
+      <div class="edit-action-bar">
+        <el-button
+          v-if="isEdit"
+          @click="handleDelete"
+          type="danger"
+          :disabled="saving"
+        >
+          <el-icon><Delete /></el-icon>
+          删除
+        </el-button>
+        <el-button @click="handleSave" type="primary" :loading="saving">
+          <el-icon><Check /></el-icon>
+          {{ isEdit ? '保存' : '创建' }}
+        </el-button>
+      </div>
+    </template>
     </AppCard>
 
     <!-- 草稿保存提示 -->
@@ -159,10 +161,19 @@ const hasTitleField = computed(() => moduleKey !== 'drug') // 药品模块标题
 
 const allFields = computed(() => module.value?.fields || [])
 
+// 模块字段里确实存在 title 字段（内置待办/记事相册及部分自定义模块）
+const isTitleAField = () => allFields.value.some((f: any) => f.fieldKey === 'title')
+
 // 可见字段（非管理员过滤私密字段）
+// 模块自带 title 字段时，页面顶部的硬编码「标题」框已负责录入，
+// 这里过滤掉重复的 title 字段，避免出现两个标题输入框。
 const visibleFields = computed(() => {
-  if (isAdmin.value) return allFields.value
-  return allFields.value.filter((f: any) => f.isPrivate !== 1)
+  const fields = isAdmin.value
+    ? allFields.value
+    : allFields.value.filter((f: any) => f.isPrivate !== 1)
+
+  if (!hasTitleField.value) return fields
+  return fields.filter((f: any) => f.fieldKey !== 'title')
 })
 
 onMounted(async () => {
@@ -247,8 +258,9 @@ async function fetchRecord() {
     const response = await recordApi.detail(Number(recordId), module.value?.id)
     const record = response.data
 
-    formData.value.title = record.title || ''
     formData.value.dataJson = record.dataJson || {}
+    // 标题以 jj_record.title 为准；为空时回退到历史数据里的 dataJson.title
+    formData.value.title = record.title || formData.value.dataJson.title || ''
     formData.value.imagesJson = record.imagesJson || []
     formData.value.tags = record.tags || ''
     formData.value.remindDate = record.remindDate || ''
@@ -282,10 +294,17 @@ async function handleSave() {
 
     saving.value = true
     try {
+      // 模块若带 title 字段（表单里已被过滤），用顶部标题框的值补回 dataJson，
+      // 既满足后端必填字段校验，又保证 dataJson 与 jj_record.title 一致。
+      const submitData = { ...formData.value.dataJson }
+      if (hasTitleField.value && isTitleAField()) {
+        submitData.title = formData.value.title
+      }
+
       const payload = {
         moduleId: module.value.id,
         title: formData.value.title,
-        dataJson: formData.value.dataJson,
+        dataJson: submitData,
         imagesJson: formData.value.imagesJson,
         tags: formData.value.tags,
         remindDate: formData.value.remindDate
@@ -296,7 +315,7 @@ async function handleSave() {
           recordId: Number(recordId),
           moduleId: module.value.id,
           title: formData.value.title,
-          dataJson: formData.value.dataJson,
+          dataJson: submitData,
           imagesJson: formData.value.imagesJson,
           tags: formData.value.tags,
           remindDate: formData.value.remindDate
@@ -434,6 +453,13 @@ onUnmounted(() => {
   :deep(el-switch) {
     margin-top: 4px;
   }
+}
+
+// 底部操作栏：位于卡片 footer 内的普通行，不做悬浮/吸底
+.edit-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
 }
 
 .loading-state {

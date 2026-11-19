@@ -1,13 +1,13 @@
 <template>
   <header class="page-header">
     <div class="page-header-main">
-      <el-button v-if="back" class="page-back" link @click="emit('back')">
-        <el-icon><ArrowLeft /></el-icon>
-        返回
-      </el-button>
-
       <div class="page-header-text">
         <div class="page-header-title-row">
+          <button v-if="back" type="button" class="page-back" @click="emit('back')">
+            <el-icon class="page-back-icon"><ArrowLeft /></el-icon>
+            <span>返回</span>
+          </button>
+
           <h1 class="page-title">{{ title }}</h1>
           <slot name="tag" />
         </div>
@@ -63,13 +63,26 @@ const emit = defineEmits<{ back: [] }>()
   min-width: 0;
 }
 
+// 返回按钮：原生按钮，避免 el-button 的盒模型/基线把「返回」和标题错开一行
 .page-back {
-  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
   flex-shrink: 0;
+  font-family: inherit;
+  font-size: $text-heading;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
   color: $text-tertiary;
+  transition: color $transition-fast $ease-out;
 
-  :deep(.el-icon) {
-    font-size: $icon-size-sm;
+  .page-back-icon {
+    font-size: $icon-size-lg;
   }
 
   &:hover {

@@ -1,5 +1,7 @@
 package com.homelog.config;
 
+import com.homelog.security.JwtAccessDeniedHandler;
+import com.homelog.security.JwtAuthenticationEntryPoint;
 import com.homelog.security.JwtAuthenticationFilter;
 import com.homelog.security.JwtTokenProvider;
 import com.homelog.security.UserDetailsServiceImpl;
@@ -31,6 +33,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsServiceImpl userDetailsService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -74,6 +78,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/webjars/**"
                 ).permitAll()
                 .anyRequest().authenticated()
+                .and()
+                // 未认证 → 401（触发前端刷新 token），已认证但权限不足 → 403
+                // 注意：若不显式配置，Spring Security 在无 formLogin/httpBasic 时会用
+                // Http403ForbiddenEntryPoint，导致 token 过期被误报成“无权访问”。
+                .exceptionHandling()
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                .accessDeniedHandler(jwtAccessDeniedHandler)
                 .and()
                 // jwt过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
