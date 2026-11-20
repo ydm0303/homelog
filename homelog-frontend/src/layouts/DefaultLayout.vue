@@ -183,6 +183,7 @@ import { useModuleStore } from '@/stores/module'
 import { messageApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { getModuleIcon } from '@/utils/module'
+import { roleLabel } from '@/utils/role'
 
 const router = useRouter()
 const route = useRoute()
@@ -303,14 +304,8 @@ const avatarText = computed(() => displayName.value.charAt(0) || '家')
 // 用户下拉实例（用于手动关闭）
 const userDropdownRef = ref<InstanceType<typeof import('element-plus').ElDropdown> | null>(null)
 
-// 角色标签文本
-const getRoleLabel = computed(() => {
-  switch (authStore.role) {
-    case 1: return '管理员'
-    case 2: return '可编辑'
-    default: return '只读'
-  }
-})
+// 角色标签文本（档位语义统一来自 @/utils/role）
+const getRoleLabel = computed(() => roleLabel(authStore.role))
 
 function handleQuickCreate() {
   const firstModule = moduleStore.enabledModules?.[0]

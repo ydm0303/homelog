@@ -4,11 +4,11 @@ import com.homelog.dto.LoginRequest;
 import com.homelog.dto.PasswordUpdateRequest;
 import com.homelog.dto.RegisterRequest;
 import com.homelog.entity.User;
-import com.homelog.entity.SpaceMember;
 import com.homelog.mapper.UserMapper;
-import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.security.CurrentUserService;
 import com.homelog.security.JwtTokenProvider;
+import com.homelog.security.Role;
+import com.homelog.service.SpaceCreationService;
 import com.homelog.vo.TokenResponse;
 import com.homelog.vo.UserProfileVO;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +22,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,16 +40,13 @@ import java.time.LocalDateTime;
 @Validated
 public class AuthController {
 
-    /** 单空间：默认空间 ID，与 UserDetailsServiceImpl / MetaController / RecordService 保持一致 */
-    private static final long DEFAULT_SPACE_ID = 1L;
-
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final UserDetailsService userDetailsService;
     private final UserMapper userMapper;
-    private final SpaceMemberMapper spaceMemberMapper;
     private final CurrentUserService currentUserService;
+    private final SpaceCreationService spaceCreationService;
 
     /**
      * 用户登录
@@ -79,6 +77,7 @@ public class AuthController {
      * POST /api/auth/register
      */
     @PostMapping("/register")
+    @Transactional
     public ResponseEntity<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
         log.info("用户注册：{}", request.getUsername());
         log.info("注册用户开始");
@@ -109,18 +108,15 @@ public class AuthController {
         userMapper.insert(user);
         log.info("用户创建成功：用户ID={}，用户名={}", user.getId(), user.getUsername());
 
-        // 加入默认空间（单空间）：不再为每个新用户新建空间。
-        // 内置模块、记录等都挂在默认空间下，若注册时另建空间，会导致
-        // 用户所属空间(如 id=2)与模块/数据所在空间(id=1)不一致，菜单与数据全部落空。
-        log.info("加入默认空间");
-        SpaceMember member = new SpaceMember()
-                .setSpaceId(DEFAULT_SPACE_ID)
-                .setUserId(user.getId())
-                .setRole(1) // 管理员
-                .setReceiveMail(1)
-                .setCreatedAt(LocalDateTime.now());
-        spaceMemberMapper.insert(member);
-        log.info("空间成员创建成功：空间ID={}，用户ID={}，角色=管理员", DEFAULT_SPACE_ID, user.getId());
+        // 注册即建自己的私有家庭空间，并按模板实例化内置模块与字段（设计文档 v1.2 §6.1 / 步 3）。
+        // 用户在自己的家是 OWNER(1) —— 这是 owner 唯一的产生途径，不接受邀请或指派。
+        //
+        // 本方法已标 @Transactional：建号 / 建家 / owner 成员关系 / 模块字段实例化同事务，
+        // 任一失败整体回滚，不会留下「已注册但无家」或「有家但菜单全空」的半态。
+        // （旧实现把新用户塞进 space_id=1 当管理员，那是在单空间硬编码下的权宜之计。）
+        log.info("创建私有家庭空间");
+        Long spaceId = spaceCreationService.createFamilySpaceWithPresets(user.getId(), null);
+        log.info("私有家庭空间就绪：spaceId={}，用户ID={}，角色={}", spaceId, user.getId(), Role.label(Role.OWNER));
         log.info("注册用户结束");
 
         // 登录生成 Token

@@ -45,25 +45,14 @@
                   <template #dropdown>
                     <el-dropdown-menu>
                       <el-dropdown-item
-                        v-if="scope.row.role !== 1"
-                        @click="updateMemberRole(scope.row, { role: 1 })"
+                        v-for="opt in assignableOptions(scope.row.role)"
+                        :key="opt.value"
+                        @click="updateMemberRole(scope.row, { role: opt.value })"
                       >
-                        设为管理员
+                        设为{{ opt.label }}
                       </el-dropdown-item>
                       <el-dropdown-item
-                        v-if="scope.row.role !== 2"
-                        @click="updateMemberRole(scope.row, { role: 2 })"
-                      >
-                        设为可编辑
-                      </el-dropdown-item>
-                      <el-dropdown-item
-                        v-if="scope.row.role !== 3"
-                        @click="updateMemberRole(scope.row, { role: 3 })"
-                      >
-                        设为只读
-                      </el-dropdown-item>
-                      <el-dropdown-item
-                        v-if="scope.row.userId !== authStore.user?.id"
+                        v-if="canRemoveMember(scope.row)"
                         @click="removeMember(scope.row)"
                         class="danger-item"
                       >
@@ -86,8 +75,13 @@
             </el-form-item>
             <el-form-item label="角色" prop="role">
               <el-radio-group v-model="addMemberForm.role">
-                <el-radio :label="2">可编辑</el-radio>
-                <el-radio :label="3">只读</el-radio>
+                <el-radio
+                  v-for="opt in inviteOptions"
+                  :key="opt.value"
+                  :label="opt.value"
+                >
+                  {{ opt.label }}
+                </el-radio>
               </el-radio-group>
             </el-form-item>
             <el-form-item label="邮件提醒">
@@ -107,21 +101,15 @@
           <h4 class="matrix-title">角色权限对照表</h4>
           <el-table :data="permissionMatrix" border stripe class="w-full">
             <el-table-column prop="permission" label="权限项" min-width="200" />
-            <el-table-column prop="admin" label="管理员" width="120" align="center">
+            <el-table-column
+              v-for="col in permissionColumns"
+              :key="col.prop"
+              :label="col.label"
+              width="110"
+              align="center"
+            >
               <template #default="scope">
-                <el-icon v-if="scope.row.admin"><Check color="var(--el-color-success)" /></el-icon>
-                <el-icon v-else><Close color="var(--el-color-danger)" /></el-icon>
-              </template>
-            </el-table-column>
-            <el-table-column prop="editor" label="可编辑" width="120" align="center">
-              <template #default="scope">
-                <el-icon v-if="scope.row.editor"><Check color="var(--el-color-success)" /></el-icon>
-                <el-icon v-else><Close color="var(--el-color-danger)" /></el-icon>
-              </template>
-            </el-table-column>
-            <el-table-column prop="readonly" label="只读" width="120" align="center">
-              <template #default="scope">
-                <el-icon v-if="scope.row.readonly"><Check color="var(--el-color-success)" /></el-icon>
+                <el-icon v-if="scope.row.flags[col.prop]"><Check color="var(--el-color-success)" /></el-icon>
                 <el-icon v-else><Close color="var(--el-color-danger)" /></el-icon>
               </template>
             </el-table-column>
@@ -420,6 +408,14 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import {
+  ROLE,
+  ASSIGNABLE_ROLES,
+  roleLabel,
+  roleTagType,
+  canManageTargetRole,
+  canGrantRole
+} from '@/utils/role'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -437,7 +433,7 @@ const showAddMember = ref(false)
 const addingMember = ref(false)
 const addMemberForm = reactive({
   email: '',
-  role: 2,
+  role: ROLE.MEMBER as number,
   receiveMail: 1
 })
 const addMemberRules = {
@@ -445,20 +441,54 @@ const addMemberRules = {
   role: [{ required: true, message: '请选择角色', trigger: 'change' }]
 }
 
+/**
+ * 角色权限对照表（设计文档 v1.2 §4.2，按 D3 沿用现有实现语义）。
+ * flags 的 key 与 permissionColumns 一一对应，新增档位只改这两处。
+ */
+const permissionColumns = [
+  { prop: 'owner', label: '所有者' },
+  { prop: 'admin', label: '管理员' },
+  { prop: 'member', label: '普通成员' },
+  { prop: 'readonly', label: '只读' }
+] as const
+
 const permissionMatrix = [
-  { permission: '查看所有模块数据', admin: true, editor: true, readonly: true },
-  { permission: '新增/编辑/删除记录', admin: true, editor: true, readonly: false },
-  { permission: '仅编辑/删除自己的记录', admin: false, editor: true, readonly: false },
-  { permission: '管理成员（增/删/改角色）', admin: true, editor: false, readonly: false },
-  { permission: '模块开关/排序/改名', admin: true, editor: false, readonly: false },
-  { permission: '创建自定义表单模块', admin: true, editor: false, readonly: false },
-  { permission: '删除自定义表单模块', admin: true, editor: false, readonly: false },
-  { permission: '查看私密字段/记录', admin: true, editor: false, readonly: false },
-  { permission: '数据导出（单模块/全空间）', admin: true, editor: false, readonly: false },
-  { permission: '药品 CSV 导入', admin: true, editor: false, readonly: false },
-  { permission: '接收邮件提醒', admin: true, editor: true, readonly: true },
-  { permission: '修改个人密码', admin: true, editor: true, readonly: true }
+  { permission: '查看所有模块数据', flags: { owner: true, admin: true, member: true, readonly: true } },
+  { permission: '新增记录', flags: { owner: true, admin: true, member: true, readonly: false } },
+  { permission: '编辑自己创建的记录', flags: { owner: true, admin: true, member: true, readonly: false } },
+  { permission: '编辑他人创建的记录', flags: { owner: true, admin: true, member: false, readonly: false } },
+  { permission: '删除记录', flags: { owner: true, admin: true, member: false, readonly: false } },
+  { permission: '查看私密字段 / 私密记录', flags: { owner: true, admin: true, member: false, readonly: false } },
+  { permission: '管理成员（邀请 / 改角色 / 移除）', flags: { owner: true, admin: true, member: false, readonly: false } },
+  { permission: '指派或移除管理员', flags: { owner: true, admin: false, member: false, readonly: false } },
+  { permission: '模块开关 / 排序 / 改名', flags: { owner: true, admin: true, member: false, readonly: false } },
+  { permission: '创建 / 删除自定义表单模块', flags: { owner: true, admin: true, member: false, readonly: false } },
+  { permission: '解散家庭空间', flags: { owner: true, admin: false, member: false, readonly: false } },
+  { permission: '主动退出家庭空间', flags: { owner: false, admin: true, member: true, readonly: true } },
+  { permission: '接收邮件提醒', flags: { owner: true, admin: true, member: true, readonly: true } },
+  { permission: '修改个人密码', flags: { owner: true, admin: true, member: true, readonly: true } }
 ]
+
+/**
+ * 某成员行可被指派到的角色选项。
+ * 与后端 updateMember 完全对齐：先判「能不能碰这个人」(canManageTargetRole)，
+ * 再逐个档判「能不能放到那档」(canGrantRole)。两级都过才显示该选项。
+ */
+function assignableOptions(targetRole: number) {
+  if (!canManageTargetRole(authStore.role, targetRole)) return []
+  return ASSIGNABLE_ROLES.filter(
+    opt => opt.value !== targetRole && canGrantRole(authStore.role, opt.value)
+  )
+}
+
+/** 当前用户能否移除该行成员：不能移自己，且只能移除严格低于自己的档（同后端 deleteMember） */
+function canRemoveMember(row: any): boolean {
+  if (row.userId === authStore.user?.id) return false
+  return canManageTargetRole(authStore.role, row.role)
+}
+
+/** 邀请对话框可选角色：随邀请人档位收窄 */
+const inviteOptions = computed(() => ASSIGNABLE_ROLES.filter(opt => canGrantRole(authStore.role, opt.value)))
 
 const customModuleForm = reactive({
   name: '',
@@ -534,20 +564,13 @@ function handleTabClick(tab: any) {
   }
 }
 
+// 角色文案/颜色统一委托 @/utils/role（档位语义单点定义，见设计文档 v1.2 §4.4）
 function getRoleLabel(role: number) {
-  switch (role) {
-    case 1: return '管理员'
-    case 2: return '可编辑'
-    default: return '只读'
-  }
+  return roleLabel(role)
 }
 
 function getRoleTagType(role: number) {
-  switch (role) {
-    case 1: return 'danger'
-    case 2: return 'success'
-    default: return 'info'
-  }
+  return roleTagType(role)
 }
 
 async function updateMemberRole(member: any, changes: Partial<any>) {
@@ -585,7 +608,7 @@ async function confirmAddMember() {
     ElMessage.success('邀请已发送')
     showAddMember.value = false
     addMemberForm.email = ''
-    addMemberForm.role = 2
+    addMemberForm.role = ROLE.MEMBER
     addMemberForm.receiveMail = 1
     fetchMembers()
   } catch (e: any) {

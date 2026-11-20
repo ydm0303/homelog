@@ -323,15 +323,14 @@ const currentPreviewIndex = ref(0)
 const members = ref<any[]>([])
 
 const isAdmin = computed(() => authStore.isAdmin)
-const isReadonly = computed(() => authStore.isReadonly)
 
 const canEdit = computed(() => {
-  if (isReadonly.value) return false
+  if (!authStore.canWrite) return false
   if (isAdmin.value) return true
   return Number(record.value?.creatorId) === Number(authStore.user?.id)
 })
 
-const canDelete = computed(() => isAdmin.value)
+const canDelete = computed(() => authStore.canDelete)
 
 const currentModule = computed(() => moduleStore.getModuleByKey(moduleKey))
 const allFields = computed(() => currentModule.value?.fields || [])

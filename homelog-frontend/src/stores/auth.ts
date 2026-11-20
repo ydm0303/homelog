@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api'
+import * as roleAbility from '@/utils/role'
 import type { User } from '@/types'
 
 /**
@@ -28,7 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
   const spaceId = ref<number>(1)
-  const role = ref<number>(3) // 1=admin, 2=edit, 3=readonly
+  const role = ref<number>(roleAbility.ROLE.READONLY) // 1=owner 2=admin 3=member 4=readonly
   const initialized = ref(false)
   let initPromise: Promise<void> | null = null
   // 并发的 401 共用同一次刷新，避免多个请求同时刷新导致后到的刷新用旧 refresh token 失败
@@ -39,9 +40,16 @@ export const useAuthStore = defineStore('auth', () => {
   let visibilityBound = false
 
   const isLoggedIn = computed(() => !!token.value && !!user.value)
-  const isAdmin = computed(() => role.value === 1)
-  const isEditor = computed(() => role.value <= 2)
-  const isReadonly = computed(() => role.value === 3)
+  // 权限判断统一委托 @/utils/role（与后端 Role 语义层一一对应，见设计文档 v1.2 §4.4）
+  const isAdmin = computed(() => roleAbility.isAdmin(role.value))
+  // 保留 isEditor 名称向后兼容；语义 = 可写（非只读）。新代码请直接判 canWrite
+  const isEditor = computed(() => roleAbility.canWrite(role.value))
+  const isReadonly = computed(() => roleAbility.isReadonly(role.value))
+  const canWrite = computed(() => roleAbility.canWrite(role.value))
+  const canDelete = computed(() => roleAbility.canDelete(role.value))
+  const canSeePrivate = computed(() => roleAbility.canSeePrivate(role.value))
+  const canManageMembers = computed(() => roleAbility.canManageMembers(role.value))
+  const canManageModule = computed(() => roleAbility.canManageModule(role.value))
 
   // 初始化认证状态（页面刷新时先恢复登录态，路由守卫/布局都要等它完成）
   async function initAuth() {
@@ -66,7 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     token.value = savedToken
     refreshToken.value = savedRefreshToken
-    role.value = savedRole ? parseInt(savedRole) : 3
+    role.value = savedRole ? parseInt(savedRole) : roleAbility.ROLE.READONLY
 
     // 先用本地缓存渲染，避免刷新瞬间显示默认占位名
     if (savedUser) {
@@ -136,7 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('user', JSON.stringify(profile))
 
     // 后端 /auth/detail 返回当前空间角色，前端不再硬编码管理员
-    role.value = profile.role ?? 3
+    role.value = profile.role ?? roleAbility.ROLE.READONLY
     spaceId.value = profile.spaceId ?? 1
     localStorage.setItem('role', role.value.toString())
   }
@@ -240,7 +248,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     refreshToken.value = null
     user.value = null
-    role.value = 3
+    role.value = roleAbility.ROLE.READONLY
 
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
@@ -266,6 +274,11 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isEditor,
     isReadonly,
+    canWrite,
+    canDelete,
+    canSeePrivate,
+    canManageMembers,
+    canManageModule,
     initAuth,
     login,
     register,

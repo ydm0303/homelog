@@ -7,6 +7,7 @@ import com.homelog.entity.Module;
 import com.homelog.mapper.ModuleMapper;
 import com.homelog.mapper.FieldMapper;
 import com.homelog.security.CurrentUserService;
+import com.homelog.security.Role;
 import com.homelog.vo.ModuleMetaVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +59,7 @@ public class MetaController {
         log.info("查询空间全部模块：空间ID={}，用户角色={}", spaceId, role);
 
         // 只有管理员可查看所有模块
-        if (role != 1) {
+        if (!Role.canManageModule(role)) {
             log.debug("Non-admin requests all modules, fallback to enabled only: spaceId={}", spaceId);
             return getEnabledModules();
         }
@@ -100,7 +101,7 @@ public class MetaController {
         Integer role = currentUserService.getCurrentRole();
         log.info("更新模块配置：空间ID={}，模块ID={}", spaceId, request.getModuleId());
 
-        if (role != 1) {
+        if (!Role.canManageModule(role)) {
             log.warn("Update module denied, not an admin: spaceId={}, moduleId={}, role={}",
                     spaceId, request.getModuleId(), role);
             throw new RuntimeException("权限不足，仅管理员可修改模块配置");
@@ -137,7 +138,7 @@ public class MetaController {
         log.info("创建自定义模块：空间ID={}，模块标识={}，名称={}",
                 spaceId, request.getModuleKey(), request.getName());
 
-        if (role != 1) {
+        if (!Role.canManageModule(role)) {
             log.warn("Create module denied, not an admin: spaceId={}, role={}", spaceId, role);
             throw new RuntimeException("权限不足，仅管理员可创建模块");
         }
@@ -169,7 +170,7 @@ public class MetaController {
         Integer role = currentUserService.getCurrentRole();
         log.info("删除模块：空间ID={}，模块ID={}", spaceId, moduleId);
 
-        if (role != 1) {
+        if (!Role.canManageModule(role)) {
             log.warn("Delete module denied, not an admin: spaceId={}, moduleId={}, role={}", spaceId, moduleId, role);
             throw new RuntimeException("权限不足，仅管理员可删除模块");
         }

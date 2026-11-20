@@ -497,9 +497,8 @@ const expiryFilterOptions = computed(() => [
 ])
 
 const isAdmin = computed(() => authStore.isAdmin)
-const isEditor = computed(() => authStore.isEditor)
 const isReadonly = computed(() => authStore.isReadonly)
-const canCreate = computed(() => isAdmin.value || isEditor.value)
+const canCreate = computed(() => authStore.canWrite)
 
 const viewOptions = [
   { label: '列表', value: 'list' },

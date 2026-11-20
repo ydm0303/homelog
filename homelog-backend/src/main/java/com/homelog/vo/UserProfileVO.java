@@ -38,7 +38,8 @@ public class UserProfileVO {
             vo.setRole(member.getRole());
             vo.setSpaceId(member.getSpaceId());
         } else {
-            vo.setRole(3);
+            // 无成员关系：兜底最保守的只读档，不可默认可写
+            vo.setRole(com.homelog.security.Role.READONLY);
             vo.setSpaceId(1L);
         }
         return vo;
