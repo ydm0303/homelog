@@ -115,6 +115,36 @@
             <el-icon><Search /></el-icon>
           </el-button>
 
+          <el-dropdown
+            v-if="spaces.length > 1"
+            trigger="click"
+            class="space-switch"
+            popper-class="space-switch-popper"
+            @command="handleSwitchSpace"
+          >
+            <span class="space-switcher" role="button" tabindex="0" aria-label="切换家庭空间">
+              <el-icon><House /></el-icon>
+              <span class="space-switcher-name">{{ currentSpaceName }}</span>
+              <el-icon class="space-switcher-caret"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item disabled class="dropdown-header">切换家庭空间</el-dropdown-item>
+                <el-dropdown-item
+                  v-for="s in spaces"
+                  :key="s.id"
+                  :command="s.id"
+                  :disabled="s.id === authStore.spaceId"
+                >
+                  <span class="space-option">
+                    <span class="space-option-name">{{ s.name }}</span>
+                    <el-tag :type="roleTagType(s.role)" size="small" effect="plain">{{ roleLabel(s.role) }}</el-tag>
+                  </span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
           <el-dropdown>
             <span class="dropdown-link" role="button" tabindex="0" aria-label="消息中心">
               <el-badge is-dot :hidden="unreadCount === 0" class="notification-badge">
@@ -145,6 +175,10 @@
                 <button class="user-menu-item user-menu-item-primary" @click="goToSettings">
                   <el-icon><Setting /></el-icon>
                   <span>个人设置</span>
+                </button>
+                <button v-if="!authStore.isOwner" class="user-menu-item" @click="handleLeaveSpace">
+                  <el-icon><Back /></el-icon>
+                  <span>退出当前家庭</span>
                 </button>
                 <button class="user-menu-item" @click="handleLogout">
                   <el-icon><SwitchButton /></el-icon>
@@ -177,13 +211,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Setting, Menu, Bell, Search, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
+import { HomeFilled, Setting, Menu, Bell, Search, ArrowDown, SwitchButton, House, Back } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
-import { messageApi } from '@/api'
-import { ElMessage } from 'element-plus'
+import { messageApi, spaceApi } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getModuleIcon } from '@/utils/module'
-import { roleLabel } from '@/utils/role'
+import { roleLabel, roleTagType } from '@/utils/role'
 
 const router = useRouter()
 const route = useRoute()
@@ -292,6 +326,10 @@ async function fetchUnreadCount() {
 // 启用的模块
 const enabledModules = computed(() => moduleStore.enabledModules)
 
+// 我可切换的空间列表与当前空间名（切换器数据源，设计文档 v1.2 §6.5）
+const spaces = computed(() => authStore.spaces)
+const currentSpaceName = computed(() => authStore.currentSpace?.name || '我的家庭')
+
 // 管理员判断
 const isAdmin = computed(() => authStore.isAdmin)
 
@@ -327,6 +365,49 @@ function handleLogout() {
   authStore.logout()
   ElMessage.success('已退出登录')
   router.push('/login')
+}
+
+// 切换家庭空间（设计文档 v1.2 §6.5）：切换后整体重新加载，确保以新 X-Space-Id 重新取数
+async function handleSwitchSpace(targetId: number) {
+  if (!targetId || targetId === authStore.spaceId) return
+  try {
+    await authStore.switchSpace(targetId)
+    ElMessage.success(`已切换到「${authStore.currentSpace?.name || '新空间'}」`)
+    window.location.assign('/')
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '切换空间失败')
+  }
+}
+
+// 主动退出当前家庭空间（非 owner）
+async function handleLeaveSpace() {
+  userDropdownRef.value?.handleClose()
+  try {
+    await ElMessageBox.confirm(
+      '退出后你将被移出当前家庭空间，且不再能查看其内容。是否继续？',
+      '退出家庭',
+      { confirmButtonText: '退出', cancelButtonText: '取消', type: 'warning', confirmButtonClass: 'el-button--danger' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await spaceApi.leave()
+    // 当前空间已失效：先清掉 header，再用剩余在籍空间重新定位，避免请求被 403
+    localStorage.removeItem('current_space_id')
+    const list = await authStore.fetchSpaces()
+    if (list.length > 0) {
+      await authStore.switchSpace(list[0].id)
+      ElMessage.success('已退出当前家庭空间')
+      window.location.assign('/')
+    } else {
+      ElMessage.success('已退出全部家庭空间')
+      authStore.logout()
+      router.push('/login')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '退出失败')
+  }
 }
 
 // 跳转个人设置
@@ -699,9 +780,40 @@ function handleSearch() {
   }
 }
 
-// 顶栏用户入口
-.user-trigger {
+// 空间切换器
+.space-switcher {
   display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: $text-secondary;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: $hover-bg;
+    color: $primary-color;
+  }
+
+  .space-switcher-name {
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .space-switcher-caret {
+    font-size: 12px;
+    color: $text-placeholder;
+  }
+}
+
+// 顶栏用户入口
+.user-trigger {  display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 10px 4px 6px;
@@ -1009,6 +1121,23 @@ function handleSearch() {
     &:hover {
       color: $primary-hover;
     }
+  }
+}
+
+// 空间切换下拉
+.el-popper.is-light.space-switch-popper {
+  .space-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 180px;
+  }
+
+  .space-option-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 </style>

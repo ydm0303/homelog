@@ -182,7 +182,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Plus, Camera } from '@element-plus/icons-vue'
 import { spaceApi, fileApi } from '@/api'
-import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { resolveFileUrl } from '@/utils/file'
 
@@ -218,8 +217,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:value': [value: any]
 }>()
-
-const authStore = useAuthStore()
 
 // 本地状态
 const localValue = ref(props.value)
@@ -298,7 +295,7 @@ function emitUpdate() {
 
 async function fetchSpaceMembers() {
   try {
-    const response = await spaceApi.getMembers(authStore.spaceId)
+    const response = await spaceApi.getMembers()
     spaceMembers.value = response.data
   } catch (e) {
     console.error('Failed to fetch space members:', e)

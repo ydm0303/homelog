@@ -382,7 +382,7 @@ onMounted(async () => {
 
 async function fetchMembers() {
   try {
-    const response = await spaceApi.getMembers(authStore.spaceId)
+    const response = await spaceApi.getMembers()
     members.value = response.data || []
   } catch (e) {
     console.error('Failed to fetch space members:', e)

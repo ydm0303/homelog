@@ -71,6 +71,12 @@ api.interceptors.request.use(
     if (authStore.token && config.headers && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
+    // 当前空间标识（设计文档 v1.2 §6.5）：服务端据此解析并校验成员身份。
+    // 用 localStorage 而非 store 读取，确保登录早期 store 尚未水合时也能带上。
+    const spaceId = localStorage.getItem('current_space_id')
+    if (spaceId && config.headers && !config.headers['X-Space-Id']) {
+      config.headers['X-Space-Id'] = spaceId
+    }
     return config
   },
   (error) => Promise.reject(error)
@@ -273,22 +279,58 @@ export const metaApi = {
 }
 
 // ============ 空间/成员相关 API ============
+// 注：当前空间由请求头 X-Space-Id 决定（见上方请求拦截器），所有空间接口不再传 spaceId。
 export const spaceApi = {
-  /** 获取成员列表 GET /api/space/members/list?spaceId=1 */
-  getMembers: (spaceId: number = 1) =>
-    api.get('/space/members/list', { params: { spaceId } }),
+  /** 我的空间列表（切换器数据源）GET /api/space/list */
+  list: () =>
+    api.get('/space/list'),
 
-  /** 添加成员 POST /api/space/members/create */
-  createMember: (data: { spaceId: number; email: string; role: number; receiveMail: number }) =>
-    api.post('/space/members/create', data),
+  /** 修改当前空间名称 POST /api/space/update */
+  update: (name: string) =>
+    api.post('/space/update', { name }),
+
+  /** 解散当前空间（owner，逻辑标记）POST /api/space/dissolve */
+  dissolve: (name: string) =>
+    api.post('/space/dissolve', { name, confirm: true }),
+
+  /** 主动退出当前空间（非 owner）POST /api/space/members/leave */
+  leave: () =>
+    api.post('/space/members/leave'),
+
+  /** 获取成员列表 GET /api/space/members/list */
+  getMembers: () =>
+    api.get('/space/members/list'),
 
   /** 更新成员 POST /api/space/members/update */
-  updateMember: (data: { spaceId: number; userId: number; role?: number; receiveMail?: number }) =>
+  updateMember: (data: { userId: number; role?: number; receiveMail?: number }) =>
     api.post('/space/members/update', data),
 
-  /** 删除成员 POST /api/space/members/delete */
-  deleteMember: (spaceId: number, userId: number) =>
-    api.post('/space/members/delete', { spaceId, userId })
+  /** 移除成员（连带删除其内容，需 confirm）POST /api/space/members/delete */
+  deleteMember: (userId: number, confirm = true) =>
+    api.post('/space/members/delete', { userId, confirm })
+}
+
+// ============ 家庭空间邀请 API（设计文档 v1.2 §6.2-6.4 / §10） ============
+export const invitationApi = {
+  /** 发起邀请 POST /api/space/invitations/create */
+  create: (data: { email: string; role: number }) =>
+    api.post('/space/invitations/create', data),
+
+  /** 邀请列表 GET /api/space/invitations/list?direction=received|sent&pendingOnly= */
+  list: (params: { direction?: 'received' | 'sent'; pendingOnly?: boolean } = {}) =>
+    api.get('/space/invitations/list', { params }),
+
+  /** 接受邀请 POST /api/space/invitations/accept */
+  accept: (invitationId: number) =>
+    api.post('/space/invitations/accept', { invitationId }),
+
+  /** 拒绝邀请 POST /api/space/invitations/reject */
+  reject: (invitationId: number) =>
+    api.post('/space/invitations/reject', { invitationId }),
+
+  /** 撤销邀请（邀请人）POST /api/space/invitations/cancel */
+  cancel: (invitationId: number) =>
+    api.post('/space/invitations/cancel', { invitationId })
 }
 
 // ============ 导出/导入相关 API ============

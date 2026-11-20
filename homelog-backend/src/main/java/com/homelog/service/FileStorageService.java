@@ -107,4 +107,33 @@ public class FileStorageService {
             log.warn("File delete failed: {}", relativePath, e);
         }
     }
+
+    /**
+     * 删除某条记录的全部图片目录（{@code basePath/moduleKey/recordId}）。
+     *
+     * <p>移除成员 / 删除记录时调用。按目录整体删除而非逐张按 images_json 删，
+     * 因为 images_json 只是引用清单，目录里可能还留有编辑过程中产生的孤立文件；
+     * 目录删除能保证不留残留。删除失败只告警不中断业务事务。
+     */
+    public void deleteRecordDirectory(String moduleKey, Long recordId) {
+        if (moduleKey == null || moduleKey.trim().isEmpty() || recordId == null) {
+            return;
+        }
+        Path dir = Paths.get(basePath, moduleKey, String.valueOf(recordId));
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+            walk.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException e) {
+                    log.warn("Image file delete failed: {}", path, e);
+                }
+            });
+            log.info("记录图片目录删除成功：{}/{}", moduleKey, recordId);
+        } catch (IOException e) {
+            log.warn("Delete record directory failed: {}/{}", moduleKey, recordId, e);
+        }
+    }
 }

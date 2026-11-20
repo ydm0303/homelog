@@ -25,4 +25,7 @@ public final class MessageType {
 
     /** 邀请回执（对方同意/拒绝，ref_id 指向 jj_invitation.id） */
     public static final String FAMILY_RESULT = "family_result";
+
+    /** 成员主动退出家庭空间（告知空间所有者，无需操作） */
+    public static final String FAMILY_MEMBER_LEAVE = "family_member_leave";
 }

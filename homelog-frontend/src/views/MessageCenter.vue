@@ -158,22 +158,44 @@
           align="center"
         >
           <template #default="scope">
-            <el-button
-              v-if="scope.row.isRead === 0"
-              link
-              size="small"
-              @click.stop="markRead(scope.row)"
-            >
-              标记已读
-            </el-button>
-            <el-button
-              link
-              size="small"
-              type="danger"
-              @click.stop="deleteMessage(scope.row)"
-            >
-              <el-icon><Delete /></el-icon>
-            </el-button>
+            <template v-if="isPendingInvitation(scope.row)">
+              <el-button
+                link
+                size="small"
+                type="primary"
+                :loading="respondingId === scope.row.id"
+                @click.stop="respondInvitation(scope.row, true)"
+              >
+                同意
+              </el-button>
+              <el-button
+                link
+                size="small"
+                type="danger"
+                :loading="respondingId === scope.row.id"
+                @click.stop="respondInvitation(scope.row, false)"
+              >
+                拒绝
+              </el-button>
+            </template>
+            <template v-else>
+              <el-button
+                v-if="scope.row.isRead === 0"
+                link
+                size="small"
+                @click.stop="markRead(scope.row)"
+              >
+                标记已读
+              </el-button>
+              <el-button
+                link
+                size="small"
+                type="danger"
+                @click.stop="deleteMessage(scope.row)"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -198,7 +220,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { messageApi } from '@/api'
+import { messageApi, invitationApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
 import { Search, Bell, Check, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import HighlightText from '@/components/HighlightText.vue'
@@ -210,6 +233,7 @@ import { getModuleTagType } from '@/utils/module'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 // 响应式状态
 const messages = ref<any[]>([])
@@ -219,6 +243,7 @@ const page = ref(1)
 const pageSize = ref(20)
 const unreadCount = ref(0)
 const markingAllRead = ref(false)
+const respondingId = ref<number | null>(null)
 
 const filterStatus = ref<string | number>('')
 const filterKeyword = ref('')
@@ -324,6 +349,37 @@ async function markRead(message: any) {
   }
 }
 
+// 未处理的入家邀请：展示「同意 / 拒绝」而非普通已读操作
+function isPendingInvitation(row: any): boolean {
+  return row?.type === 'family_invitation' && row?.isRead === 0 && !!row?.refId
+}
+
+// 应答邀请：同意即加入目标空间（refId 指向 jj_invitation.id）
+async function respondInvitation(row: any, accept: boolean) {
+  if (respondingId.value) return
+  respondingId.value = row.id
+  try {
+    if (accept) {
+      await invitationApi.accept(row.refId)
+    } else {
+      await invitationApi.reject(row.refId)
+    }
+    ElMessage.success(accept ? '已加入该家庭空间' : '已拒绝邀请')
+    row.isRead = 1
+    unreadCount.value = Math.max(0, unreadCount.value - 1)
+    await messageApi.markRead(row.id).catch(() => {})
+    if (accept) {
+      // 加入新空间后刷新空间列表，切换器立即可见
+      await authStore.fetchSpaces().catch(() => {})
+    }
+    await fetchMessages()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '操作失败')
+  } finally {
+    respondingId.value = null
+  }
+}
+
 async function markAllRead() {
   markingAllRead.value = true
   try {
@@ -370,18 +426,26 @@ function getRowStyle({ row }: any) {
 
 function getTypeTagType(type: string): 'primary' | 'success' | 'info' | 'warning' | 'danger' {
   const types: Record<string, 'primary' | 'success' | 'info' | 'warning' | 'danger'> = {
+    record: 'info',
     remind: 'warning',
     system: 'info',
-    mention: 'primary'
+    mention: 'primary',
+    family_invitation: 'primary',
+    family_result: 'success',
+    family_member_leave: 'warning'
   }
   return types[type] || 'info'
 }
 
 function getTypeLabel(type: string) {
   const labels: Record<string, string> = {
+    record: '记录',
     remind: '到期提醒',
     system: '系统通知',
-    mention: '@提及'
+    mention: '@提及',
+    family_invitation: '入家邀请',
+    family_result: '邀请回执',
+    family_member_leave: '成员退出'
   }
   return labels[type] || type
 }

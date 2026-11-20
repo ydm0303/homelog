@@ -49,11 +49,16 @@ public interface InvitationMapper extends BaseMapper<Invitation> {
             "WHERE id = #{id} AND inviter_id = #{inviterId} AND status = 1")
     int cancelAtomically(@Param("id") Long id, @Param("inviterId") Long inviterId, @Param("now") LocalDateTime now);
 
-    /** 级联撤销：某邀请人在某空间的待处理邀请（邀请人被移除/降权、空间解散时调用） */
+    /** 级联撤销：某邀请人在某空间的待处理邀请（邀请人被移除/降权时调用） */
     @Update("UPDATE jj_invitation SET status = 4, responded_at = #{now} " +
             "WHERE space_id = #{spaceId} AND inviter_id = #{inviterId} AND status = 1")
     int cancelPendingByInviter(@Param("spaceId") Long spaceId, @Param("inviterId") Long inviterId,
                                @Param("now") LocalDateTime now);
+
+    /** 级联撤销：整个空间的所有待处理邀请（空间解散时调用，设计文档 v1.2 §6.8 / §11） */
+    @Update("UPDATE jj_invitation SET status = 4, responded_at = #{now} " +
+            "WHERE space_id = #{spaceId} AND status = 1")
+    int cancelPendingBySpace(@Param("spaceId") Long spaceId, @Param("now") LocalDateTime now);
 
     /**
      * 我收到的全部邀请（按新到旧）。
