@@ -94,6 +94,7 @@
         <el-table-column
           label="关联记录"
           width="200"
+          v-if="!isMobile"
         >
           <template #default="scope">
             <div v-if="scope.row.recordId" class="record-link">
@@ -121,6 +122,7 @@
           label="类型"
           width="100"
           align="center"
+          v-if="!isMobile"
         >
           <template #default="scope">
             <el-tag :type="getTypeTagType(scope.row.type)" size="small" effect="plain">
@@ -145,6 +147,7 @@
           prop="createdAt"
           label="接收时间"
           width="180"
+          v-if="!isMobile"
         >
           <template #default="scope">
             {{ formatDateTime(scope.row.createdAt) }}
@@ -154,7 +157,7 @@
         <el-table-column
           label="操作"
           width="140"
-          fixed="right"
+          :fixed="isMobile ? false : 'right'"
           align="center"
         >
           <template #default="scope">
@@ -230,6 +233,7 @@ import AppCard from '@/components/ui/AppCard.vue'
 import AsyncState from '@/components/ui/AsyncState.vue'
 import { formatDateTime as formatDateTimeSafe } from '@/utils/date'
 import { getModuleTagType } from '@/utils/module'
+import { useIsMobile } from '@/composables/useMediaQuery'
 
 const router = useRouter()
 const route = useRoute()
@@ -238,6 +242,7 @@ const authStore = useAuthStore()
 // 响应式状态
 const messages = ref<any[]>([])
 const loading = ref(false)
+const isMobile = useIsMobile()
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)

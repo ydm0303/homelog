@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'breakpoints' as *;
 
 // ============================================================
 // 0. 运行时 CSS 变量
@@ -67,6 +68,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -76,7 +78,9 @@ body {
   color: $text-primary;
   background-color: $bg-color;
   min-height: 100vh;
+  min-height: 100dvh;
   font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
 }
 
 h1,
@@ -89,6 +93,7 @@ h4 {
 #app {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 // 滚动条
@@ -155,6 +160,7 @@ h4 {
 .el-button {
   border-radius: $border-radius-base;
   font-weight: $font-weight-medium;
+  touch-action: manipulation;
   transition: background-color $transition-fast $ease-out, border-color $transition-fast $ease-out,
     color $transition-fast $ease-out, box-shadow $transition-fast $ease-out,
     transform $transition-fast $ease-out;
@@ -265,6 +271,25 @@ h4 {
 
 .el-message {
   border-radius: $border-radius-base;
+}
+
+// 窄屏下弹窗自适应宽度：组件上的固定像素 width（如 700px/500px）会溢出手机屏
+@include down(md) {
+  .el-dialog {
+    width: 92vw !important;
+    max-width: 92vw;
+    margin-top: 8vh !important;
+  }
+
+  .el-dialog__body {
+    max-height: 64vh;
+    overflow-y: auto;
+  }
+
+  .el-message-box {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 
 // ---- 表单 ----

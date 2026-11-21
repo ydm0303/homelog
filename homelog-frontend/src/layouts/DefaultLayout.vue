@@ -209,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { HomeFilled, Setting, Menu, Bell, Search, ArrowDown, SwitchButton, House, Back } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
@@ -218,6 +218,7 @@ import { messageApi, spaceApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getModuleIcon } from '@/utils/module'
 import { roleLabel, roleTagType } from '@/utils/role'
+import { useIsTabletDown } from '@/composables/useMediaQuery'
 
 const router = useRouter()
 const route = useRoute()
@@ -234,21 +235,15 @@ const mobileDrawer = ref(false)
 const unreadCount = ref(0)
 const searchKeyword = ref('')
 
-// 断点检测
-const isMobile = ref(false)
-const checkMobile = () => {
-  isMobile.value = window.innerWidth < 1024
-  if (isMobile.value) {
-    sidebarCollapsed.value = false
-  }
-}
+// 断点检测：<1024px 走移动端布局（抽屉菜单）
+const isMobile = useIsTabletDown()
+watch(isMobile, (mobile) => {
+  if (mobile) sidebarCollapsed.value = false
+}, { immediate: true })
 
 let unreadTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-
   unregisterScrollGuard = router.beforeEach((_to, from) => {
     const el = document.querySelector<HTMLElement>('.page-content')
     if (el && from.fullPath) {
@@ -272,7 +267,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile)
   if (unregisterScrollGuard) unregisterScrollGuard()
   if (unreadTimer) clearInterval(unreadTimer)
 })
@@ -864,6 +858,7 @@ function handleSearch() {
   flex: 1;
   padding: 24px clamp(24px, 5vw, 88px) calc(88px + env(safe-area-inset-bottom));
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: $bg-color;
 }
 
@@ -878,6 +873,7 @@ function handleSearch() {
   right: 28px;
   bottom: calc(28px + env(safe-area-inset-bottom));
   z-index: $z-index-fab;
+  touch-action: manipulation;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -983,6 +979,7 @@ function handleSearch() {
     left: 0;
     top: 0;
     height: 100vh;
+    height: 100dvh;
     z-index: $z-index-mobile-drawer;
     box-shadow: 4px 0 20px rgba($text-primary, 0.12);
     transform: translateX(-100%);

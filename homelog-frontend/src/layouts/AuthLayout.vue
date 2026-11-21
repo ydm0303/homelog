@@ -48,6 +48,7 @@ import { House } from '@element-plus/icons-vue'
 .login-page {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

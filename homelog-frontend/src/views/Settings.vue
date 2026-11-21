@@ -19,7 +19,7 @@
           <el-table :data="members" border stripe class="w-full">
             <el-table-column prop="nickName" label="昵称" min-width="120" />
             <el-table-column prop="username" label="账号" min-width="140" />
-            <el-table-column prop="email" label="邮箱" min-width="200" />
+            <el-table-column prop="email" label="邮箱" min-width="200" v-if="!isMobile" />
             <el-table-column label="角色" width="120">
               <template #default="scope">
                 <el-tag :type="getRoleTagType(scope.row.role)" size="small">
@@ -38,7 +38,7 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="160" fixed="right">
+            <el-table-column label="操作" width="160" :fixed="isMobile ? false : 'right'">
               <template #default="scope">
                 <el-dropdown size="small">
                   <el-button link>操作 <el-icon><ArrowDown /></el-icon></el-button>
@@ -226,8 +226,8 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column prop="sortOrder" label="排序号" width="80" align="center" />
-            <el-table-column label="操作" width="140" fixed="right">
+            <el-table-column prop="sortOrder" label="排序号" width="80" align="center" v-if="!isMobile" />
+            <el-table-column label="操作" width="140" :fixed="isMobile ? false : 'right'">
               <template #default="scope">
                 <el-dropdown size="small">
                   <el-button link>操作 <el-icon><ArrowDown /></el-icon></el-button>
@@ -473,10 +473,13 @@ import {
   canManageTargetRole,
   canGrantRole
 } from '@/utils/role'
+import { useIsMobile } from '@/composables/useMediaQuery'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const moduleStore = useModuleStore()
+
+const isMobile = useIsMobile()
 
 const activeTab = ref('members')
 

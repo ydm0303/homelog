@@ -429,6 +429,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDate as formatDateSafe, formatDateTime as formatDateTimeSafe, dayDiffFromToday } from '@/utils/date'
 import { getModuleIcon, getModuleTagType } from '@/utils/module'
 import { getExpiryState } from '@/utils/drug'
+import { useIsMobile } from '@/composables/useMediaQuery'
 
 const route = useRoute()
 const router = useRouter()
@@ -448,6 +449,11 @@ const DRUG_LIST_MAX = 1000 // 药箱体量小，一次拉全量做客户端过�
 const searchKeyword = ref('')
 const selectedTag = ref('')
 const viewMode = ref('list')
+// 窄屏（手机）默认切到卡片视图，避免表格横向滚动 + fixed 列遮挡
+const isMobile = useIsMobile()
+watch(isMobile, (mobile) => {
+  if (mobile) viewMode.value = 'card'
+}, { immediate: true })
 const showAdvancedFilter = ref(false)
 const filterDateRange = ref<[string, string] | null>(null)
 const filterCreator = ref('')

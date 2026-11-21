@@ -179,11 +179,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Plus, Camera } from '@element-plus/icons-vue'
 import { spaceApi, fileApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { resolveFileUrl } from '@/utils/file'
+import { useIsMobile } from '@/composables/useMediaQuery'
 
 interface Field {
   id: number
@@ -252,11 +253,8 @@ const tagInputValue = ref('')
 // 空间成员
 const spaceMembers = ref<Member[]>([])
 
-// 移动端检测
-const isMobile = ref(false)
-const checkMobile = () => { isMobile.value = window.innerWidth < 768 }
-onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
-onUnmounted(() => window.removeEventListener('resize', checkMobile))
+// 移动端检测：<768px 显示拍照入口
+const isMobile = useIsMobile()
 
 // 标签输入处理
 function addTag() {
