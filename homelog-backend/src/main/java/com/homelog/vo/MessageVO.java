@@ -16,6 +16,10 @@ public class MessageVO {
     private Long spaceId;
     private Long userId;
     private Long recordId;
+
+    /** 业务引用 ID：邀请类消息指向 jj_invitation.id，供前端跳转接受页 */
+    private Long refId;
+
     private String content;
     private Integer isRead;
     private LocalDateTime createdAt;

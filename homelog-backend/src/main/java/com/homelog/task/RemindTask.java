@@ -3,14 +3,19 @@ package com.homelog.task;
 import com.homelog.entity.Message;
 import com.homelog.entity.Module;
 import com.homelog.entity.Record;
+import com.homelog.entity.Space;
 import com.homelog.entity.SpaceMember;
 import com.homelog.entity.User;
 import com.homelog.mapper.MessageMapper;
 import com.homelog.mapper.ModuleMapper;
 import com.homelog.mapper.RecordMapper;
+import com.homelog.mapper.SpaceMapper;
 import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
+import com.homelog.security.Role;
+import com.homelog.security.SpaceMembershipReader;
 import com.homelog.service.MailService;
+import com.homelog.service.MessageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +40,7 @@ import java.util.stream.Collectors;
 public class RemindTask {
 
     private final RecordMapper recordMapper;
+    private final SpaceMapper spaceMapper;
     private final SpaceMemberMapper spaceMemberMapper;
     private final UserMapper userMapper;
     private final MessageMapper messageMapper;
@@ -49,53 +55,72 @@ public class RemindTask {
 
     /**
      * 每天 08:00 执行到期扫描
+     *
+     * <p>步 3 起支持多空间，故这里<b>遍历所有正常状态的空间</b>逐个处理。
+     * 早期实现把 space_id 写死成 1，单空间时代成立；新家庭空间产生后，
+     * 除最早那一个家以外所有人的到期提醒都会静默失效 —— 属于必须随步 3 一起改的连带缺陷。
      */
     @Scheduled(cron = "0 0 8 * * ?")
     @Transactional
     public void scanDueRecords() {
         log.info("开始扫描到期记录...");
 
-        // 解析提前提醒天数
+        List<Space> spaces = spaceMapper.selectAllActive();
+        if (spaces == null || spaces.isEmpty()) {
+            log.info("无可处理的家庭空间，跳过到期扫描");
+            return;
+        }
+
         String[] leadDaysArray = leadDaysStr.split(",");
         for (String dayStr : leadDaysArray) {
             int leadDays = Integer.parseInt(dayStr.trim());
             LocalDate targetDate = LocalDate.now().plusDays(leadDays);
 
-            // 查询当天到期的记录
-            List<Record> dueRecords = recordMapper.selectDueRecords(1L, targetDate.toString());
-
-            if (dueRecords.isEmpty()) {
-                log.info("未发现符合条件的到期记录：提前天数={}，日期={}", leadDays, targetDate);
-                continue;
-            }
-
-            log.info("发现到期记录：数量={}，提前天数={}，日期={}", dueRecords.size(), leadDays, targetDate);
-
-            // 获取所有开启邮件提醒的成员
-            List<SpaceMember> members = spaceMemberMapper.selectBySpaceId(1L);
-            List<SpaceMember> mailMembers = members.stream()
-                    .filter(m -> m.getReceiveMail() == 1)
-                    .collect(Collectors.toList());
-
-            // 用户邮箱映射
-            Map<Long, User> userMap = mailMembers.stream()
-                    .map(m -> userMapper.selectById(m.getUserId()))
-                    .filter(u -> u != null && u.getEmail() != null && !u.getEmail().isEmpty())
-                    .collect(Collectors.toMap(User::getId, u -> u));
-
-            // 为每条记录创建消息并发送邮件
-            for (Record record : dueRecords) {
-                processRecord(record, leadDays, targetDate, mailMembers, userMap);
+            for (Space space : spaces) {
+                processSpace(space.getId(), leadDays, targetDate);
             }
         }
 
-        log.info("到期记录扫描完成。");
+        log.info("到期记录扫描完成。空间数={}", spaces.size());
+    }
+
+    /**
+     * 处理单个家庭空间的到期记录。
+     */
+    private void processSpace(Long spaceId, int leadDays, LocalDate targetDate) {
+        List<Record> dueRecords = recordMapper.selectDueRecords(spaceId, targetDate.toString());
+
+        if (dueRecords.isEmpty()) {
+            log.debug("未发现符合条件的到期记录：spaceId={}, 提前天数={}, 日期={}", spaceId, leadDays, targetDate);
+            return;
+        }
+
+        log.info("发现到期记录：spaceId={}, 数量={}, 提前天数={}, 日期={}",
+                spaceId, dueRecords.size(), leadDays, targetDate);
+
+        // 获取该空间内开启邮件提醒的在籍成员
+        List<SpaceMember> members = spaceMemberMapper.selectBySpaceId(spaceId);
+        List<SpaceMember> mailMembers = members.stream()
+                .filter(SpaceMembershipReader::isActive)
+                .filter(m -> m.getReceiveMail() != null && m.getReceiveMail() == 1)
+                .collect(Collectors.toList());
+
+        // 用户邮箱映射
+        Map<Long, User> userMap = mailMembers.stream()
+                .map(m -> userMapper.selectById(m.getUserId()))
+                .filter(u -> u != null && u.getEmail() != null && !u.getEmail().isEmpty())
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        // 为每条记录创建消息并发送邮件
+        for (Record record : dueRecords) {
+            processRecord(spaceId, record, leadDays, targetDate, mailMembers, userMap);
+        }
     }
 
     /**
      * 处理单条到期记录
      */
-    private void processRecord(Record record, int leadDays, LocalDate targetDate,
+    private void processRecord(Long spaceId, Record record, int leadDays, LocalDate targetDate,
                                List<SpaceMember> mailMembers, Map<Long, User> userMap) {
 
         String typeLabel = getRecordTypeLabel(record);
@@ -113,18 +138,19 @@ public class RemindTask {
         }
 
         // 为每个开启邮件提醒的成员创建消息
-        // 私密记录仅管理员可见（与 RecordService.canViewRecord 一致），避免标题/内容泄露给非管理员
+        // 私密记录仅管理档（owner/admin）可见（与 RecordService.canViewRecord 一致），避免标题/内容泄露给非管理档
         boolean isPrivate = record.getIsPrivate() != null && record.getIsPrivate() == 1;
         for (SpaceMember member : mailMembers) {
-            if (isPrivate && (member.getRole() == null || member.getRole() != 1)) {
+            if (isPrivate && !Role.canSeePrivate(member.getRole())) {
                 continue;
             }
 
             // 写入消息中心
             Message message = new Message()
-                    .setSpaceId(1L)
+                    .setSpaceId(spaceId)
                     .setUserId(member.getUserId())
                     .setRecordId(record.getId())
+                    .setType(MessageType.REMIND)
                     .setContent(content)
                     .setIsRead(0)
                     .setCreatedAt(LocalDateTime.now());

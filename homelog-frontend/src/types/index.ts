@@ -15,6 +15,10 @@ export interface Space {
   id: number
   name: string
   ownerId: number
+  /** 本人在该空间的角色：1=owner 2=admin 3=member 4=readonly */
+  role?: number
+  /** 在籍成员数 */
+  memberCount?: number
   createdAt: string
 }
 
@@ -22,9 +26,17 @@ export interface SpaceMember {
   id: number
   spaceId: number
   userId: number
-  role: number // 1=admin, 2=edit, 3=readonly
+  /** 1=owner 2=admin 3=member 4=readonly（语义见 utils/role） */
+  role: number
+  /** 1=active 2=left 3=removed */
+  status?: number
+  nickname?: string
   receiveMail: number
   createdAt: string
+  // 关联用户信息
+  username?: string
+  nickName?: string
+  email?: string
 }
 
 export interface FieldVO {

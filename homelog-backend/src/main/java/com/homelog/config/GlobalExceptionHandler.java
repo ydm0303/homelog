@@ -3,7 +3,7 @@ package com.homelog.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.MediaType;import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -72,6 +72,26 @@ public class GlobalExceptionHandler {
         body.put("timestamp", System.currentTimeMillis());
         body.put("traceId", generateTraceId());
         log.warn("Illegal argument: path={}, message={}", request.getRequestURI(), ex.getMessage());
+        return body;
+    }
+
+    /**
+     * 处理权限不足异常
+     * <p>必须显式列出：本类末尾的 {@code @ExceptionHandler(Exception.class)} 会吞掉
+     * 任何未单独声明的异常并返回 500。设计文档 v1.2 §15 M3 —— 越权统一收敛到 403，
+     * 不再让「权限不足」伪装成「服务器故障」。
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, Object> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", 403);
+        body.put("message", ex.getMessage() != null && !ex.getMessage().trim().isEmpty()
+                ? ex.getMessage() : "权限不足，无法访问该资源");
+        body.put("path", request.getRequestURI());
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("traceId", generateTraceId());
+        log.warn("Access denied: path={}, reason={}", request.getRequestURI(), ex.getMessage());
         return body;
     }
 

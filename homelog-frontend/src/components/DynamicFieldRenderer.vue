@@ -179,12 +179,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Plus, Camera } from '@element-plus/icons-vue'
 import { spaceApi, fileApi } from '@/api'
-import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { resolveFileUrl } from '@/utils/file'
+import { useIsMobile } from '@/composables/useMediaQuery'
 
 interface Field {
   id: number
@@ -218,8 +218,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:value': [value: any]
 }>()
-
-const authStore = useAuthStore()
 
 // 本地状态
 const localValue = ref(props.value)
@@ -255,11 +253,8 @@ const tagInputValue = ref('')
 // 空间成员
 const spaceMembers = ref<Member[]>([])
 
-// 移动端检测
-const isMobile = ref(false)
-const checkMobile = () => { isMobile.value = window.innerWidth < 768 }
-onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
-onUnmounted(() => window.removeEventListener('resize', checkMobile))
+// 移动端检测：<768px 显示拍照入口
+const isMobile = useIsMobile()
 
 // 标签输入处理
 function addTag() {
@@ -298,7 +293,7 @@ function emitUpdate() {
 
 async function fetchSpaceMembers() {
   try {
-    const response = await spaceApi.getMembers(authStore.spaceId)
+    const response = await spaceApi.getMembers()
     spaceMembers.value = response.data
   } catch (e) {
     console.error('Failed to fetch space members:', e)

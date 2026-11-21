@@ -128,19 +128,47 @@ public class MessageService {
 
     /**
      * 创建消息（供定时任务/其他服务调用）
+     *
+     * <p>M1 修复：早先 {@code type} 形参只进了日志、未落库（V3 才加的 type 列），
+     * 导致通知无法按类型筛选。现在真正写入。{@code spaceId} 取当前请求空间——
+     * 调用方（提醒任务、业务事件）都在目标空间上下文内执行，语义正确。
      */
     @Transactional
     public void createMessage(Long userId, Long recordId, String content, String type) {
+        insertMessage(currentUserService.getCurrentSpaceId(), userId, recordId, null, content, type);
+    }
+
+    /**
+     * 创建一条带业务引用的通知（邀请类消息用）。
+     *
+     * <p>与 {@link #createMessage} 的区别：显式传入 {@code spaceId} 与 {@code refId}，
+     * 不依赖当前请求上下文。邀请通知要在「被邀请人尚未加入的目标空间」语境下记录归属，
+     * 且需通过 {@code refId} 指回 {@code jj_invitation.id} 供前端跳转接受页。
+     *
+     * @param spaceId  消息归属空间（邀请=目标空间）
+     * @param userId   接收人
+     * @param refId    业务引用 ID（邀请类=invitationId），可空
+     * @param content  文案
+     * @param type     类型常量，见 {@code MessageType}
+     */
+    @Transactional
+    public void createNotification(Long spaceId, Long userId, Long refId, String content, String type) {
+        insertMessage(spaceId, userId, null, refId, content, type);
+    }
+
+    private void insertMessage(Long spaceId, Long userId, Long recordId, Long refId, String content, String type) {
         Message message = new Message()
-                .setSpaceId(currentUserService.getCurrentSpaceId())
+                .setSpaceId(spaceId)
                 .setUserId(userId)
                 .setRecordId(recordId)
+                .setRefId(refId)
+                .setType(type)
                 .setContent(content)
                 .setIsRead(0)
                 .setCreatedAt(LocalDateTime.now());
         messageMapper.insert(message);
-        log.info("消息创建成功：消息ID={}，用户ID={}，记录ID={}，类型={}",
-                message.getId(), userId, recordId, type);
+        log.info("消息创建成功：消息ID={}，用户ID={}，记录ID={}，引用ID={}，类型={}",
+                message.getId(), userId, recordId, refId, type);
     }
 
     /**
@@ -166,7 +194,12 @@ public class MessageService {
                 .setContent(message.getContent())
                 .setIsRead(message.getIsRead())
                 .setCreatedAt(message.getCreatedAt())
-                .setType(inferType(message.getContent()));
+                // M1 修复：直接取落库的 type，不再靠猜文案关键字。
+                // 旧实现用 inferType(content) 嗅探「到期/提醒/@」，任何文案改动或新增
+                // 业务类型（如 family_invitation）都会让分类静默出错。
+                // 老数据在 V3 迁移里已回填为默认值 'record'。
+                .setType(message.getType() != null ? message.getType() : MessageType.RECORD)
+                .setRefId(message.getRefId());
 
         // 补充关联记录信息
         if (message.getRecordId() != null) {
@@ -182,19 +215,5 @@ public class MessageService {
         }
 
         return vo;
-    }
-
-    /**
-     * 根据内容推断消息类型
-     */
-    private String inferType(String content) {
-        if (content == null) return "system";
-        if (content.contains("到期") || content.contains("截止") || content.contains("提醒")) {
-            return "remind";
-        }
-        if (content.contains("@")) {
-            return "mention";
-        }
-        return "system";
     }
 }
