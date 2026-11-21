@@ -30,6 +30,10 @@
 
       <main class="login-panel">
         <div class="login-card">
+          <div class="brand-mini">
+            <el-icon><House /></el-icon>
+            <span>家记</span>
+          </div>
           <slot />
         </div>
       </main>
@@ -272,6 +276,11 @@ import { House } from '@element-plus/icons-vue'
   box-shadow: 0 16px 36px rgba(80, 50, 30, 0.1);
 }
 
+// 迷你品牌标识仅在窄屏（brand-panel 隐藏后）显示
+.brand-mini {
+  display: none;
+}
+
 @media (max-width: 1023px) {
   .login-page {
     padding: 20px 16px;
@@ -295,7 +304,10 @@ import { House } from '@element-plus/icons-vue'
 
 @media (max-width: 639px) {
   .login-page {
-    padding: 14px;
+    // standalone 模式下 Safari 不把视口顶计入刘海，需自行预留状态栏安全区
+    padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+    align-items: flex-start;
+    overflow-y: auto;
   }
 
   .login-shell {
@@ -303,7 +315,7 @@ import { House } from '@element-plus/icons-vue'
   }
 
   .brand-panel {
-    padding: 24px 18px 18px;
+    display: none;
   }
 
   .logo-mark {
@@ -338,6 +350,18 @@ import { House } from '@element-plus/icons-vue'
   .login-card {
     padding: 24px 18px 20px;
     border-radius: $border-radius-xl;
+
+    .brand-mini {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      color: $primary-color;
+      font-size: $text-title;
+      font-weight: $font-weight-bold;
+      letter-spacing: 0.04em;
+    }
   }
 }
 </style>
