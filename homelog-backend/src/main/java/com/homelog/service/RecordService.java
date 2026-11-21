@@ -13,6 +13,7 @@ import com.homelog.mapper.RecordMapper;
 import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
 import com.homelog.security.CurrentUserService;
+import com.homelog.security.Role;
 import com.homelog.vo.PageResult;
 import com.homelog.vo.RecordVO;
 import lombok.RequiredArgsConstructor;
@@ -111,7 +112,7 @@ public class RecordService {
 
         // 仅私密：非管理员不允许查看私密记录，直接返回空
         if (Boolean.TRUE.equals(privateOnly)) {
-            if (role != 1) {
+            if (!Role.canSeePrivate(role)) {
                 return new PageResult<>(new ArrayList<>(), 0, page, size);
             }
             records = records.stream()
@@ -296,7 +297,7 @@ public class RecordService {
      * 非管理员不返回私密字段值，避免列表/首页摘要泄露私密内容。
      */
     private void removePrivateFieldsForViewer(RecordVO vo, Long moduleId, Integer viewerRole) {
-        if (viewerRole != null && viewerRole == 1) {
+        if (Role.canSeePrivate(viewerRole)) {
             return;
         }
         if (vo.getDataJson() == null || moduleId == null) {
@@ -354,7 +355,7 @@ public class RecordService {
         }
 
         // 权限检查：只读不能创建
-        if (role == 3) {
+        if (!Role.canWrite(role)) {
             log.warn("Create record denied, read-only role: moduleId={}, userId={}", module.getId(), currentUserId);
             throw new RuntimeException("只读权限，无法创建记录");
         }
@@ -406,11 +407,11 @@ public class RecordService {
         }
 
         // 权限检查：只读不能修改；编辑只能改自己的
-        if (role == 3) {
+        if (!Role.canWrite(role)) {
             log.warn("Update record denied, read-only role: recordId={}, userId={}", recordId, currentUserId);
             throw new RuntimeException("只读权限，无法修改记录");
         }
-        if (role == 2 && !record.getCreatorId().equals(currentUserId)) {
+        if (Role.ownContentOnly(role) && !record.getCreatorId().equals(currentUserId)) {
             log.warn("Update record denied, not the creator: recordId={}, userId={}, creatorId={}",
                     recordId, currentUserId, record.getCreatorId());
             throw new RuntimeException("只能修改自己创建的记录");
@@ -465,7 +466,7 @@ public class RecordService {
         }
 
         // 权限检查：只读/编辑不能删除（仅管理员可删）
-        if (role != 1) {
+        if (!Role.canDelete(role)) {
             log.warn("Delete record denied, not an admin: recordId={}, role={}, userId={}", recordId, role, currentUserId);
             throw new RuntimeException("仅管理员可删除记录");
         }
@@ -536,7 +537,7 @@ public class RecordService {
      */
     private boolean canViewRecord(Record record, Integer role, Long currentUserId) {
         // 管理员可见所有
-        if (role == 1) return true;
+        if (Role.canSeePrivate(role)) return true;
 
         // 记录级私密：仅管理员可见
         if (record.getIsPrivate() == 1) return false;

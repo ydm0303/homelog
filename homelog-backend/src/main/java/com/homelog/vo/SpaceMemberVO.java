@@ -15,7 +15,7 @@ public class SpaceMemberVO {
     private Long id;
     private Long spaceId;
     private Long userId;
-    private Integer role; // 1=admin, 2=edit, 3=readonly
+    private Integer role; // 1=owner 2=admin 3=member 4=readonly（语义见 com.homelog.security.Role）
     private Integer receiveMail;
     private LocalDateTime createdAt;
 

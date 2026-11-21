@@ -6,6 +6,7 @@ import com.homelog.entity.Module;
 import com.homelog.mapper.RecordMapper;
 import com.homelog.mapper.ModuleMapper;
 import com.homelog.security.CurrentUserService;
+import com.homelog.security.Role;
 import com.homelog.vo.SearchResultVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +54,7 @@ public class SearchService {
                 request.getTag(),
                 request.getStartDate(),
                 request.getEndDate(),
-                role == 1 ? 1 : 0,
+                Role.canSeePrivate(role) ? 1 : 0,
                 currentUserId,
                 offset,
                 request.getSize()
@@ -83,7 +84,7 @@ public class SearchService {
                 request.getTag(),
                 request.getStartDate(),
                 request.getEndDate(),
-                role == 1 ? 1 : 0,
+                Role.canSeePrivate(role) ? 1 : 0,
                 currentUserId
         );
     }

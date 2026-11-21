@@ -20,6 +20,10 @@ public interface RecordMapper extends BaseMapper<Record> {
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} ORDER BY created_at DESC")
     List<Record> selectBySpaceId(@Param("spaceId") Long spaceId);
 
+    /** 某成员在某空间创建的全部记录（移除成员时连带清理用，设计文档 v1.2 §6.7） */
+    @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND creator_id = #{creatorId} ORDER BY id")
+    List<Record> selectBySpaceAndCreator(@Param("spaceId") Long spaceId, @Param("creatorId") Long creatorId);
+
     @Select("SELECT * FROM jj_record WHERE space_id = #{spaceId} AND module_id = #{moduleId} AND id = #{id}")
     Record selectByIdAndSpaceAndModule(@Param("spaceId") Long spaceId, @Param("moduleId") Long moduleId, @Param("id") Long id);
 

@@ -2,7 +2,6 @@ package com.homelog.security;
 
 import com.homelog.entity.SpaceMember;
 import com.homelog.entity.User;
-import com.homelog.mapper.SpaceMemberMapper;
 import com.homelog.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,20 +16,20 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 用户认证信息加载服务
- * 从 jj_user 读取账号密码，从 jj_space_member 读取空间角色并映射为 ROLE_* 权限。
- * 权限约定：1=ADMIN 2=EDIT 3=READ，与 RecordService/SpaceController/MetaController 中的角色解析保持一致。
+ * 用户认证信息加载服务。
+ *
+ * <p>从 jj_user 读取账号密码；并为用户生成一个<b>代表性的</b> ROLE_* 权限写入 JWT。
+ * 注意该权限只是元数据：真正的鉴权由 {@link CurrentUserService} 按请求实时解析
+ * 「当前空间 + 该空间内的角色」完成，档位语义统一见 {@link Role}
+ * （1=owner 2=admin 3=member 4=readonly）。
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    /** 单空间：默认空间 ID */
-    private static final long DEFAULT_SPACE_ID = 1L;
-
     private final UserMapper userMapper;
-    private final SpaceMemberMapper spaceMemberMapper;
+    private final SpaceMembershipReader spaceMembershipReader;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -51,36 +50,50 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     /**
-     * 将空间成员角色映射为 Spring Security 权限（ROLE_ADMIN/ROLE_EDIT/ROLE_READ）
-     * 优先取默认空间(1)的成员关系；新注册用户空间 id 非 1，则回退为其任一成员关系。
+     * 为 JWT 生成一个代表性的 Spring Security 权限声明。
+     *
+     * <p><b>现状说明（步 2）：</b>本仓库没有任何 {@code @PreAuthorize}/{@code hasRole}
+     * 注解消费这些权限，真正的鉴权全部走 {@link CurrentUserService#getCurrentRole()}
+     * 按请求实时解析当前空间，因此这里的权限<b>只是元数据</b>，不是授权依据。
+     * 早期实现把它建立在写死的 {@code DEFAULT_SPACE_ID=1} 上，多空间下已无意义，
+     * 改为取「space_id 最小的在籍空间」作为代表档，纯粹为了稳定可重现。
+     *
+     * <p>不要据这些权限做安全判断，也不要在新增鉴权时复用它们——
+     * 它们无法表达「在哪个家的什么身份」。若将来要做注解层鉴权，应改为
+     * 自定义 {@code PermissionEvaluator} 内部调 {@link Role}，而非扩展权限名。
      */
     private List<GrantedAuthority> resolveAuthorities(Long userId) {
-        List<SpaceMember> memberships = spaceMemberMapper.selectByUserId(userId);
-        if (memberships == null || memberships.isEmpty()) {
+        List<SpaceMember> active = spaceMembershipReader.findActiveMemberships(userId);
+        if (active.isEmpty()) {
             return Collections.emptyList();
         }
 
-        SpaceMember member = memberships.stream()
-                .filter(m -> m.getSpaceId() != null && m.getSpaceId() == DEFAULT_SPACE_ID)
-                .findFirst()
-                .orElse(memberships.get(0));
+        SpaceMember representative = active.stream()
+                .filter(m -> m.getSpaceId() != null)
+                .min((a, b) -> Long.compare(a.getSpaceId(), b.getSpaceId()))
+                .orElse(active.get(0));
 
-        if (member.getRole() == null) {
+        if (representative.getRole() == null) {
             return Collections.emptyList();
         }
 
-        String role;
-        switch (member.getRole()) {
-            case 1:
-                role = "ROLE_ADMIN";
-                break;
-            case 2:
-                role = "ROLE_EDIT";
-                break;
-            default:
-                role = "ROLE_READ";
-                break;
+        return Collections.singletonList(new SimpleGrantedAuthority(roleToAuthority(representative.getRole())));
+    }
+
+    /**
+     * 角色档位 → Spring Security 权限名（仅元数据，见 {@link #resolveAuthorities} 说明）。
+     * <p>owner 单列 ROLE_OWNER，便于将来在注解层区分「仅所有者」的操作。
+     */
+    static String roleToAuthority(Integer role) {
+        if (Role.isOwner(role)) {
+            return "ROLE_OWNER";
         }
-        return Collections.singletonList(new SimpleGrantedAuthority(role));
+        if (Role.isAdminTier(role)) {
+            return "ROLE_ADMIN";
+        }
+        if (Role.isMemberTier(role)) {
+            return "ROLE_EDIT";
+        }
+        return "ROLE_READ";
     }
 }

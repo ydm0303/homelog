@@ -1,8 +1,9 @@
 // 认证状态管理
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '@/api'
-import type { User } from '@/types'
+import { authApi, spaceApi } from '@/api'
+import * as roleAbility from '@/utils/role'
+import type { User, Space } from '@/types'
 
 /**
  * 从 JWT 载荷里解析过期时间（毫秒时间戳），解析失败返回 0。
@@ -27,8 +28,10 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
-  const spaceId = ref<number>(1)
-  const role = ref<number>(3) // 1=admin, 2=edit, 3=readonly
+  // 当前空间由 X-Space-Id 请求头承载（见 api/index.ts 请求拦截器），此处仅作展示/判断用
+  const spaceId = ref<number | null>(null)
+  const spaces = ref<Space[]>([])
+  const role = ref<number>(roleAbility.ROLE.READONLY) // 1=owner 2=admin 3=member 4=readonly
   const initialized = ref(false)
   let initPromise: Promise<void> | null = null
   // 并发的 401 共用同一次刷新，避免多个请求同时刷新导致后到的刷新用旧 refresh token 失败
@@ -39,9 +42,19 @@ export const useAuthStore = defineStore('auth', () => {
   let visibilityBound = false
 
   const isLoggedIn = computed(() => !!token.value && !!user.value)
-  const isAdmin = computed(() => role.value === 1)
-  const isEditor = computed(() => role.value <= 2)
-  const isReadonly = computed(() => role.value === 3)
+  // 权限判断统一委托 @/utils/role（与后端 Role 语义层一一对应，见设计文档 v1.2 §4.4）
+  const isAdmin = computed(() => roleAbility.isAdmin(role.value))
+  // 保留 isEditor 名称向后兼容；语义 = 可写（非只读）。新代码请直接判 canWrite
+  const isEditor = computed(() => roleAbility.canWrite(role.value))
+  const isReadonly = computed(() => roleAbility.isReadonlyTier(role.value))
+  const canWrite = computed(() => roleAbility.canWrite(role.value))
+  const canDelete = computed(() => roleAbility.canDelete(role.value))
+  const canSeePrivate = computed(() => roleAbility.canSeePrivate(role.value))
+  const canManageMembers = computed(() => roleAbility.canManageMembers(role.value))
+  const canManageModule = computed(() => roleAbility.canManageModule(role.value))
+  const isOwner = computed(() => roleAbility.isOwner(role.value))
+  /** 当前空间对象（切换器展示用） */
+  const currentSpace = computed(() => spaces.value.find(s => s.id === spaceId.value) || null)
 
   // 初始化认证状态（页面刷新时先恢复登录态，路由守卫/布局都要等它完成）
   async function initAuth() {
@@ -66,7 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     token.value = savedToken
     refreshToken.value = savedRefreshToken
-    role.value = savedRole ? parseInt(savedRole) : 3
+    role.value = savedRole ? parseInt(savedRole) : roleAbility.ROLE.READONLY
 
     // 先用本地缓存渲染，避免刷新瞬间显示默认占位名
     if (savedUser) {
@@ -86,10 +99,25 @@ export const useAuthStore = defineStore('auth', () => {
       await fetchMe()
       // 恢复登录态后安排主动续期，避免停留过久后 token 过期
       scheduleProactiveRefresh()
-    } catch {
+    } catch (error: any) {
+      // 403：本地记录的当前空间已失效（被移除/解散），清掉 header 让它回落到其余在籍空间
+      if (error?.response?.status === 403) {
+        localStorage.removeItem('current_space_id')
+        try {
+          await fetchMe()
+          scheduleProactiveRefresh()
+          await fetchSpaces().catch(() => {})
+          return
+        } catch {
+          // 仍然失败：按退出处理
+        }
+      }
       // 走到这里说明刷新也已失败，清理登录态
       await logout()
+      return
     }
+
+    await fetchSpaces().catch(() => {})
   }
 
   // 登录
@@ -107,6 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
     api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
 
     await fetchMe()
+    await fetchSpaces().catch(() => {})
     scheduleProactiveRefresh()
   }
 
@@ -125,6 +154,7 @@ export const useAuthStore = defineStore('auth', () => {
     api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
 
     await fetchMe()
+    await fetchSpaces().catch(() => {})
     scheduleProactiveRefresh()
   }
 
@@ -135,10 +165,34 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = profile
     localStorage.setItem('user', JSON.stringify(profile))
 
-    // 后端 /auth/detail 返回当前空间角色，前端不再硬编码管理员
-    role.value = profile.role ?? 3
-    spaceId.value = profile.spaceId ?? 1
+    // 后端 /auth/detail 返回当前空间角色（依据 X-Space-Id 解析），前端不再硬编码
+    role.value = profile.role ?? roleAbility.ROLE.READONLY
+    const resolvedSpaceId = profile.spaceId ?? null
+    spaceId.value = resolvedSpaceId
+    if (resolvedSpaceId != null) {
+      localStorage.setItem('current_space_id', String(resolvedSpaceId))
+    } else {
+      localStorage.removeItem('current_space_id')
+    }
     localStorage.setItem('role', role.value.toString())
+  }
+
+  // 拉取我加入的全部在籍空间（切换器数据源）
+  async function fetchSpaces() {
+    const response = await spaceApi.list()
+    spaces.value = Array.isArray(response.data) ? response.data : []
+    return spaces.value
+  }
+
+  /**
+   * 切换当前空间：写入 current_space_id → 用新 header 重新拉取身份/角色 → 刷新空间列表。
+   * 只改变上下文，不改变任何空间内的角色（角色由服务端按成员关系返回）。
+   */
+  async function switchSpace(targetSpaceId: number) {
+    if (targetSpaceId === spaceId.value) return
+    localStorage.setItem('current_space_id', String(targetSpaceId))
+    await fetchMe()
+    await fetchSpaces().catch(() => {})
   }
 
   // 刷新 Access Token
@@ -240,12 +294,15 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     refreshToken.value = null
     user.value = null
-    role.value = 3
+    role.value = roleAbility.ROLE.READONLY
+    spaceId.value = null
+    spaces.value = []
 
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user')
     localStorage.removeItem('role')
+    localStorage.removeItem('current_space_id')
 
     const api = (await import('@/api')).default
     delete api.defaults.headers.common['Authorization']
@@ -261,15 +318,25 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     user,
     spaceId,
+    spaces,
+    currentSpace,
     role,
     isLoggedIn,
     isAdmin,
+    isOwner,
     isEditor,
     isReadonly,
+    canWrite,
+    canDelete,
+    canSeePrivate,
+    canManageMembers,
+    canManageModule,
     initAuth,
     login,
     register,
     fetchMe,
+    fetchSpaces,
+    switchSpace,
     refreshAccessToken,
     logout,
     updatePassword

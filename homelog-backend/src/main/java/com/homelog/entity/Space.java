@@ -25,6 +25,13 @@ public class Space {
     @TableField("owner_id")
     private Long ownerId;
 
+    /** 状态：1=正常 2=已解散 */
+    @TableField("status")
+    private Integer status;
+
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 }

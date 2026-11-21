@@ -2,6 +2,7 @@ package com.homelog.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.homelog.entity.Message;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -16,18 +17,19 @@ import java.util.List;
 public interface MessageMapper extends BaseMapper<Message> {
 
     @Select("SELECT * FROM jj_message WHERE user_id = #{userId} AND is_read = 0 ORDER BY created_at DESC")
-    List<Message> selectUnreadByUserId(Long userId);
+    List<Message> selectUnreadByUserId(@Param("userId")Long userId);
 
     @Select("SELECT * FROM jj_message WHERE user_id = #{userId} ORDER BY created_at DESC")
-    List<Message> selectByUserId(Long userId);
+    List<Message> selectByUserId(@Param("userId")Long userId);
 
     @Select("SELECT COUNT(*) FROM jj_message WHERE user_id = #{userId} AND is_read = 0")
-    Integer countUnreadByUserId(Long userId);
+    Integer countUnreadByUserId(@Param("userId")Long userId);
 
     /**
      * 带筛选条件的分页查询
      */
-    @Select("SELECT * FROM jj_message WHERE user_id = #{userId} AND is_read = #{isRead} " +
+    @Select("SELECT * FROM jj_message WHERE user_id = #{userId} " +
+            "AND (#{isRead} IS NULL OR is_read = #{isRead}) " +
             "AND (#{keyword} IS NULL OR #{keyword} = '' OR content LIKE CONCAT('%', #{keyword}, '%')) " +
             "AND (#{startDate} IS NULL OR #{startDate} = '' OR DATE(created_at) >= #{startDate}) " +
             "AND (#{endDate} IS NULL OR #{endDate} = '' OR DATE(created_at) <= #{endDate}) " +
@@ -45,7 +47,8 @@ public interface MessageMapper extends BaseMapper<Message> {
     /**
      * 带筛选条件的总数查询
      */
-    @Select("SELECT COUNT(*) FROM jj_message WHERE user_id = #{userId} AND is_read = #{isRead} " +
+    @Select("SELECT COUNT(*) FROM jj_message WHERE user_id = #{userId} " +
+            "AND (#{isRead} IS NULL OR is_read = #{isRead}) " +
             "AND (#{keyword} IS NULL OR #{keyword} = '' OR content LIKE CONCAT('%', #{keyword}, '%')) " +
             "AND (#{startDate} IS NULL OR #{startDate} = '' OR DATE(created_at) >= #{startDate}) " +
             "AND (#{endDate} IS NULL OR #{endDate} = '' OR DATE(created_at) <= #{endDate})")
@@ -62,4 +65,10 @@ public interface MessageMapper extends BaseMapper<Message> {
      */
     @Update("UPDATE jj_message SET is_read = 1 WHERE user_id = #{userId} AND is_read = 0")
     void updateAllReadByUserId(@Param("userId") Long userId);
+
+    /**
+     * 清理某成员在某空间名下的全部消息（移除成员时调用，设计文档 v1.2 §6.7）。
+     */
+    @Delete("DELETE FROM jj_message WHERE user_id = #{userId} AND space_id = #{spaceId}")
+    int deleteByUserAndSpace(@Param("userId") Long userId, @Param("spaceId") Long spaceId);
 }
