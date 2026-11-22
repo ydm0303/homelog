@@ -399,3 +399,18 @@ export const searchApi = {
   }) =>
     api.get('/search', { params })
 }
+
+// ============ Web Push API ============
+export const pushApi = {
+  /** VAPID 公钥 GET /api/push/vapid-public-key */
+  getVapidPublicKey: () =>
+    api.get('/push/vapid-public-key'),
+
+  /** 保存/更新订阅 PUT /api/push/subscription */
+  saveSubscription: (data: { endpoint: string; p256dh: string; auth: string; platform?: string }) =>
+    api.put('/push/subscription', data),
+
+  /** 删除订阅 DELETE /api/push/subscription?endpoint= */
+  removeSubscription: (endpoint: string) =>
+    api.delete('/push/subscription', { params: { endpoint } })
+}

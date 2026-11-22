@@ -237,39 +237,12 @@
                         <el-icon><Setting /></el-icon>
                         字段配置
                       </el-dropdown-item>
-                      <el-dropdown-item
-                        v-if="scope.row.moduleType === 2"
-                        @click="deleteCustomModule(scope.row)"
-                        class="danger-item"
-                      >
-                        <el-icon><Delete /></el-icon>
-                        删除模块
-                      </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
               </template>
             </el-table-column>
           </el-table>
-
-          <!-- 新建自定义表单模块 -->
-          <div class="create-custom-module" v-if="isAdmin">
-            <el-divider content-position="left">新建自定义表单模块</el-divider>
-            <el-form :model="customModuleForm" :rules="customModuleRules" label-width="100px" inline>
-              <el-form-item label="模块名称" prop="name">
-                <el-input v-model="customModuleForm.name" placeholder="如：宠物档案" clearable style="width: 200px" />
-              </el-form-item>
-              <el-form-item label="模块 Key" prop="moduleKey">
-                <el-input v-model="customModuleForm.moduleKey" placeholder="英文，如 pet" clearable style="width: 200px" />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="createCustomModule" :loading="creatingModule">
-                  <el-icon><Plus /></el-icon>
-                  创建模块
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </div>
         </el-card>
       </el-tab-pane>
 
@@ -384,6 +357,46 @@
         </el-card>
       </el-tab-pane>
 
+      <!-- 提醒推送 -->
+      <el-tab-pane label="提醒推送" name="push">
+        <el-card class="tab-card" shadow="never">
+          <h4>浏览器到期提醒推送</h4>
+          <template v-if="pushState === 'unsupported'">
+            <el-alert type="info" :closable="false" show-icon
+              title="当前浏览器不支持消息推送"
+              description="需使用 Chrome / Edge / Firefox，或 iOS 16.4+ 已添加到主屏幕的家记。" />
+          </template>
+          <template v-else-if="!isStandalone">
+            <el-alert type="warning" :closable="false" show-icon
+              title="请先将家记添加到主屏幕"
+              description="网页标签模式下无法稳定接收推送。iOS：Safari 分享 → 添加到主屏幕；Android/桌面：浏览器菜单 → 安装应用。" />
+          </template>
+          <template v-else-if="pushState === 'denied'">
+            <el-alert type="error" :closable="false" show-icon
+              title="通知权限已被拒绝"
+              description="请在浏览器站点设置中重新允许「通知」后刷新本页。" />
+          </template>
+          <template v-else>
+            <p class="push-status">
+              当前状态：<el-tag :type="subscribed ? 'success' : 'info'" size="small">
+                {{ subscribed ? '已开启推送' : '未开启推送' }}
+              </el-tag>
+            </p>
+            <el-button
+              v-if="!subscribed"
+              type="primary"
+              :loading="busy"
+              @click="onEnablePush"
+            >开启到期提醒推送</el-button>
+            <el-button
+              v-else
+              :loading="busy"
+              @click="onDisablePush"
+            >关闭推送</el-button>
+          </template>
+        </el-card>
+      </el-tab-pane>
+
       <!-- 适老化设置 -->
       <el-tab-pane label="适老化设置" name="elderly">
         <el-card class="tab-card" shadow="never">
@@ -474,12 +487,14 @@ import {
   canGrantRole
 } from '@/utils/role'
 import { useIsMobile } from '@/composables/useMediaQuery'
+import { usePush } from '@/composables/usePush'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const moduleStore = useModuleStore()
 
 const isMobile = useIsMobile()
+const { pushState, subscribed, busy, isStandalone, refreshStatus, enablePush, disablePush } = usePush()
 
 const activeTab = ref('members')
 
@@ -532,7 +547,6 @@ const permissionMatrix = [
   { permission: '管理成员（邀请 / 改角色 / 移除）', flags: { owner: true, admin: true, member: false, readonly: false } },
   { permission: '指派或移除管理员', flags: { owner: true, admin: false, member: false, readonly: false } },
   { permission: '模块开关 / 排序 / 改名', flags: { owner: true, admin: true, member: false, readonly: false } },
-  { permission: '创建 / 删除自定义表单模块', flags: { owner: true, admin: true, member: false, readonly: false } },
   { permission: '解散家庭空间', flags: { owner: true, admin: false, member: false, readonly: false } },
   { permission: '主动退出家庭空间', flags: { owner: false, admin: true, member: true, readonly: true } },
   { permission: '接收邮件提醒', flags: { owner: true, admin: true, member: true, readonly: true } },
@@ -559,16 +573,6 @@ function canRemoveMember(row: any): boolean {
 
 /** 邀请对话框可选角色：随邀请人档位收窄 */
 const inviteOptions = computed(() => ASSIGNABLE_ROLES.filter(opt => canGrantRole(authStore.role, opt.value)))
-
-const customModuleForm = reactive({
-  name: '',
-  moduleKey: ''
-})
-const customModuleRules = {
-  name: [{ required: true, message: '请输入模块名称', trigger: 'blur' }],
-  moduleKey: [{ required: true, message: '请输入模块 Key', trigger: 'blur' }, { pattern: /^[a-z][a-z0-9_]*$/, message: '仅支持小写字母、数字、下划线，且必须以字母开头', trigger: 'blur' }]
-}
-const creatingModule = ref(false)
 
 const exportForm = reactive({
   scope: 'module' as 'module' | 'all',
@@ -610,7 +614,20 @@ onMounted(async () => {
     spaceNameInput.value = currentSpaceName.value
   }
   loadElderlySettings()
+  await refreshStatus()
 })
+
+async function onEnablePush() {
+  const ok = await enablePush()
+  if (ok) ElMessage.success('已开启到期提醒推送')
+  else if (pushState.value === 'denied') ElMessage.warning('浏览器通知权限被拒绝，请在站点设置中允许通知')
+  else ElMessage.error('开启推送失败，请稍后重试')
+}
+
+async function onDisablePush() {
+  if (await disablePush()) ElMessage.success('已关闭推送')
+  else ElMessage.error('操作失败')
+}
 
 async function fetchMembers() {
   try {
@@ -783,34 +800,6 @@ function goToModuleFields(_module: any) {
   ElMessage.info('字段配置功能开发中...')
 }
 
-async function deleteCustomModule(module: any) {
-  try {
-    await ElMessageBox.confirm(`确定要删除自定义模块「${module.name}」吗？数据将保留但模块入口会消失`, '确认删除', {
-      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning', confirmButtonClass: 'el-button--danger'
-    })
-    await metaApi.deleteModule(module.id)
-    ElMessage.success('删除成功')
-    fetchAllModules()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error('删除失败')
-  }
-}
-
-async function createCustomModule() {
-  try {
-    creatingModule.value = true
-    await metaApi.createModule(customModuleForm)
-    ElMessage.success('创建成功')
-    customModuleForm.name = ''
-    customModuleForm.moduleKey = ''
-    fetchAllModules()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '创建失败')
-  } finally {
-    creatingModule.value = false
-  }
-}
-
 async function handleExport() {
   if (exportForm.scope === 'module' && !exportForm.moduleId) {
     ElMessage.warning('请选择要导出的模块')
@@ -974,17 +963,6 @@ function toggleElderlyMode() {
     color: $text-primary;
   }
 
-  .create-custom-module {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid $border-color;
-
-    :deep(.el-form-item) {
-      margin-bottom: 0;
-      margin-right: 16px;
-    }
-  }
-
   .export-note,
   .import-note {
     display: flex;
@@ -1024,6 +1002,11 @@ function toggleElderlyMode() {
     .preview-input {
       width: 300px;
     }
+  }
+
+  .push-status {
+    margin: 0 0 16px;
+    color: $text-secondary;
   }
 }
 

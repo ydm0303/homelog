@@ -132,6 +132,12 @@ homelog:
   frontend:
     base-url: ${FRONTEND_BASE_URL:https://your-domain.com}
 
+# Web Push（VAPID）—— 生产由环境变量注入
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:}
+  private-key: ${VAPID_PRIVATE_KEY:}
+  subject: ${VAPID_SUBJECT:mailto:admin@your-domain.com}
+
 management:
   endpoints:
     web:

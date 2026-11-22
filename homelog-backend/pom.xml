@@ -34,6 +34,9 @@
         <swagger.version>2.9.2</swagger.version>
         <springdoc.version>1.7.0</springdoc.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <!-- web-push：API（Subscription.Keys + send() 返回 Apache HttpResponse）始于 3.x；
+             5.x 起改用 async-http-client 线，Java 8 须停留在 3.1.1（Apache HttpClient 系） -->
+        <webpush.version>3.1.1</webpush.version>
     </properties>
 
     <dependencyManagement>
@@ -185,6 +188,14 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-ui</artifactId>
             <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- ========== Web Push（浏览器推送，VAPID） ========== -->
+        <!-- 3.1.1：依赖 Apache HttpClient + BouncyCastle，兼容 Java 8 -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>${webpush.version}</version>
         </dependency>
 
         <!-- ========== 测试 ========== -->
