@@ -131,6 +131,15 @@ homelog:
   frontend:
     base-url: http://localhost:5173
 
+# ============================================================================
+# Web Push（VAPID）—— 占位测试值，部署前请用 `npx web-push generate-vapid-keys` 生成并替换。
+# 当前值为假密钥，仅保证本地能启动（PushService 会懒加载并在密钥非法时静默禁用推送）。
+# ============================================================================
+vapid:
+  public-key: BFn8Yk2PLACEHOLDERpublicKEYbase64urlP256UncompressedECPointReplaceMe1234567890abcdefghijk
+  private-key: REPLACE_ME_WITH_REAL_VAPID_PRIVATE_KEY_BASE64URL_01234
+  subject: mailto:local@homelog.test
+
 management:
   endpoints:
     web:

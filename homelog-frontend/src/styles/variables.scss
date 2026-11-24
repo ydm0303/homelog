@@ -62,7 +62,9 @@ $text-tertiary: #6f665f;
 $text-placeholder: #8a7b72;
 $text-disabled: #d2c5bc;
 
-$bg-color: #f7f3ed;
+// 全站主背景：与侧边栏 $sidebar-bg 同调的暖白，确保整页（顶栏/侧栏/内容区）颜色统一。
+// 卡片仍用纯白 $card-bg(#ffffff) 形成层次对比，勿再改回偏灰值。
+$bg-color: #fffaf5;
 $card-bg: #ffffff;
 $surface-warm: #fffbf7;
 $surface-warm-soft: #fff9f5;
@@ -70,7 +72,6 @@ $field-bg: #f8f6f3;
 $header-bg: #fffdfb;
 $topbar-bg: rgba(255, 253, 251, 0.45);
 $sidebar-bg: #fffaf5;
-$sidebar-header-bg: #f5efe8;
 $hover-bg: #fff0ea;
 $nav-text: #666666;
 $nav-hover-bg: #f7f2ec;

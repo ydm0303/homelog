@@ -12,6 +12,7 @@ import com.homelog.security.CurrentUserService;
 import com.homelog.security.Role;
 import com.homelog.security.SpaceMembershipReader;
 import com.homelog.vo.InvitationVO;
+import com.homelog.vo.InviteeCheckVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -53,14 +54,37 @@ public class InvitationService {
     private final MessageService messageService;
 
     /**
+     * 发起前真实性预检：判断标识（账号或邮箱）是否对应已注册账号，并返回脱敏信息供前端确认。
+     *
+     * <p>与登录/邀请一致的多标识解析规则见 {@link #resolveInvitee}。本方法<b>不抛异常</b>，
+     * 仅以 {@code exists=false} 反馈「未注册」，让对话框可在失焦时就地提示而不打断输入流。
+     * 仍要求调用方具备成员管理权，避免无权限者借预检枚举账号。
+     */
+    public InviteeCheckVO check(String identifier) {
+        Integer inviterRole = currentUserService.getCurrentRole();
+        if (!Role.canManageMembers(inviterRole)) {
+            throw new AccessDeniedException("权限不足，仅所有者与管理员可邀请成员");
+        }
+        User invitee = resolveInvitee(identifier);
+        if (invitee == null) {
+            return new InviteeCheckVO().setExists(false);
+        }
+        return new InviteeCheckVO()
+                .setExists(true)
+                .setNickname(displayOf(invitee.getId()))
+                .setEmail(maskEmail(invitee.getEmail()));
+    }
+
+    /**
      * 发起邀请（当前空间内，邀请人须有成员管理权）。
      *
-     * @param email 被邀请人邮箱，必须是系统内已存在账号（决策：不支持匿名/未注册邀请）
-     * @param role  授予角色
+     * @param identifier 被邀请人的账号或邮箱，必须是系统内已存在账号（决策：不支持匿名/未注册邀请）。
+     *                   与登录一致支持多标识：含 {@code @} 视为邮箱，否则先按用户名查、再按邮箱兜底。
+     * @param role       授予角色
      * @return 新建或复用的待处理邀请
      */
     @Transactional
-    public InvitationVO invite(String email, Integer role) {
+    public InvitationVO invite(String identifier, Integer role) {
         Long spaceId = currentUserService.requireCurrentSpaceId();
         Integer inviterRole = currentUserService.getCurrentRole();
         Long inviterId = currentUserService.getCurrentUserId();
@@ -78,11 +102,11 @@ public class InvitationService {
             throw new AccessDeniedException("权限不足，不能邀请该角色");
         }
 
-        // 被邀请账号必须已存在
-        User invitee = userMapper.selectByEmail(email == null ? null : email.trim());
+        // 被邀请账号必须已存在：账号或邮箱任一命中即可（多标识，与登录保持一致）
+        User invitee = resolveInvitee(identifier);
         if (invitee == null) {
-            log.warn("Invite failed, invitee not registered: spaceId={}, email={}", spaceId, email);
-            throw new IllegalArgumentException("该邮箱对应的账号尚未注册，请对方先注册后再邀请");
+            log.warn("Invite failed, invitee not registered: spaceId={}, identifier={}", spaceId, identifier);
+            throw new IllegalArgumentException("该账号或邮箱尚未注册，请确认对方用户名/邮箱是否正确，或让对方先注册");
         }
 
         // 已在籍则拒绝（§9）
@@ -111,7 +135,7 @@ public class InvitationService {
         // 站内通知给被邀请人：ref_id 指回邀请，前端据此渲染接受/拒绝按钮
         Space space = spaceMapper.selectById(spaceId);
         String spaceName = space != null ? space.getName() : "家庭空间";
-        String content = String.format("%s 邀请你加入【%s】，身份：%s",
+        String content = String.format("🏠 %s 想邀请你一起经营「%s」，成为家里的%s。点下方按钮即可同意或婉拒～",
                 displayOf(inviterId), spaceName, Role.label(role));
         messageService.createNotification(spaceId, invitee.getId(), invitation.getId(),
                 content, MessageType.FAMILY_INVITATION);
@@ -181,7 +205,7 @@ public class InvitationService {
         }
 
         // 回执通知给邀请人（§8）
-        String content = String.format("%s 已接受你发起的家庭邀请，加入【%s】",
+        String content = String.format("🎉 好消息！%s 接受了你的邀请，已经加入「%s」，快一起把家里的事记起来吧～",
                 displayOf(inviteeId), space.getName());
         messageService.createNotification(invitation.getSpaceId(), invitation.getInviterId(),
                 invitationId, content, MessageType.FAMILY_RESULT);
@@ -219,7 +243,7 @@ public class InvitationService {
             throw new IllegalArgumentException("该邀请已被处理");
         }
 
-        String content = String.format("%s 已拒绝你发起的家庭邀请", displayOf(inviteeId));
+        String content = String.format("%s 这次先婉拒了你的家庭邀请，之后随时欢迎再邀请～", displayOf(inviteeId));
         messageService.createNotification(invitation.getSpaceId(), invitation.getInviterId(),
                 invitationId, content, MessageType.FAMILY_RESULT);
 
@@ -314,6 +338,40 @@ public class InvitationService {
         vo.setInviterNickname(displayOf(invitation.getInviterId()));
         vo.setInviteeNickname(displayOf(invitation.getInviteeId()));
         return vo;
+    }
+
+    /**
+     * 按标识解析被邀请人：含 @ 视为邮箱；否则先按用户名查，未命中再按邮箱兜底
+     * （兼容用户误把邮箱填进"账号"框、或用户名恰好含特殊字符的情况）。
+     */
+    private User resolveInvitee(String identifier) {
+        String key = identifier == null ? null : identifier.trim();
+        if (key == null || key.isEmpty()) {
+            return null;
+        }
+        if (key.contains("@")) {
+            return userMapper.selectByEmail(key);
+        }
+        User byName = userMapper.selectByUsername(key);
+        return byName != null ? byName : userMapper.selectByEmail(key);
+    }
+
+    /**
+     * 邮箱脱敏：保留前缀前若干位与完整域名，中间以 *** 替代，供邀请人核对是否本人。
+     * 例：abcdef@qq.com → abc***@qq.com；过短则仅留首字符。
+     */
+    private String maskEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return null;
+        }
+        int at = email.indexOf('@');
+        if (at <= 0) {
+            return email.charAt(0) + "***";
+        }
+        String local = email.substring(0, at);
+        String domain = email.substring(at);
+        int keep = Math.min(3, Math.max(1, local.length() - 2));
+        return local.substring(0, keep) + "***" + domain;
     }
 
     private String displayOf(Long userId) {

@@ -476,7 +476,9 @@ function handleSearch() {
   justify-content: center;
   padding: 0 16px;
   border-bottom: 1px solid $border-color;
-  background: $sidebar-header-bg;
+  // 与顶栏搜索区同一背景（$topbar-bg + 毛玻璃），保证顶部一行视觉连贯
+  background: $topbar-bg;
+  backdrop-filter: blur(10px);
 
   .brand-block {
     display: flex;

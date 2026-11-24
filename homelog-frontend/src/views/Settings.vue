@@ -34,65 +34,97 @@
                   :active-value="1"
                   :inactive-value="0"
                   @change="(val: string | number | boolean) => updateMemberRole(scope.row, { receiveMail: val ? 1 : 0 })"
-                  :disabled="scope.row.userId === authStore.user?.id"
                 />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="160" :fixed="isMobile ? false : 'right'">
+            <el-table-column label="操作" width="220" :fixed="isMobile ? false : 'right'">
               <template #default="scope">
-                <el-dropdown size="small">
-                  <el-button link>操作 <el-icon><ArrowDown /></el-icon></el-button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item
-                        v-for="opt in assignableOptions(scope.row.role)"
-                        :key="opt.value"
-                        @click="updateMemberRole(scope.row, { role: opt.value })"
-                      >
-                        设为{{ opt.label }}
-                      </el-dropdown-item>
-                      <el-dropdown-item
-                        v-if="canRemoveMember(scope.row)"
-                        @click="removeMember(scope.row)"
-                        class="danger-item"
-                      >
-                        <el-icon><Delete /></el-icon>
-                        移出家庭
-                      </el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
+                <div class="row-actions">
+                  <el-button
+                    v-for="opt in assignableOptions(scope.row.role)"
+                    :key="opt.value"
+                    link
+                    size="small"
+                    type="primary"
+                    @click="updateMemberRole(scope.row, { role: opt.value })"
+                  >
+                    设为{{ opt.label }}
+                  </el-button>
+                  <el-button
+                    v-if="canRemoveMember(scope.row)"
+                    link
+                    size="small"
+                    type="danger"
+                    @click="removeMember(scope.row)"
+                  >
+                    移出家庭
+                  </el-button>
+                  <span
+                    v-if="assignableOptions(scope.row.role).length === 0 && !canRemoveMember(scope.row)"
+                    class="no-action"
+                  >—</span>
+                </div>
               </template>
             </el-table-column>
           </el-table>
 
           <!-- 待处理邀请（邀请人可撤销，设计文档 v1.2 §8） -->
           <div v-if="pendingInvitations.length > 0" class="pending-invitations">
-            <el-divider content-position="left">待处理的邀请</el-divider>
-            <el-table :data="pendingInvitations" border stripe class="w-full" size="small">
-              <el-table-column prop="inviteeNickname" label="被邀请人" min-width="120" />
-              <el-table-column label="角色" width="110">
-                <template #default="scope">
-                  <el-tag :type="getRoleTagType(scope.row.role)" size="small">{{ getRoleLabel(scope.row.role) }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="createdAt" label="邀请时间" width="180">
-                <template #default="scope">{{ formatInviteTime(scope.row.createdAt) }}</template>
-              </el-table-column>
-              <el-table-column label="操作" width="100" align="center">
-                <template #default="scope">
-                  <el-button link size="small" type="danger" @click="cancelInvitation(scope.row)">撤销</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+            <div class="pending-invitations__head">
+              <span class="pending-invitations__title">待处理的邀请</span>
+              <el-tag type="warning" size="small" effect="light" round>{{ pendingInvitations.length }}</el-tag>
+            </div>
+            <ul class="invite-list">
+              <li v-for="inv in pendingInvitations" :key="inv.id" class="invite-item">
+                <div class="invite-item__avatar">{{ inviteeInitial(inv.inviteeNickname) }}</div>
+                <div class="invite-item__main">
+                  <div class="invite-item__name">
+                    {{ inv.inviteeNickname || '未命名成员' }}
+                    <el-tag :type="getRoleTagType(inv.role)" size="small" effect="plain">
+                      {{ getRoleLabel(inv.role) }}
+                    </el-tag>
+                  </div>
+                  <div class="invite-item__meta">
+                    <el-icon><Clock /></el-icon>
+                    <span>邀请您加入「{{ inv.spaceName || currentSpaceName }}」· {{ formatInviteTime(inv.createdAt) }}</span>
+                  </div>
+                </div>
+                <div class="invite-item__status">
+                  <el-tag type="info" size="small" effect="light" round>等待对方应答</el-tag>
+                </div>
+                <el-button link size="small" type="danger" @click="cancelInvitation(inv)">撤销</el-button>
+              </li>
+            </ul>
           </div>
         </el-card>
 
         <!-- 邀请成员对话框 -->
-        <el-dialog v-model="showAddMember" title="邀请成员加入" width="500px">
+        <el-dialog v-model="showAddMember" title="邀请成员加入" width="500px" @closed="resetInviteeCheck">
           <el-form :model="addMemberForm" :rules="addMemberRules" label-width="100px">
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model="addMemberForm.email" placeholder="对方账号的注册邮箱" clearable />
+            <el-form-item label="账号或邮箱" prop="identifier">
+              <el-input
+                v-model="addMemberForm.identifier"
+                placeholder="对方的账号或注册邮箱"
+                clearable
+              >
+                <template v-if="inviteeCheck === 'checking'" #suffix>
+                  <el-icon class="is-loading"><Loading /></el-icon>
+                </template>
+              </el-input>
+              <div class="invitee-check" :class="`invitee-check--${inviteeCheck}`">
+                <template v-if="inviteeCheck === 'ok'">
+                  <el-icon><CircleCheckFilled /></el-icon>
+                  <span>已找到账号：<b>{{ inviteeNickname }}</b><em v-if="inviteeEmail">（{{ inviteeEmail }}）</em>，确认邀请 TA？</span>
+                </template>
+                <template v-else-if="inviteeCheck === 'notfound'">
+                  <el-icon><CircleCloseFilled /></el-icon>
+                  <span>该账号或邮箱尚未注册，请核对后再发送，或让对方先注册</span>
+                </template>
+                <template v-else-if="inviteeCheck === 'badformat'">
+                  <el-icon><WarningFilled /></el-icon>
+                  <span>格式不正确：请输入合法用户名（字母/数字/_/-，3~32位）或邮箱地址</span>
+                </template>
+              </div>
             </el-form-item>
             <el-form-item label="角色" prop="role">
               <el-radio-group v-model="addMemberForm.role">
@@ -105,48 +137,63 @@
                 </el-radio>
               </el-radio-group>
             </el-form-item>
-            <p class="invite-tip">对方需已注册家记账号。邀请发送后，对方在消息中心同意即可加入。</p>
           </el-form>
           <template #footer>
             <el-button @click="showAddMember = false">取消</el-button>
-            <el-button type="primary" @click="confirmAddMember" :loading="addingMember">发送邀请</el-button>
+            <el-button
+              type="primary"
+              :loading="addingMember"
+              :disabled="inviteeCheck === 'notfound' || inviteeCheck === 'badformat'"
+              @click="confirmAddMember"
+            >发送邀请</el-button>
           </template>
         </el-dialog>
       </el-tab-pane>
 
       <!-- 空间管理 -->
       <el-tab-pane label="空间管理" name="space" :disabled="!isAdmin">
-        <el-card class="tab-card" shadow="never">
-          <h4>当前家庭空间</h4>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="空间名称">{{ currentSpaceName }}</el-descriptions-item>
-            <el-descriptions-item label="我的角色">{{ getRoleLabel(authStore.role) }}</el-descriptions-item>
-            <el-descriptions-item label="在籍成员数">{{ currentSpace?.memberCount ?? '-' }}</el-descriptions-item>
-          </el-descriptions>
+        <el-card class="tab-card space-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <h3>当前家庭空间</h3>
+            </div>
+          </template>
 
-          <el-divider content-position="left">修改名称</el-divider>
-          <el-form inline>
-            <el-form-item label="新名称">
-              <el-input v-model="spaceNameInput" maxlength="64" clearable style="width: 240px" />
-            </el-form-item>
-            <el-form-item>
+          <div class="space-info">
+            <div class="info-item">
+              <span class="info-label">空间名称</span>
+              <span class="info-value">{{ currentSpaceName }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">我的角色</span>
+              <el-tag :type="getRoleTagType(authStore.role)" size="small">{{ getRoleLabel(authStore.role) }}</el-tag>
+            </div>
+            <div class="info-item">
+              <span class="info-label">在籍成员数</span>
+              <span class="info-value info-stat">{{ currentSpace?.memberCount ?? '-' }}</span>
+            </div>
+          </div>
+
+          <div class="space-section">
+            <h4 class="section-title">修改名称</h4>
+            <p class="section-desc">空间名称会显示在所有成员的侧边栏空间切换器中。</p>
+            <div class="inline-form">
+              <el-input v-model="spaceNameInput" maxlength="64" clearable placeholder="输入新的空间名称" class="form-input" />
               <el-button type="primary" :loading="renamingSpace" @click="renameSpace">保存</el-button>
-            </el-form-item>
-          </el-form>
+            </div>
+          </div>
 
           <template v-if="authStore.isOwner">
-            <el-divider content-position="left">解散家庭空间</el-divider>
-            <p class="danger-note">
-              解散后该空间将从所有成员的列表中消失。仅所有者可执行，操作不可自行恢复。
-            </p>
-            <el-form inline>
-              <el-form-item label="输入空间名确认">
-                <el-input v-model="dissolveNameInput" :placeholder="currentSpaceName" style="width: 240px" />
-              </el-form-item>
-              <el-form-item>
+            <div class="danger-zone">
+              <h4 class="section-title danger-title">解散家庭空间</h4>
+              <p class="danger-note">
+                解散后该空间将从所有成员的列表中消失，仅所有者可执行，操作不可自行恢复。请输入空间名称确认。
+              </p>
+              <div class="inline-form">
+                <el-input v-model="dissolveNameInput" :placeholder="currentSpaceName" class="form-input" />
                 <el-button type="danger" :loading="dissolvingSpace" @click="dissolveSpace">解散空间</el-button>
-              </el-form-item>
-            </el-form>
+              </div>
+            </div>
           </template>
         </el-card>
       </el-tab-pane>
@@ -227,49 +274,16 @@
               </template>
             </el-table-column>
             <el-table-column prop="sortOrder" label="排序号" width="80" align="center" v-if="!isMobile" />
-            <el-table-column label="操作" width="140" :fixed="isMobile ? false : 'right'">
+            <el-table-column label="操作" width="120" :fixed="isMobile ? false : 'right'">
               <template #default="scope">
-                <el-dropdown size="small">
-                  <el-button link>操作 <el-icon><ArrowDown /></el-icon></el-button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item @click="goToModuleFields(scope.row)">
-                        <el-icon><Setting /></el-icon>
-                        字段配置
-                      </el-dropdown-item>
-                      <el-dropdown-item
-                        v-if="scope.row.moduleType === 2"
-                        @click="deleteCustomModule(scope.row)"
-                        class="danger-item"
-                      >
-                        <el-icon><Delete /></el-icon>
-                        删除模块
-                      </el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
+                <div class="row-actions">
+                  <el-button link size="small" type="primary" @click="goToModuleFields(scope.row)">
+                    字段配置
+                  </el-button>
+                </div>
               </template>
             </el-table-column>
           </el-table>
-
-          <!-- 新建自定义表单模块 -->
-          <div class="create-custom-module" v-if="isAdmin">
-            <el-divider content-position="left">新建自定义表单模块</el-divider>
-            <el-form :model="customModuleForm" :rules="customModuleRules" label-width="100px" inline>
-              <el-form-item label="模块名称" prop="name">
-                <el-input v-model="customModuleForm.name" placeholder="如：宠物档案" clearable style="width: 200px" />
-              </el-form-item>
-              <el-form-item label="模块 Key" prop="moduleKey">
-                <el-input v-model="customModuleForm.moduleKey" placeholder="英文，如 pet" clearable style="width: 200px" />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="createCustomModule" :loading="creatingModule">
-                  <el-icon><Plus /></el-icon>
-                  创建模块
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </div>
         </el-card>
       </el-tab-pane>
 
@@ -384,6 +398,46 @@
         </el-card>
       </el-tab-pane>
 
+      <!-- 提醒推送 -->
+      <el-tab-pane label="提醒推送" name="push">
+        <el-card class="tab-card" shadow="never">
+          <h4>浏览器到期提醒推送</h4>
+          <template v-if="pushState === 'unsupported'">
+            <el-alert type="info" :closable="false" show-icon
+              title="当前浏览器不支持消息推送"
+              description="需使用 Chrome / Edge / Firefox，或 iOS 16.4+ 已添加到主屏幕的家记。" />
+          </template>
+          <template v-else-if="!isStandalone">
+            <el-alert type="warning" :closable="false" show-icon
+              title="请先将家记添加到主屏幕"
+              description="网页标签模式下无法稳定接收推送。iOS：Safari 分享 → 添加到主屏幕；Android/桌面：浏览器菜单 → 安装应用。" />
+          </template>
+          <template v-else-if="pushState === 'denied'">
+            <el-alert type="error" :closable="false" show-icon
+              title="通知权限已被拒绝"
+              description="请在浏览器站点设置中重新允许「通知」后刷新本页。" />
+          </template>
+          <template v-else>
+            <p class="push-status">
+              当前状态：<el-tag :type="subscribed ? 'success' : 'info'" size="small">
+                {{ subscribed ? '已开启推送' : '未开启推送' }}
+              </el-tag>
+            </p>
+            <el-button
+              v-if="!subscribed"
+              type="primary"
+              :loading="busy"
+              @click="onEnablePush"
+            >开启到期提醒推送</el-button>
+            <el-button
+              v-else
+              :loading="busy"
+              @click="onDisablePush"
+            >关闭推送</el-button>
+          </template>
+        </el-card>
+      </el-tab-pane>
+
       <!-- 适老化设置 -->
       <el-tab-pane label="适老化设置" name="elderly">
         <el-card class="tab-card" shadow="never">
@@ -454,13 +508,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { authApi, metaApi, spaceApi, invitationApi, exportApi } from '@/api'
 import {
-  Plus, ArrowDown, Check, Close, Delete, Setting, Upload, Download, InfoFilled
+  Plus, Check, Close, Upload, Download, InfoFilled,
+  Loading, CircleCheckFilled, CircleCloseFilled, WarningFilled, Clock
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -474,12 +529,14 @@ import {
   canGrantRole
 } from '@/utils/role'
 import { useIsMobile } from '@/composables/useMediaQuery'
+import { usePush } from '@/composables/usePush'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const moduleStore = useModuleStore()
 
 const isMobile = useIsMobile()
+const { pushState, subscribed, busy, isStandalone, refreshStatus, enablePush, disablePush } = usePush()
 
 const activeTab = ref('members')
 
@@ -503,12 +560,69 @@ const dissolvingSpace = ref(false)
 const showAddMember = ref(false)
 const addingMember = ref(false)
 const addMemberForm = reactive({
-  email: '',
+  identifier: '',
   role: ROLE.MEMBER as number
 })
 const addMemberRules = {
-  email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }, { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
+  identifier: [{ required: true, message: '请输入用户名或邮箱', trigger: 'blur' }],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }]
+}
+
+// —— 邀请标识真实性预检：失焦/输入停顿后查库，命中给昵称确认、未命中就地提示 ——
+const IDENTIFIER_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$|^[A-Za-z0-9_-]{3,32}$/
+type InviteeCheckState = 'idle' | 'checking' | 'ok' | 'notfound' | 'badformat' | 'error'
+const inviteeCheck = ref<InviteeCheckState>('idle')
+const inviteeNickname = ref('')
+const inviteeEmail = ref('')
+let checkTimer: ReturnType<typeof setTimeout> | null = null
+let lastCheckedIdentifier = ''
+
+watch(() => addMemberForm.identifier, (val) => {
+  const key = (val || '').trim()
+  if (checkTimer) clearTimeout(checkTimer)
+  if (!key) {
+    inviteeCheck.value = 'idle'
+    inviteeNickname.value = ''
+    inviteeEmail.value = ''
+    lastCheckedIdentifier = ''
+    return
+  }
+  if (!IDENTIFIER_RE.test(key)) {
+    inviteeCheck.value = 'badformat'
+    lastCheckedIdentifier = ''
+    return
+  }
+  if (key === lastCheckedIdentifier && inviteeCheck.value !== 'error') return
+  inviteeCheck.value = 'checking'
+  checkTimer = setTimeout(() => runInviteeCheck(key), 400)
+})
+
+async function runInviteeCheck(key: string) {
+  try {
+    const res = await invitationApi.check(key)
+    const data = res.data || {}
+    lastCheckedIdentifier = key
+    if (data.exists) {
+      inviteeCheck.value = 'ok'
+      inviteeNickname.value = data.nickname || ''
+      inviteeEmail.value = data.email || ''
+    } else {
+      inviteeCheck.value = 'notfound'
+      inviteeNickname.value = ''
+      inviteeEmail.value = ''
+    }
+  } catch {
+    // 网络/权限等异常不打断输入，仅在发送时由 create 接口兜底报错
+    inviteeCheck.value = 'error'
+  }
+}
+
+function resetInviteeCheck() {
+  if (checkTimer) clearTimeout(checkTimer)
+  inviteeCheck.value = 'idle'
+  inviteeNickname.value = ''
+  inviteeEmail.value = ''
+  lastCheckedIdentifier = ''
 }
 
 /**
@@ -532,7 +646,6 @@ const permissionMatrix = [
   { permission: '管理成员（邀请 / 改角色 / 移除）', flags: { owner: true, admin: true, member: false, readonly: false } },
   { permission: '指派或移除管理员', flags: { owner: true, admin: false, member: false, readonly: false } },
   { permission: '模块开关 / 排序 / 改名', flags: { owner: true, admin: true, member: false, readonly: false } },
-  { permission: '创建 / 删除自定义表单模块', flags: { owner: true, admin: true, member: false, readonly: false } },
   { permission: '解散家庭空间', flags: { owner: true, admin: false, member: false, readonly: false } },
   { permission: '主动退出家庭空间', flags: { owner: false, admin: true, member: true, readonly: true } },
   { permission: '接收邮件提醒', flags: { owner: true, admin: true, member: true, readonly: true } },
@@ -559,16 +672,6 @@ function canRemoveMember(row: any): boolean {
 
 /** 邀请对话框可选角色：随邀请人档位收窄 */
 const inviteOptions = computed(() => ASSIGNABLE_ROLES.filter(opt => canGrantRole(authStore.role, opt.value)))
-
-const customModuleForm = reactive({
-  name: '',
-  moduleKey: ''
-})
-const customModuleRules = {
-  name: [{ required: true, message: '请输入模块名称', trigger: 'blur' }],
-  moduleKey: [{ required: true, message: '请输入模块 Key', trigger: 'blur' }, { pattern: /^[a-z][a-z0-9_]*$/, message: '仅支持小写字母、数字、下划线，且必须以字母开头', trigger: 'blur' }]
-}
-const creatingModule = ref(false)
 
 const exportForm = reactive({
   scope: 'module' as 'module' | 'all',
@@ -610,7 +713,20 @@ onMounted(async () => {
     spaceNameInput.value = currentSpaceName.value
   }
   loadElderlySettings()
+  await refreshStatus()
 })
+
+async function onEnablePush() {
+  const ok = await enablePush()
+  if (ok) ElMessage.success('已开启到期提醒推送')
+  else if (pushState.value === 'denied') ElMessage.warning('浏览器通知权限被拒绝，请在站点设置中允许通知')
+  else ElMessage.error('开启推送失败，请稍后重试')
+}
+
+async function onDisablePush() {
+  if (await disablePush()) ElMessage.success('已关闭推送')
+  else ElMessage.error('操作失败')
+}
 
 async function fetchMembers() {
   try {
@@ -688,13 +804,23 @@ async function removeMember(member: any) {
 }
 
 async function confirmAddMember() {
+  const key = addMemberForm.identifier.trim()
+  if (!IDENTIFIER_RE.test(key)) {
+    ElMessage.warning('请输入合法的账号（字母/数字/_/-，3~32位）或邮箱地址')
+    return
+  }
+  if (inviteeCheck.value === 'notfound') {
+    ElMessage.warning('该账号或邮箱尚未注册，请确认无误或让对方先注册')
+    return
+  }
   try {
     addingMember.value = true
-    await invitationApi.create({ email: addMemberForm.email, role: addMemberForm.role })
+    await invitationApi.create({ identifier: key, role: addMemberForm.role })
     ElMessage.success('邀请已发送')
     showAddMember.value = false
-    addMemberForm.email = ''
+    addMemberForm.identifier = ''
     addMemberForm.role = ROLE.MEMBER
+    resetInviteeCheck()
     fetchInvitations()
   } catch (e: any) {
     ElMessage.error(e.response?.data?.message || '邀请失败')
@@ -715,6 +841,11 @@ async function cancelInvitation(invitation: any) {
 
 function formatInviteTime(val: string) {
   return val ? formatDateTime(val) : '-'
+}
+
+function inviteeInitial(name?: string) {
+  const n = (name || '').trim()
+  return n ? n.charAt(0).toUpperCase() : '家'
 }
 
 async function renameSpace() {
@@ -781,34 +912,6 @@ async function updateModule(module: any) {
 function goToModuleFields(_module: any) {
   // TODO: 跳转到字段配置页面
   ElMessage.info('字段配置功能开发中...')
-}
-
-async function deleteCustomModule(module: any) {
-  try {
-    await ElMessageBox.confirm(`确定要删除自定义模块「${module.name}」吗？数据将保留但模块入口会消失`, '确认删除', {
-      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning', confirmButtonClass: 'el-button--danger'
-    })
-    await metaApi.deleteModule(module.id)
-    ElMessage.success('删除成功')
-    fetchAllModules()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error('删除失败')
-  }
-}
-
-async function createCustomModule() {
-  try {
-    creatingModule.value = true
-    await metaApi.createModule(customModuleForm)
-    ElMessage.success('创建成功')
-    customModuleForm.name = ''
-    customModuleForm.moduleKey = ''
-    fetchAllModules()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '创建失败')
-  } finally {
-    creatingModule.value = false
-  }
 }
 
 async function handleExport() {
@@ -939,6 +1042,21 @@ function toggleElderlyMode() {
     width: 100%;
   }
 
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+
+    :deep(.el-button + .el-button) {
+      margin-left: 0;
+    }
+
+    .no-action {
+      color: $text-placeholder;
+    }
+  }
+
   .settings-tabs {
     :deep(.el-tabs__nav) {
       border-bottom: 1px solid $border-color;
@@ -967,22 +1085,237 @@ function toggleElderlyMode() {
     }
   }
 
+  // ---------- 待处理邀请卡片列表 ----------
+  .pending-invitations {
+    margin-top: $spacing-lg;
+
+    &__head {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      margin-bottom: $spacing-sm;
+
+      .pending-invitations__title {
+        font-size: $text-label;
+        font-weight: $font-weight-semibold;
+        color: $text-secondary;
+      }
+    }
+
+    .invite-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-sm;
+    }
+
+    .invite-item {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      padding: $spacing-md;
+      background: $surface-warm;
+      border: 1px solid $primary-soft-border;
+      border-left: 3px solid $primary-color;
+      border-radius: $border-radius-base;
+      transition: box-shadow $transition-base $ease-out, background $transition-base $ease-out;
+
+      &:hover {
+        background: $hover-bg;
+        box-shadow: $shadow-sm;
+      }
+
+      &__avatar {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: $text-title;
+        font-weight: $font-weight-semibold;
+        color: $primary-text;
+        background: $primary-light-bg;
+      }
+
+      &__main {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      &__name {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        font-size: $text-body;
+        font-weight: $font-weight-medium;
+        color: $text-primary;
+
+        :deep(.el-tag) {
+          border-radius: 999px;
+        }
+      }
+
+      &__meta {
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: $text-caption;
+        color: $text-tertiary;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &__status {
+        flex: 0 0 auto;
+      }
+    }
+  }
+
+  // ---------- 邀请对话框：标识预检反馈 ----------
+  .invitee-check {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: $text-caption;
+    line-height: $line-height-base;
+
+    .el-icon {
+      flex: 0 0 auto;
+    }
+
+    b {
+      font-weight: $font-weight-semibold;
+    }
+
+    em {
+      font-style: normal;
+      color: $text-tertiary;
+    }
+
+    &--ok {
+      color: $success-text;
+    }
+
+    &--notfound,
+    &--badformat {
+      color: $danger-text;
+    }
+
+    &--checking,
+    &--error,
+    &--idle {
+      color: transparent;
+      height: 0;
+      margin: 0;
+      overflow: hidden;
+    }
+  }
+
+  // ---------- 空间管理 ----------
+  .space-card {
+    .space-info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: $spacing-md;
+      padding: $spacing-md;
+      background: $surface-warm-soft;
+      border: 1px solid $border-color-light;
+      border-radius: $border-radius-base;
+
+      .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-xs;
+
+        :deep(.el-tag) {
+          align-self: flex-start;
+          border-radius: 999px;
+          padding: 0 $spacing-md;
+          height: 24px;
+          line-height: 24px;
+          font-weight: $font-weight-medium;
+        }
+
+        .info-label {
+          font-size: $text-caption;
+          color: $text-tertiary;
+        }
+
+        .info-value {
+          font-size: $text-body;
+          font-weight: $font-weight-medium;
+          color: $text-primary;
+        }
+
+        .info-stat {
+          font-size: $text-title;
+          font-weight: $font-weight-semibold;
+        }
+      }
+    }
+
+    .space-section {
+      margin-top: $spacing-lg;
+
+      .section-title {
+        margin: 0;
+        font-size: $text-title;
+        font-weight: $font-weight-semibold;
+        color: $text-primary;
+      }
+
+      .section-desc {
+        margin: $spacing-xs 0 $spacing-md;
+        font-size: $text-label;
+        color: $text-tertiary;
+        line-height: $line-height-base;
+      }
+    }
+
+    .inline-form {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: $spacing-sm;
+
+      .form-input {
+        flex: 1 1 240px;
+        max-width: 320px;
+      }
+    }
+
+    .danger-zone {
+      margin-top: $spacing-lg;
+      padding: $spacing-md;
+      background: $danger-bg;
+      border-left: 3px solid $danger-color;
+      border-radius: $border-radius-base;
+
+      .danger-title {
+        color: $danger-text;
+      }
+
+      .danger-note {
+        margin: $spacing-xs 0 $spacing-md;
+        font-size: $text-label;
+        color: $text-secondary;
+        line-height: $line-height-base;
+      }
+    }
+  }
+
   .matrix-title {
     margin: 0 0 16px;
     font-size: 14px;
     font-weight: 600;
     color: $text-primary;
-  }
-
-  .create-custom-module {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid $border-color;
-
-    :deep(.el-form-item) {
-      margin-bottom: 0;
-      margin-right: 16px;
-    }
   }
 
   .export-note,
@@ -998,7 +1331,7 @@ function toggleElderlyMode() {
     color: $text-secondary;
     line-height: 1.6;
 
-    el-icon {
+    :deep(.el-icon) {
       flex-shrink: 0;
       margin-top: 2px;
       color: $primary-text;
@@ -1025,6 +1358,11 @@ function toggleElderlyMode() {
       width: 300px;
     }
   }
+
+  .push-status {
+    margin: 0 0 16px;
+    color: $text-secondary;
+  }
 }
 
 // 响应式
@@ -1038,6 +1376,37 @@ function toggleElderlyMode() {
     .tab-card {
       :deep(.el-table) {
         font-size: 13px;
+      }
+    }
+
+    .space-card {
+      .space-info {
+        grid-template-columns: 1fr;
+      }
+
+      .inline-form .form-input {
+        max-width: none;
+      }
+    }
+
+    .pending-invitations {
+      .invite-item {
+        flex-wrap: wrap;
+        gap: $spacing-sm;
+
+        &__main {
+          flex: 1 1 calc(100% - 56px);
+        }
+
+        &__status {
+          order: 3;
+          width: 100%;
+          padding-left: 56px;
+        }
+
+        > .el-button {
+          margin-left: auto;
+        }
       }
     }
   }

@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 
 /**
  * 发起空间邀请请求（步 4）。
@@ -14,8 +15,13 @@ import javax.validation.constraints.NotNull;
 @Data
 public class InvitationCreateRequest {
 
-    @NotBlank(message = "邮箱不能为空")
-    private String email;
+    /** 被邀请人的用户名或邮箱（多标识，与登录一致）；格式先行拦截，真实性由后端查库校验 */
+    @NotBlank(message = "请输入对方的账号或注册邮箱")
+    @Pattern(
+            regexp = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$|^[A-Za-z0-9_-]{3,32}$",
+            message = "格式不正确：请输入合法的用户名（字母/数字/_/-，3~32位）或邮箱地址"
+    )
+    private String identifier;
 
     /** 授予角色：2=admin 3=member 4=readonly（owner 不可邀请产生） */
     @NotNull(message = "角色不能为空")

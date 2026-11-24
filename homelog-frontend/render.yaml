@@ -6,12 +6,35 @@ services:
     pullRequestPreviewsEnabled: false
     # 路由（Vue history模式必备，兜底到index.html）
     routes:
+      # PWA 产物必须原样返回，不能被 SPA 兜底 rewrite 成 HTML（SW 注册要求正确 MIME）
+      - type: rewrite
+        source: /sw.js
+        destination: /sw.js
+      - type: rewrite
+        source: /registerSW.js
+        destination: /registerSW.js
+      - type: rewrite
+        source: /manifest.webmanifest
+        destination: /manifest.webmanifest
+      - type: prefix
+        source: /workbox-*
+        destination: /workbox-$1
       - type: rewrite
         source: /*
         destination: /index.html
     headers:
       # index.html 不缓存
       - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      # SW 入口与注册脚本不可长缓存（更新检测依赖）
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /registerSW.js
+        name: Cache-Control
+        value: no-cache
+      - path: /manifest.webmanifest
         name: Cache-Control
         value: no-cache
       # 打包带hash的静态资源，长期缓存

@@ -4,6 +4,7 @@ import com.homelog.dto.InvitationCreateRequest;
 import com.homelog.dto.InvitationRespondRequest;
 import com.homelog.service.InvitationService;
 import com.homelog.vo.InvitationVO;
+import com.homelog.vo.InviteeCheckVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,13 +33,25 @@ public class InvitationController {
     private final InvitationService invitationService;
 
     /**
+     * 发起邀请前真实性预检（账号或邮箱）
+     * POST /api/space/invitations/check?identifier=xxx
+     *
+     * <p>前端在填写邀请标识时失焦即调用：命中已注册账号返回昵称与脱敏邮箱供确认，
+     * 未注册返回 exists=false，便于就地提示「该账号尚未注册」。
+     */
+    @PostMapping("/check")
+    public InviteeCheckVO check(@Valid @RequestBody InvitationCreateRequest request) {
+        return invitationService.check(request.getIdentifier());
+    }
+
+    /**
      * 发起邀请
      * POST /api/space/invitations/create
      */
     @PostMapping("/create")
     public InvitationVO invite(@Valid @RequestBody InvitationCreateRequest request) {
-        log.info("收到邀请请求：email={}", request.getEmail());
-        return invitationService.invite(request.getEmail(), request.getRole());
+        log.info("收到邀请请求：identifier={}", request.getIdentifier());
+        return invitationService.invite(request.getIdentifier(), request.getRole());
     }
 
     /**

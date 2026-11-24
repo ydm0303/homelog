@@ -137,7 +137,7 @@
 
         <div v-else class="record-list">
           <article
-            v-for="record in recentRecords"
+            v-for="record in visibleRecentRecords"
             :key="record.id"
             class="record-item"
             role="button"
@@ -157,6 +157,16 @@
               <button type="button" aria-label="查看详情">↗</button>
             </div>
           </article>
+
+          <button
+            v-if="recentRecords.length > RECENT_LIMIT"
+            type="button"
+            class="record-toggle"
+            @click="recentExpanded = !recentExpanded"
+          >
+            {{ recentExpanded ? '收起' : `展开全部 ${recentRecords.length} 条` }}
+            <el-icon><ArrowUp v-if="recentExpanded" /><ArrowDown v-else /></el-icon>
+          </button>
         </div>
       </section>
 
@@ -226,7 +236,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi, dashboardApi } from '@/api'
-import { Checked, AlarmClock, Clock, Sunny, ArrowLeft } from '@element-plus/icons-vue'
+import { Checked, AlarmClock, Clock, Sunny, ArrowLeft, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { formatDateTime, dayDiffFromToday } from '@/utils/date'
@@ -244,6 +254,13 @@ const expiringList = ref<any[]>([])
 const recentRecords = ref<any[]>([])
 const recentModuleFilter = ref('')
 const loading = ref(false)
+
+// 最近记录初始展示条数，超出则折叠为「展开全部」
+const RECENT_LIMIT = 6
+const recentExpanded = ref(false)
+const visibleRecentRecords = computed(() =>
+  recentExpanded.value ? recentRecords.value : recentRecords.value.slice(0, RECENT_LIMIT)
+)
 
 const showCreateDialog = ref(false)
 const createDialogModule = ref('')
@@ -305,6 +322,7 @@ async function fetchDashboardData() {
       ...record,
       summary: getRecordSummary(record)
     }))
+    recentExpanded.value = false
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
   } finally {
@@ -314,6 +332,7 @@ async function fetchDashboardData() {
 
 async function fetchRecentRecords() {
   recentRecords.value = []
+  recentExpanded.value = false
   for (const module of enabledModules.value) {
     if (recentModuleFilter.value && module.moduleKey !== recentModuleFilter.value) continue
     try {
@@ -329,7 +348,7 @@ async function fetchRecentRecords() {
     }
   }
   recentRecords.value.sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)))
-  recentRecords.value = recentRecords.value.slice(0, 8)
+  recentRecords.value = recentRecords.value.slice(0, RECENT_LIMIT * 2)
 }
 
 function goToModule(moduleKey: string) {
@@ -759,6 +778,28 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.record-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 8px 12px;
+  border: 1px dashed rgba($text-primary, 0.12);
+  border-radius: 10px;
+  background: transparent;
+  color: $text-secondary;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: $primary-text;
+    border-color: rgba($primary-text, 0.4);
+    background: rgba(255, 255, 255, 0.5);
+  }
 }
 
 .record-item {
