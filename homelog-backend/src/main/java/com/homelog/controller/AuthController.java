@@ -56,19 +56,21 @@ public class AuthController {
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("用户登录尝试：{}", request.getUsername());
 
-        // 认证
+        // 认证（用户名或邮箱均可，UserDetailsServiceImpl 负责归一到真实 username）
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // 生成 Token
+        // 生成 Token：统一以认证主体里的真实 username 为准，避免邮箱登录时把邮箱写进 token
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
         String accessToken = jwtTokenProvider.generateAccessToken(authentication);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(request.getUsername());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(username);
 
         TokenResponse response = new TokenResponse(accessToken, refreshToken, jwtTokenProvider.getAccessTokenExpire());
-        log.info("用户登录成功：{}", request.getUsername());
+        log.info("用户登录成功：{}", username);
         return ResponseEntity.ok(response);
     }
 
@@ -125,7 +127,8 @@ public class AuthController {
         );
 
         String accessToken = jwtTokenProvider.generateAccessToken(authentication);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(request.getUsername());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(
+                ((UserDetails) authentication.getPrincipal()).getUsername());
 
         TokenResponse response = new TokenResponse(accessToken, refreshToken, jwtTokenProvider.getAccessTokenExpire());
         log.info("用户注册成功：用户ID={}，用户名={}", user.getId(), user.getUsername());

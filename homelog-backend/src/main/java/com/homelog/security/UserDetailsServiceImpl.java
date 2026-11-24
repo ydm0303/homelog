@@ -32,15 +32,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final SpaceMembershipReader spaceMembershipReader;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userMapper.selectByUsername(username);
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        // 多标识登录：输入含 @ 视为邮箱，否则按用户名查。两者都全表唯一且指向同一条 jj_user，
+        // 最终归一到真实的 user.getUsername()，下游 JWT/refresh/改密码全部以 username 为准。
+        User user = identifier != null && identifier.contains("@")
+                ? userMapper.selectByEmail(identifier.trim())
+                : userMapper.selectByUsername(identifier);
         if (user == null) {
-            log.warn("User details load failed, user not found: {}", username);
-            throw new UsernameNotFoundException("用户不存在: " + username);
+            log.warn("User details load failed, user not found: {}", identifier);
+            throw new UsernameNotFoundException("用户不存在: " + identifier);
         }
 
         List<GrantedAuthority> authorities = resolveAuthorities(user.getId());
-        log.debug("User details loaded: username={}, userId={}, authorities={}", username, user.getId(), authorities);
+        log.debug("User details loaded: identifier={}, username={}, userId={}, authorities={}",
+                identifier, user.getUsername(), user.getId(), authorities);
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),

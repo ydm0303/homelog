@@ -301,9 +301,10 @@ export const spaceApi = {
   getMembers: () =>
     api.get('/space/members/list'),
 
-  /** 更新成员 POST /api/space/members/update */
+  /** 更新成员 POST /api/space/members/update
+   *  错误提示由调用方（Settings 成员管理）统一处理，跳过拦截器去重避免连续弹两次 */
   updateMember: (data: { userId: number; role?: number; receiveMail?: number }) =>
-    api.post('/space/members/update', data),
+    api.post('/space/members/update', data, { _skipErrorToast: true } as any),
 
   /** 移除成员（连带删除其内容，需 confirm）POST /api/space/members/delete */
   deleteMember: (userId: number, confirm = true) =>
@@ -312,9 +313,14 @@ export const spaceApi = {
 
 // ============ 家庭空间邀请 API（设计文档 v1.2 §6.2-6.4 / §10） ============
 export const invitationApi = {
-  /** 发起邀请 POST /api/space/invitations/create */
-  create: (data: { email: string; role: number }) =>
-    api.post('/space/invitations/create', data),
+  /** 发起邀请 POST /api/space/invitations/create（被邀请人支持用户名或邮箱）
+   *  错误提示由调用方（Settings 邀请表单）统一处理，跳过拦截器去重避免连续弹两次 */
+  create: (data: { identifier: string; role: number }) =>
+    api.post('/space/invitations/create', data, { _skipErrorToast: true } as any),
+
+  /** 发起前真实性预检 POST /api/space/invitations/check（账号或邮箱，返回 exists/nickname/email） */
+  check: (identifier: string) =>
+    api.post('/space/invitations/check', { identifier }, { _skipErrorToast: true } as any),
 
   /** 邀请列表 GET /api/space/invitations/list?direction=received|sent&pendingOnly= */
   list: (params: { direction?: 'received' | 'sent'; pendingOnly?: boolean } = {}) =>
