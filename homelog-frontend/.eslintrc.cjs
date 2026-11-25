@@ -2,7 +2,7 @@
 /**
  * ESLint 配置（.eslintrc 格式，配合 ESLint 8.x）
  *
- * 之前仓库缺少该文件，导致 `npm run lint` 一直报 “couldn't find a configuration file”。
+ * 之前仓库缺少该文件，导致 `pnpm lint` 一直报 “couldn't find a configuration file”。
  * 这里采用最小可用配置：Vue3 基础规则 + TypeScript 解析，不做类型感知（避免需要 parserOptions.project）。
  */
 module.exports = {

@@ -83,24 +83,32 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
+      # pnpm 版本由 homelog-frontend/package.json 的 packageManager 字段决定；
+      # 该步骤必须在 setup-node 之前，否则 cache: pnpm 找不到 pnpm 无法定位 store
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # 仓库根没有 package.json，需显式指向前端，否则读不到 packageManager 字段
+          package_json_file: homelog-frontend/package.json
+
       - name: 安装 Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: homelog-frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: homelog-frontend/pnpm-lock.yaml
 
       - name: 安装依赖
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: 类型检查 + 生产构建
-        # package.json 的 build 脚本 = vue-tsc && vite build，类型错误会直接失败
-        run: npm run build
+      - name: 生产构建
+        # package.json 的 build 脚本 = vite build（类型检查单独走 frontend-quality）
+        run: pnpm run build
 
       - name: ESLint 检查（暂不阻断构建）
         # 现有代码存在告警，先观察；清理干净后删除 continue-on-error
         continue-on-error: true
-        run: npx eslint . --ext .vue,.js,.ts,.tsx --max-warnings=0
+        run: pnpm exec eslint . --ext .vue,.js,.ts,.tsx --max-warnings=0
 
       - name: 上传 dist 产物
         uses: actions/upload-artifact@v4

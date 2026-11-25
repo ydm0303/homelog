@@ -6,7 +6,7 @@
 - **Maven 3.6+** (已安装)
 - **MySQL 8.0** (已运行，已执行 `db/migration/V1__init.sql`)
 - **Node.js 18+** (需安装)
-- **npm/pnpm** (随 Node.js 安装)
+- **pnpm 10+** (随 Node.js 安装后可用 `corepack enable` 启用；项目统一使用 pnpm)
 
 ---
 
@@ -69,6 +69,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ### 1. 安装 Node.js 18+
 - 下载: https://nodejs.org/ (推荐 LTS 版本)
 - 验证: `node --version` 应显示 v18+
+- 启用 pnpm: `corepack enable`（Node 自带，无需另外安装；首次运行会按 `package.json` 的 `packageManager` 拉取 pnpm 10）
 
 ### 2. 进入前端目录
 ```bash
@@ -77,15 +78,16 @@ cd d:/CodexWork/HomeLog/homelog-frontend
 
 ### 3. 安装依赖
 ```bash
-npm install
-# 或使用 pnpm (更快)
 pnpm install
+# 严格对齐 lockfile（等价于 CI 的检查）
+pnpm install --frozen-lockfile
 ```
+
+> 项目统一使用 **pnpm**，不要用 `npm install`：依赖锁定信息在 `pnpm-lock.yaml`，
+> `package-lock.json` 已被 `.gitignore` 忽略。混用包管理器会产生第二套依赖树。
 
 ### 4. 启动开发服务器
 ```bash
-npm run dev
-# 或
 pnpm dev
 ```
 
@@ -112,19 +114,22 @@ mvn flyway:migrate -Dflyway.url=jdbc:mysql://localhost:3306/homelog -Dflyway.use
 ### 前端
 ```bash
 # 类型检查
-npm run type-check  # 或 npx vue-tsc --noEmit
+pnpm type-check  # 或 pnpm exec vue-tsc --noEmit
 
 # 代码检查
-npm run lint
+pnpm lint
 
 # 代码格式化
-npm run format
+pnpm format
 
 # 生产构建
-npm run build
+pnpm build
 
 # 预览生产构建
-npm run preview
+pnpm preview
+
+# 单元测试
+pnpm test
 ```
 
 ---
@@ -217,13 +222,11 @@ docker-compose up -d
 | `-StrictLint` | ESLint 告警即失败（默认只告警，不阻断） |
 | `-RunTests` | 后端跑单元测试（默认 `-DskipTests`） |
 | `-Clean` | 后端先 `mvn clean`，默认复用 target 以适配离线环境 |
-| `-TypeCheck` | 额外跑 `vue-tsc --noEmit`（见下方注意） |
-| `-CleanInstall` | 强制 `npm ci` 重装前端依赖 |
+| `-TypeCheck` | 额外跑 `pnpm type-check`（vue-tsc） |
+| `-CleanInstall` | 清空 `node_modules` 后强制 `pnpm install --frozen-lockfile` |
 
-> ⚠️ `-TypeCheck` 目前会失败：`package-lock.json` 锁定的 `vue-tsc@1.8.27` 与
-> `typescript@5.9.3` 不兼容（报 `Search string not found: /supportedTSExtensions ...`）。
-> 解决办法二选一：把 typescript 降到 `~5.4.5`，或把 vue-tsc 升到 `^2.x` 后重新 `npm install`。
-> 在此之前 `npm run build` 只跑 `vite build`，类型检查单独用 `npm run type-check`。
+> 脚本要求 PATH 里有 `pnpm`（`corepack enable` 后即可）。前端所有命令都走 pnpm，
+> 不再调用 npm/npx。
 
 ---
 
@@ -260,8 +263,9 @@ docker-compose up -d
 - 或设置环境变量: `MAVEN_OPTS="-Xmx1024m"`
 
 ### 前端依赖安装失败
-- 使用淘宝镜像: `npm config set registry https://registry.npmmirror.com`
-- 或使用 pnpm: `npm install -g pnpm && pnpm install`
+- 使用淘宝镜像: `pnpm config set registry https://registry.npmmirror.com`
+- pnpm 未安装: `corepack enable`（Node 18+ 自带），或 `npm install -g pnpm@10`
+- 校验 lockfile 一致: `pnpm install --frozen-lockfile`
 
 ### 端口冲突
 - 后端默认 8080，前端默认 5173

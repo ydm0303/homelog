@@ -29,8 +29,10 @@ mvn test -Dtest=ClassName#methodName                 # run a single test
 
 ### Frontend (`homelog-frontend/`, run from that dir)
 
+**Use pnpm only** — `pnpm-lock.yaml` is the single lockfile (`packageManager` is pinned in `package.json`, CI and Docker both use pnpm). Do not run `npm install` here; `package-lock.json` is gitignored, and `pnpm install --frozen-lockfile` is what CI verifies against.
+
 ```bash
-pnpm install        # or npm install — both lockfiles exist; CI uses `npm ci`
+pnpm install                  # or pnpm install --frozen-lockfile (CI-equivalent)
 pnpm dev            # dev server at :5173, proxies /api → :8080
 pnpm build          # production build (vite build only — does NOT type-check)
 pnpm type-check     # vue-tsc --noEmit
@@ -38,7 +40,7 @@ pnpm lint           # eslint + style guard (node scripts/lint-styles.mjs)
 pnpm lint:fix       # eslint --fix only
 pnpm format         # prettier on src/**
 pnpm test           # vitest run
-npx vitest run src/path/to/file.spec.ts   # single test file
+npx vitest run src/path/to/file.spec.ts   # single test file (or: pnpm vitest run ...)
 pnpm test:watch     # vitest watch
 ```
 
