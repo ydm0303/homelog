@@ -3,9 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      锁定缩放以脱离网页体感（双击缩放 / 捏合缩放产生的错位是主要来源）。
+      注意：iOS Safari 10+ 会忽略 user-scalable=no，仅 desktop 与 Android 全量生效；
+      iOS 上真正会引发自动放大的场景是聚焦小字号输入框，
+      故必须保证表单控件 ≥16px（见 index.scss 的 .el-input 字号），这才是 iOS 侧的实际手段。
+      代价：系统级文字放大与无障碍双指放大失效 —— 补偿通道为「设置 → 适老化 → 字号」。
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <meta name="description" content="家记：家里的事，都记在这里，模块化家庭私有记录平台" />
-    <meta name="theme-color" content="#3a8dff" />
+    <meta name="theme-color" content="#fffaf5" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

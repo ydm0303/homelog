@@ -219,6 +219,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getModuleIcon } from '@/utils/module'
 import { roleLabel, roleTagType } from '@/utils/role'
 import { useIsTabletDown } from '@/composables/useMediaQuery'
+import { haptic } from '@/composables/useHaptics'
 
 const router = useRouter()
 const route = useRoute()
@@ -340,6 +341,7 @@ const userDropdownRef = ref<InstanceType<typeof import('element-plus').ElDropdow
 const getRoleLabel = computed(() => roleLabel(authStore.role))
 
 function handleQuickCreate() {
+  haptic('light')
   const firstModule = moduleStore.enabledModules?.[0]
   if (firstModule?.moduleKey) {
     router.push(`/module/${firstModule.moduleKey}/create`)

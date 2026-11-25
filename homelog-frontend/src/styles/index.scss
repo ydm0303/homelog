@@ -81,6 +81,36 @@ body {
   min-height: 100dvh;
   font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
+  // 原生手感：禁用文档级橡皮筋（.page-content 内部滚动仍正常），
+  // 去掉 iOS 长按弹出「拷贝/查找」系统菜单
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+}
+
+// 交互层：消除移动端 300ms 点击延迟与双击缩放（= 网页感的直接来源）。
+// 只关 double-tap-zoom，保留双指捏合缩放 —— 适老化用户靠放大看药品名，
+// 不要用 user-scalable=no 把它一起关掉。
+a,
+button,
+input,
+textarea,
+select,
+label,
+[role='button'],
+[role='tab'],
+.el-button,
+.el-drawer,
+.page-content {
+  touch-action: manipulation;
+}
+
+// 长按不选中导航/按钮文字（正文与表单仍可正常选中复制）
+.top-bar,
+.sidebar,
+.mobile-nav,
+.el-button {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 h1,
@@ -185,6 +215,30 @@ h4 {
 .el-textarea__inner {
   border-radius: $border-radius-base;
   transition: box-shadow $transition-fast $ease-out;
+}
+
+// iOS 锁定缩放（index.html 的 user-scalable=no）在 Safari 上会被忽略，
+// 但聚焦 font-size < 16px 的控件仍会触发「自动放大」，且放大后用户捏不回来 ——
+// 表现为填表时页面莫名放大且无法复原。抬到 ≥16px 是 iOS 侧唯一有效手段。
+// 只在触控断点内生效：桌面不存在该问题，且可避免改动顶栏 size="small" 搜索框的排版。
+//
+// 用 max() 取「16px 下限」与「Element Plus 当前字号」的较大者，而不是写死 16px：
+// 适老化模式靠 --el-font-size-base 放大文字（见下方 body.elderly-mode），
+// 写死会把输入框冻在 16px，正好毁掉视力最差那批用户的输入体验。
+// 必须用 #{$text-title} 插值，否则 Sass 会拿自己的 max() 函数去算 var() 而报错。
+// 直接命中承载文字的内层节点，避免被 .el-input--small .el-input__inner
+// 以同特异性 + 先加载顺序压过。
+$mobile-input-min-font: max(#{$text-title}, var(--el-font-size-base));
+
+@include down(lg) {
+  .el-input__inner,
+  .el-textarea__inner,
+  .el-select__input,
+  .el-date-editor .el-input__inner,
+  .el-input-number .el-input__inner,
+  .el-select__placeholder {
+    font-size: $mobile-input-min-font;
+  }
 }
 
 .el-input__wrapper.is-focus,
@@ -396,8 +450,10 @@ h4 {
 // ============================================================
 // 5. 路由转场（内容区）
 // ============================================================
+// transition 是 mode="out-in"，两段时长串行相加 = 用户感知的空白等待，
+// 所以整体压到 120 + 160，接近原生页面切换（iOS push ≈ 200ms）
 .page-fade-enter-active {
-  transition: opacity $transition-base $ease-out, transform $transition-base $ease-out;
+  transition: opacity 160ms $ease-out, transform 160ms $ease-out;
 }
 
 .page-fade-leave-active {
@@ -406,7 +462,7 @@ h4 {
 
 .page-fade-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(6px);
 }
 
 .page-fade-leave-to {
