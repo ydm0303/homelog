@@ -35,9 +35,15 @@ export default defineConfig({
         description: '模块化家庭私有记录平台：药品、待办、记事、证件',
         start_url: '/',
         display: 'standalone',
+        // Android Chrome 会忽略 standalone 而给窄屏套 minimal-ui（全屏浅灰栏），
+        // 部分国产 WebView 干脆不支持 standalone。用 override 争一个无地址栏的外壳。
+        // 不放 fullscreen：那会连状态栏一起去掉，首页顶部内容容易顶进刘海。
+        // 注意：iOS Safari 不认 display_override，只认上面的 display。
+        display_override: ['standalone', 'minimal-ui'],
         orientation: 'portrait',
-        background_color: '#3a8dff',
-        theme_color: '#3a8dff',
+        // 启动闪屏 + 状态栏底色必须等于首屏背景色（$bg-color），否则冷启动会闪一块异色
+        background_color: '#fffaf5',
+        theme_color: '#fffaf5',
         lang: 'zh-CN',
         icons: [
           {
