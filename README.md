@@ -105,13 +105,11 @@ java -jar target/homelog-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```bash
 cd homelog-frontend
 
-# 安装依赖
-npm install
-# 或使用 pnpm
+# 安装依赖（项目统一使用 pnpm）
 pnpm install
 
 # 启动开发服务器
-npm run dev
+pnpm dev
 ```
 
 访问 `http://localhost:5173` 即可看到前端页面。
@@ -258,11 +256,11 @@ java -jar target/homelog-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```bash
 cd homelog-frontend
 
-# Install dependencies
-npm install
+# Install dependencies (pnpm is the project's package manager)
+pnpm install
 
 # Start dev server
-npm run dev
+pnpm dev
 ```
 
 Visit `http://localhost:5173` to access the application.

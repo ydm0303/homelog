@@ -100,11 +100,11 @@ java -jar target/homelog-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```bash
 cd homelog-frontend
 
-# Install dependencies
-npm install
+# Install dependencies (pnpm is the project's package manager)
+pnpm install
 
 # Start dev server
-npm run dev
+pnpm dev
 ```
 
 Visit `http://localhost:5173` to access the application.

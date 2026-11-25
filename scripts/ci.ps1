@@ -8,7 +8,7 @@
 
     执行内容：
       后端  1) mvn clean package        —— 编译 + 打包（默认跳过测试）
-      前端  2) npm ci（仅当 node_modules 缺失时）
+      前端  2) pnpm install --frozen-lockfile（仅当 node_modules 缺失时）
             3) eslint 静态检查
             4) vue-tsc 类型检查 + vite 生产构建
 
@@ -30,11 +30,9 @@
 
 .PARAMETER TypeCheck
     前端执行 vue-tsc 类型检查。
-    注意：当前 lock 锁定的 vue-tsc 1.8.27 与 TypeScript 5.9 不兼容，
-    需先把 typescript 降到 5.4.x 或把 vue-tsc 升到 2.x 后才能启用。
 
 .PARAMETER CleanInstall
-    强制重新执行 npm ci（清空并重装 node_modules）
+    强制重新执行 pnpm install --frozen-lockfile（清空并重装 node_modules）
 
 .EXAMPLE
     ./scripts/ci.ps1
@@ -201,7 +199,7 @@ if ($needBackend) {
 }
 
 if ($needFrontend) {
-    if (-not (Test-CommandAvailable 'npm')) { throw '未找到 npm，请安装 Node.js 18+ 并加入 PATH' }
+    if (-not (Test-CommandAvailable 'pnpm')) { throw '未找到 pnpm，请安装 Node.js 18+ 后执行 corepack enable（或 npm install -g pnpm@10）' }
 }
 
 Write-Host ''
@@ -221,7 +219,7 @@ if ($needBackend) {
         ForEach-Object { Write-Host "  $($_.Trim())" }
 }
 if ($needFrontend) {
-    Write-Host "  node $(node -v) / npm $(npm -v)"
+    Write-Host "  node $(node -v) / pnpm $(pnpm -v)"
 }
 
 # ---------------------------------------------------------------------------
@@ -269,12 +267,18 @@ if ($needFrontend) {
     $nodeModules = Join-Path $FrontendDir 'node_modules'
 
     if ($CleanInstall -or -not (Test-Path $nodeModules)) {
-        Invoke-Step -Name 'npm ci' -WorkDir $FrontendDir -Action {
-            Invoke-CommandLine -File 'npm' -Arguments @('ci')
+        # pnpm install 只补齐差异，-CleanInstall 需先真正清空才叫重装
+        if ($CleanInstall -and (Test-Path $nodeModules)) {
+            Write-Host '   -> 清空 node_modules（-CleanInstall）' -ForegroundColor DarkGray
+            Remove-Item -Path $nodeModules -Recurse -Force
+        }
+
+        Invoke-Step -Name 'pnpm install --frozen-lockfile' -WorkDir $FrontendDir -Action {
+            Invoke-CommandLine -File 'pnpm' -Arguments @('install', '--frozen-lockfile')
         } | Out-Null
     }
     else {
-        Write-Host '   -> 跳过 npm ci（node_modules 已存在，需要重装请加 -CleanInstall）' -ForegroundColor DarkGray
+        Write-Host '   -> 跳过 pnpm install（node_modules 已存在，需要重装请加 -CleanInstall）' -ForegroundColor DarkGray
     }
 
     $eslintBin = Join-Path $FrontendDir 'node_modules\eslint\bin\eslint.js'
@@ -288,7 +292,7 @@ if ($needFrontend) {
         Write-Host '   -> 跳过 eslint（-SkipLint）' -ForegroundColor DarkGray
     }
     elseif (-not (Test-Path $eslintBin)) {
-        Write-Host '   -> 跳过 eslint（node_modules 中未安装 eslint，请先 npm install）' -ForegroundColor Yellow
+        Write-Host '   -> 跳过 eslint（node_modules 中未安装 eslint，请先 pnpm install）' -ForegroundColor Yellow
     }
     elseif (-not $hasEslintConfig) {
         Write-Host '   -> 跳过 eslint（缺少 ESLint 配置文件）' -ForegroundColor Yellow
@@ -307,12 +311,12 @@ if ($needFrontend) {
 
     if ($TypeCheck) {
         Invoke-Step -Name 'vue-tsc --noEmit' -WorkDir $FrontendDir -Action {
-            Invoke-CommandLine -File 'npm' -Arguments @('run', 'type-check')
+            Invoke-CommandLine -File 'pnpm' -Arguments @('run', 'type-check')
         } | Out-Null
     }
 
     Invoke-Step -Name 'vite build' -WorkDir $FrontendDir -Action {
-        Invoke-CommandLine -File 'npm' -Arguments @('run', 'build')
+        Invoke-CommandLine -File 'pnpm' -Arguments @('run', 'build')
     } | Out-Null
 
     $distDir = Join-Path $FrontendDir 'dist'

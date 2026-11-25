@@ -5,15 +5,18 @@
 # 构建阶段
 FROM node:20-alpine AS builder
 
+# 通过 corepack 启用 pnpm，版本取 package.json 的 packageManager 字段
+RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+
 WORKDIR /app
 
-# 复制 package 文件并安装依赖
-COPY package*.json ./
-RUN npm ci
+# 复制 lockfile 并安装依赖（--frozen-lockfile 保证与 pnpm-lock.yaml 一致）
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # 复制源码并构建
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # 运行阶段 - Nginx
 FROM nginx:alpine

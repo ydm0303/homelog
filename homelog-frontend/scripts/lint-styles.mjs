@@ -8,7 +8,7 @@
 //   4. @media 宽度只允许 640 / 768 / 1024 / 1280 边界
 //   5. 全局 .scss 中禁止 :deep()（只对 SFC scoped 样式有效）
 //
-// 运行：npm run lint:styles
+// 运行：pnpm lint:styles
 // ============================================================
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
