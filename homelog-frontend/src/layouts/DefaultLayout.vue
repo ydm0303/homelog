@@ -56,7 +56,7 @@
     <el-drawer
       v-model="mobileDrawer"
       direction="ltr"
-      size="86%"
+      size="clamp(260px, 78%, 320px)"
       class="mobile-drawer"
       modal-class="mobile-drawer-overlay"
       :before-close="handleDrawerClose"
@@ -348,9 +348,10 @@ function handleQuickCreate() {
   router.push('/settings')
 }
 
-// 抽屉关闭前
-function handleDrawerClose() {
-  return true
+// 抽屉关闭前：Element Plus 的 before-close 不会看返回值，
+// 必须调用 done() 才真正关闭（X 按钮 / 遮罩 / ESC 都走这里）
+function handleDrawerClose(done: () => void) {
+  done()
 }
 
 // 退出登录
