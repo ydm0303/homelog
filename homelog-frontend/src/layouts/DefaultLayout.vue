@@ -433,6 +433,7 @@ function handleSearch() {
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
+@use '@/styles/breakpoints' as *;
 
 .default-layout {
   display: flex;
@@ -443,21 +444,21 @@ function handleSearch() {
 
 // 侧边栏
 .sidebar {
-  width: 240px;
-  min-width: 240px;
+  width: $layout-sidebar-width;
+  min-width: $layout-sidebar-width;
   height: 100%;
   background: $sidebar-bg;
   border-right: 1px solid $border-color;
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
+  transition: width $transition-slow $ease-out;
   z-index: $z-index-sidebar;
   overflow: hidden;
   box-shadow: inset -1px 0 0 rgba($primary-color, 0.06);
 
   &.collapsed {
-    width: 64px;
-    min-width: 64px;
+    width: $layout-sidebar-collapsed-width;
+    min-width: $layout-sidebar-collapsed-width;
 
     .nav-item {
       justify-content: center;
@@ -473,11 +474,11 @@ function handleSearch() {
 }
 
 .sidebar-header {
-  height: 64px;
+  height: $layout-header-height;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  padding: 0 $spacing-md;
   border-bottom: 1px solid $border-color;
   // 与顶栏搜索区同一背景（$topbar-bg + 毛玻璃），保证顶部一行视觉连贯
   background: $topbar-bg;
@@ -486,19 +487,19 @@ function handleSearch() {
   .brand-block {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: $spacing-md-soft;
     min-width: 0;
 
     .brand-mark {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
+      width: $icon-tile-size-sm;
+      height: $icon-tile-size-sm;
       border-radius: $border-radius-lg;
       background: $primary-color;
       color: $card-bg;
-      font-size: 20px;
+      font-size: $icon-size-xl;
       flex-shrink: 0;
     }
 
@@ -509,8 +510,8 @@ function handleSearch() {
       min-width: 0;
 
       .logo {
-        font-size: 20px;
-        font-weight: 800;
+        font-size: $text-heading;
+        font-weight: $font-weight-bold;
         color: $primary-text;
         margin: 0;
         white-space: nowrap;
@@ -523,7 +524,7 @@ function handleSearch() {
 
 .sidebar-nav {
   flex: 1;
-  padding: 12px 8px;
+  padding: $spacing-md-soft $spacing-sm;
   overflow-y: auto;
   background: transparent;
 
@@ -531,29 +532,31 @@ function handleSearch() {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 10px;
-    min-height: 44px;
-    padding: 10px 12px;
-    border-radius: 14px;
+    gap: $spacing-md-soft;
+    min-height: $touch-target-min;
+    padding: $spacing-sm $spacing-md-soft;
+    // 原先 14px：卡片 12 / 导航 14 两种圆角混用，是「同一层级不同长相」的典型
+    border-radius: $border-radius-lg;
     background: transparent;
     color: $nav-text;
     text-decoration: none;
-    transition: all 0.2s ease;
+    font-size: $text-body;
+    @include transition-interactive;
     white-space: nowrap;
-    font-weight: 500;
+    font-weight: $font-weight-medium;
     border: none;
     box-shadow: none;
 
     &:hover {
       background-color: $nav-hover-bg;
       color: $primary-text;
-      transform: translateX(1px);
+      transform: translateX($shift-on-hover);
     }
 
     &.active {
       background: $hover-bg;
       color: $primary-text;
-      font-weight: 700;
+      font-weight: $font-weight-bold;
       box-shadow: inset 0 0 0 1px rgba($primary-color, 0.05);
     }
 
@@ -564,15 +567,15 @@ function handleSearch() {
     }
 
     el-icon {
-      width: 18px;
-      height: 18px;
-      font-size: 18px;
+      width: $icon-size-base;
+      height: $icon-size-base;
+      font-size: $icon-size-base;
       flex-shrink: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: $nav-text;
-      transition: color 0.2s ease;
+      @include transition-interactive;
     }
 
     &:hover el-icon,
@@ -592,18 +595,18 @@ function handleSearch() {
 }
 
 .sidebar-footer {
-  padding: 12px;
+  padding: $spacing-md-soft;
   border-top: 1px solid $border-color;
 
   .footer-note {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 0 0 12px;
-    padding: 12px 14px;
+    gap: $spacing-sm;
+    margin: 0 0 $spacing-md-soft;
+    padding: $spacing-md-soft $spacing-lg-soft;
     text-align: left;
-    font-size: 12px;
-    line-height: 1.6;
+    font-size: $text-caption;
+    line-height: $line-height-base;
     letter-spacing: 0.08em;
     color: $text-tertiary;
     background: $surface-warm;
@@ -613,14 +616,14 @@ function handleSearch() {
     .footer-note-heart {
       flex-shrink: 0;
       color: $brand-400;
-      font-size: 14px;
+      font-size: $text-body;
       line-height: 1;
     }
 
     .footer-note-text {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: $spacing-micro;
 
       span {
         display: block;
@@ -632,17 +635,17 @@ function handleSearch() {
   .user-info {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: $spacing-md-soft;
 
     .user-detail {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: $spacing-micro;
       min-width: 0;
 
       .user-name {
-        font-size: 13px;
-        font-weight: 600;
+        font-size: $text-label;
+        font-weight: $font-weight-semibold;
         color: $text-primary;
         white-space: nowrap;
         overflow: hidden;
@@ -650,7 +653,8 @@ function handleSearch() {
       }
 
       .user-role {
-        font-size: 11px;
+        // 原先 11px 低于可读下限，且与说明文字 12px 只差 1px，两档并存无意义
+        font-size: $text-caption;
         color: $text-placeholder;
         white-space: nowrap;
       }
@@ -664,20 +668,16 @@ function handleSearch() {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  transition: margin-left 0.3s ease;
-
-  &.expanded {
-    // 展开状态下无需额外样式，侧边栏已收缩
-  }
+  transition: margin-left $transition-slow $ease-out;
 }
 
 // 顶部栏
 .top-bar {
-  height: calc(64px + env(safe-area-inset-top));
+  height: calc(#{$layout-header-height} + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: env(safe-area-inset-top) 24px 0;
+  padding: env(safe-area-inset-top) $spacing-lg 0;
   background: $topbar-bg;
   border-bottom: 1px solid $border-color;
   position: sticky;
@@ -688,28 +688,28 @@ function handleSearch() {
   .top-bar-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: $spacing-md;
   }
 
   .top-bar-center {
     flex: 1;
     display: flex;
     justify-content: flex-start;
-    max-width: 560px;
-    margin: 0 20px 0 16px;
+    max-width: $layout-search-slot-width;
+    margin: 0 $spacing-lg-soft 0 $spacing-md;
 
     .top-search-input {
       width: 100%;
-      max-width: 420px;
+      max-width: $layout-search-input-width;
 
       :deep(.el-input__wrapper) {
-        height: 36px;
-        padding: 0 14px;
-        border-radius: 999px;
+        height: $control-height-md;
+        padding: 0 $spacing-lg-soft;
+        border-radius: $border-radius-pill;
         background: $field-bg;
         border: 1px solid transparent;
         box-shadow: none;
-        transition: all 0.2s ease;
+        @include transition-interactive;
 
         &:hover {
           background: $card-bg;
@@ -724,8 +724,9 @@ function handleSearch() {
       }
 
       :deep(.el-input__inner) {
-        height: 34px;
-        font-size: 14px;
+        // 内层比外壳少 2px：外壳有 1px 上下边框，写满会撑高外壳
+        height: calc(#{$control-height-md} - 2px);
+        font-size: $text-body;
         color: $text-primary;
       }
 
@@ -738,7 +739,7 @@ function handleSearch() {
   .top-bar-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: $spacing-md;
   }
 
   .toggle-btn,
@@ -747,7 +748,7 @@ function handleSearch() {
     color: $text-tertiary;
     background: transparent;
     border: none;
-    transition: color 0.2s ease;
+    @include transition-interactive;
 
     &:hover,
     &:focus {
@@ -758,11 +759,11 @@ function handleSearch() {
   }
 
   .notification-icon {
-    font-size: 20px;
+    font-size: $icon-size-lg;
     color: $text-tertiary;
     cursor: pointer;
     position: relative;
-    transition: color 0.2s ease;
+    @include transition-interactive;
 
     &:hover {
       color: $primary-color;
@@ -773,8 +774,8 @@ function handleSearch() {
   .notification-badge {
     :deep(.el-badge__content.is-dot) {
       background-color: $primary-color;
-      width: 7px;
-      height: 7px;
+      width: $badge-dot-size;
+      height: $badge-dot-size;
     }
   }
 }
@@ -783,15 +784,15 @@ function handleSearch() {
 .space-switcher {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  border-radius: 999px;
+  gap: $spacing-sm;
+  height: $control-height-sm;
+  padding: 0 $spacing-md-soft;
+  border-radius: $border-radius-pill;
   cursor: pointer;
   color: $text-secondary;
-  font-size: 13px;
-  font-weight: 600;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  font-size: $text-label;
+  font-weight: $font-weight-semibold;
+  @include transition-interactive;
 
   &:hover {
     background: $hover-bg;
@@ -799,26 +800,27 @@ function handleSearch() {
   }
 
   .space-switcher-name {
-    max-width: 120px;
+    max-width: $layout-name-max-width;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .space-switcher-caret {
-    font-size: 12px;
+    font-size: $text-caption;
     color: $text-placeholder;
   }
 }
 
 // 顶栏用户入口
-.user-trigger {  display: flex;
+.user-trigger {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 10px 4px 6px;
-  border-radius: 999px;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md-soft $spacing-xs $spacing-sm;
+  border-radius: $border-radius-pill;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  @include transition-interactive;
 
   &:hover {
     background-color: $hover-bg;
@@ -835,33 +837,34 @@ function handleSearch() {
   .user-avatar {
     background: $primary-light-bg;
     color: $primary-text;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: $text-body;
+    font-weight: $font-weight-semibold;
     flex-shrink: 0;
   }
 
   .user-trigger-name {
-    max-width: 120px;
-    font-size: 13px;
-    font-weight: 600;
+    max-width: $layout-name-max-width;
+    font-size: $text-label;
+    font-weight: $font-weight-semibold;
     color: $text-primary;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color 0.2s ease;
+    @include transition-interactive;
   }
 
   .user-trigger-caret {
-    font-size: 12px;
+    font-size: $text-caption;
     color: $text-placeholder;
-    transition: color 0.2s ease;
+    @include transition-interactive;
   }
 }
 
 // 页面内容
 .page-content {
   flex: 1;
-  padding: 24px clamp(24px, 5vw, 88px) calc(88px + env(safe-area-inset-bottom));
+  padding: $spacing-lg clamp($spacing-lg, 5vw, #{$layout-content-pad-x-max})
+    calc(#{$layout-content-pad-bottom} + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
   background: $bg-color;
@@ -869,35 +872,35 @@ function handleSearch() {
 
 .page-container {
   width: 100%;
-  max-width: 1320px;
+  max-width: $layout-content-max-width;
   margin: 0 auto;
 }
 
 .global-fab {
   position: fixed;
-  right: 28px;
-  bottom: calc(28px + env(safe-area-inset-bottom));
+  right: $layout-fab-inset;
+  bottom: calc(#{$layout-fab-inset} + env(safe-area-inset-bottom));
   z-index: $z-index-fab;
   touch-action: manipulation;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 18px 0 14px;
-  height: 58px;
+  gap: $spacing-sm;
+  padding: 0 $spacing-lg-soft 0 $spacing-md-soft;
+  height: $layout-fab-size;
   border: 0;
-  border-radius: 999px;
+  border-radius: $border-radius-pill;
   background: $gradient-primary;
   color: $card-bg;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: $text-body-lg;
+  font-weight: $font-weight-bold;
   letter-spacing: 0.02em;
-  box-shadow: 0 16px 26px rgba($primary-color, 0.28);
+  box-shadow: $shadow-fab;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform $transition-base $ease-out, box-shadow $transition-base $ease-out;
 
   &:hover {
-    transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 18px 30px rgba($primary-color, 0.32);
+    transform: translateY(-$lift-on-hover) scale(1.01);
+    box-shadow: $shadow-fab-hover;
   }
 
   &:active {
@@ -909,11 +912,11 @@ function handleSearch() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: $icon-button-size;
+  height: $icon-button-size;
+  border-radius: $border-radius-pill;
   background: rgba(255, 255, 255, 0.2);
-  font-size: 22px;
+  font-size: $icon-size-xl;
   line-height: 1;
 }
 
@@ -925,23 +928,24 @@ function handleSearch() {
 .mobile-nav {
   display: flex;
   flex-direction: column;
-  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-  gap: 8px;
+  padding: $spacing-lg $spacing-md calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  gap: $spacing-sm;
   background: transparent;
 
   .mobile-nav-item {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 10px;
-    min-height: 44px;
-    padding: 10px 12px;
-    border-radius: 14px;
+    gap: $spacing-md-soft;
+    min-height: $touch-target-min;
+    padding: $spacing-sm $spacing-md-soft;
+    border-radius: $border-radius-lg;
     background: transparent;
     color: $nav-text;
     text-decoration: none;
-    font-size: 16px;
+    font-size: $text-title;
     border: none;
+    @include transition-interactive;
 
     &:hover {
       background-color: $nav-hover-bg;
@@ -960,9 +964,9 @@ function handleSearch() {
     }
 
     el-icon {
-      width: 18px;
-      height: 18px;
-      font-size: 18px;
+      width: $icon-size-base;
+      height: $icon-size-base;
+      font-size: $icon-size-base;
       color: $nav-text;
       display: inline-flex;
       align-items: center;
@@ -978,7 +982,7 @@ function handleSearch() {
 }
 
 // 响应式
-@media (max-width: 1023px) {
+@include down(lg) {
   .sidebar {
     position: fixed;
     left: 0;
@@ -986,9 +990,9 @@ function handleSearch() {
     height: 100vh;
     height: 100dvh;
     z-index: $z-index-mobile-drawer;
-    box-shadow: 4px 0 20px rgba($text-primary, 0.12);
+    box-shadow: $shadow-drawer;
     transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    transition: transform $transition-slow $ease-out;
 
     &.mobile-open {
       transform: translateX(0);
@@ -1000,7 +1004,7 @@ function handleSearch() {
   }
 
   .top-bar {
-    padding: 0 16px;
+    padding: 0 $spacing-md;
   }
 
   .top-bar-center {
@@ -1008,7 +1012,7 @@ function handleSearch() {
   }
 
   .page-content {
-    padding: 16px 16px calc(84px + env(safe-area-inset-bottom));
+    padding: $spacing-md $spacing-md calc(#{$layout-content-pad-bottom-mobile} + env(safe-area-inset-bottom));
   }
 
   .page-container {
@@ -1016,10 +1020,10 @@ function handleSearch() {
   }
 
   .global-fab {
-    right: 16px;
-    bottom: calc(20px + env(safe-area-inset-bottom));
-    width: 52px;
-    height: 52px;
+    right: $layout-fab-inset-mobile;
+    bottom: calc(#{$layout-fab-inset-mobile} + env(safe-area-inset-bottom));
+    width: $layout-fab-size-mobile;
+    height: $layout-fab-size-mobile;
     padding: 0;
     justify-content: center;
   }
@@ -1032,7 +1036,7 @@ function handleSearch() {
     width: auto;
     height: auto;
     background: transparent;
-    font-size: 24px;
+    font-size: $icon-size-xl;
   }
 
   .search-btn {
@@ -1040,7 +1044,7 @@ function handleSearch() {
   }
 }
 
-@media (min-width: 1024px) {
+@include up(lg) {
   .search-btn {
     display: none;
   }
@@ -1063,51 +1067,51 @@ function handleSearch() {
   }
 
   .user-menu-card {
-    width: 224px;
-    padding: 8px;
+    width: $popper-menu-width;
+    padding: $spacing-sm;
   }
 
   .user-menu-header {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 6px 12px 12px;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md-soft $spacing-md-soft;
   }
 
   .user-menu-name {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: $text-body;
+    font-weight: $font-weight-bold;
     color: $text-primary;
   }
 
   .user-menu-role {
-    font-size: 12px;
+    font-size: $text-caption;
     color: $text-tertiary;
   }
 
   .user-menu-divider {
     height: 1px;
-    margin: 0 8px 8px;
+    margin: 0 $spacing-sm $spacing-sm;
     background: $border-color-light;
   }
 
   .user-menu-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: $spacing-sm;
     width: 100%;
-    padding: 9px 12px;
+    padding: $spacing-sm $spacing-md-soft;
     border: none;
     background: transparent;
     border-radius: $border-radius-base;
-    font-size: 13px;
+    font-size: $text-label;
     color: $text-primary;
     cursor: pointer;
     text-align: left;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    @include transition-interactive;
 
     .el-icon {
-      font-size: 16px;
+      font-size: $icon-size-sm;
       flex-shrink: 0;
     }
 
@@ -1118,7 +1122,7 @@ function handleSearch() {
 
   .user-menu-item-primary {
     color: $primary-text;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
 
     &:hover {
       color: $primary-hover;
@@ -1132,8 +1136,8 @@ function handleSearch() {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    min-width: 180px;
+    gap: $spacing-md;
+    min-width: $popper-menu-min-width;
   }
 
   .space-option-name {

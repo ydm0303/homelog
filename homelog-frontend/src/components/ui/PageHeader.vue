@@ -52,14 +52,14 @@ const emit = defineEmits<{ back: [] }>()
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: $spacing-md;
   margin-bottom: $spacing-lg;
 }
 
 .page-header-main {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: $spacing-md-soft;
   min-width: 0;
 }
 
@@ -67,7 +67,7 @@ const emit = defineEmits<{ back: [] }>()
 .page-back {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: $spacing-xs;
   margin: 0;
   padding: 0;
   border: 0;
@@ -79,7 +79,7 @@ const emit = defineEmits<{ back: [] }>()
   font-weight: $font-weight-semibold;
   line-height: $line-height-tight;
   color: $text-tertiary;
-  transition: color $transition-fast $ease-out;
+  @include transition-interactive;
 
   .page-back-icon {
     font-size: $icon-size-lg;
@@ -98,7 +98,7 @@ const emit = defineEmits<{ back: [] }>()
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: $spacing-md-soft;
 }
 
 .page-title {
@@ -111,7 +111,7 @@ const emit = defineEmits<{ back: [] }>()
 }
 
 .page-description {
-  margin: 6px 0 0;
+  margin: $spacing-xs 0 0;
   font-size: $text-label;
   line-height: $line-height-base;
   color: $text-tertiary;
@@ -120,7 +120,7 @@ const emit = defineEmits<{ back: [] }>()
 .page-header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: $spacing-md-soft;
   flex-shrink: 0;
 }
 
@@ -133,10 +133,6 @@ const emit = defineEmits<{ back: [] }>()
   .page-header-actions {
     justify-content: flex-start;
     flex-wrap: wrap;
-  }
-
-  .page-title {
-    font-size: 20px;
   }
 }
 </style>

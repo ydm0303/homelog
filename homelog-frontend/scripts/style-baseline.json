@@ -1,0 +1,15 @@
+{
+  "src/views/ModuleList.vue": 63,
+  "src/views/GlobalSearch.vue": 57,
+  "src/views/RecordDetail.vue": 36,
+  "src/layouts/AuthLayout.vue": 30,
+  "src/views/Settings.vue": 23,
+  "src/views/MessageCenter.vue": 16,
+  "src/components/DynamicFieldRenderer.vue": 11,
+  "src/views/Register.vue": 9,
+  "src/views/Forbidden.vue": 8,
+  "src/views/NotFound.vue": 8,
+  "src/App.vue": 4,
+  "src/views/RecordEdit.vue": 4,
+  "src/views/Login.vue": 2
+}

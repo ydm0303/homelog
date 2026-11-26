@@ -39,9 +39,9 @@ withDefaults(
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: $spacing-md-soft;
   min-width: 0;
-  padding: 16px 18px;
+  padding: $spacing-md $spacing-lg-soft;
   background: $card-bg;
   border: 1px solid $border-color;
   border-radius: $border-radius-lg;
@@ -51,11 +51,11 @@ withDefaults(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: $icon-tile-size;
+  height: $icon-tile-size;
   flex-shrink: 0;
-  border-radius: 10px;
-  font-size: 19px;
+  border-radius: $border-radius-base;
+  font-size: $icon-size-lg;
 }
 
 .stat-body {
@@ -73,7 +73,7 @@ withDefaults(
 }
 
 .stat-label {
-  margin-top: 4px;
+  margin-top: $spacing-xs;
   font-size: $text-caption;
   color: $text-tertiary;
   white-space: nowrap;
@@ -114,7 +114,7 @@ withDefaults(
 
 @include down(md) {
   .stat-card {
-    padding: 12px 14px;
+    padding: $spacing-md-soft;
   }
 
   .stat-value {

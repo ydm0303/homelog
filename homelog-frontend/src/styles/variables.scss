@@ -85,33 +85,57 @@ $gradient-primary: linear-gradient(135deg, $primary-strong 0%, $primary-gradient
 $gradient-primary-hover: linear-gradient(135deg, $primary-strong-hover 0%, #963c24 100%);
 
 // ---------- 5. 圆角 ----------
+// 微型档：行内标记（<mark> 高亮）等贴着文字的小元素专用，
+// 不要拿 $border-radius-sm(4px) 凑合——会让 12px 的行内块看起来肿胀。
+$border-radius-micro: 2px;
 $border-radius-sm: 4px;
 $border-radius-base: 8px;
 $border-radius-lg: 12px;
 $border-radius-xl: 16px;
+// 胶囊：顶栏搜索框、徽标、圆形钮统一用这一档，不要再裸写 999px
+$border-radius-pill: 999px;
 
 // ---------- 6. 阴影（暖灰，不用纯黑） ----------
 $shadow-sm: 0 1px 2px rgba(80, 50, 30, 0.06);
 $shadow-base: 0 2px 8px rgba(80, 50, 30, 0.08);
 $shadow-lg: 0 8px 24px rgba(80, 50, 30, 0.12);
 $shadow-hover: 0 6px 18px rgba(80, 50, 30, 0.1);
+// 悬浮主按钮（FAB）专用：主色投影比暖灰投影更需可见
+$shadow-fab: 0 16px 26px rgba($primary-color, 0.28);
+$shadow-fab-hover: 0 18px 30px rgba($primary-color, 0.32);
+// 移动端抽屉：侧向投影，暖灰
+$shadow-drawer: 4px 0 20px rgba($text-primary, 0.12);
+// hover 微动效的位移量：上浮 2px / 轻移 1px（导航横移、行上浮都用 small 档）
+$lift-on-hover: 2px;
+$shift-on-hover: 1px;
 
-// ---------- 7. 间距 ----------
+// ---------- 7. 间距（4 的倍数刻度）----------
+// 命名约定：`-soft` 表示「紧邻命名档位之下的半档」，
+// 即 $spacing-md-soft(12) 在 sm(8) 与 md(16) 之间，$spacing-lg-soft(20) 在 md(16) 与 lg(24) 之间。
+// 视图层需要新档位时先回到这里加，不要在页面里裸写 px。
+$spacing-micro: 2px;
 $spacing-xs: 4px;
 $spacing-sm: 8px;
+$spacing-md-soft: 12px;
 $spacing-md: 16px;
+$spacing-lg-soft: 20px;
 $spacing-lg: 24px;
 $spacing-xl: 32px;
+// 区块级留白：卡片之间的纵向分组间距、空态上下内边距
+$spacing-2xl: 40px;
+$spacing-3xl: 56px;
 
 // ---------- 8. 字体 ----------
 $font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
   'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', 'Noto Sans', sans-serif,
   'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-// 语义字号（六档）：正文 14，说明 12/13，标题 16/20，展示 28
+// 语义字号（八档）：说明 12/13，正文 14/15，标题 16/20，指标 24，展示 28
 $text-caption: 12px;
 $text-label: 13px;
 $text-body: 14px;
+// 卡片标题、欢迎语副文案等「比正文大一档、又不到标题」的真实需求，用这一档而不是 15px 裸写
+$text-body-lg: 15px;
 $text-title: 16px;
 $text-heading: 20px;
 $text-display: 28px;
@@ -122,7 +146,7 @@ $text-stat: 24px;
 $font-size-xs: $text-caption;
 $font-size-sm: $text-label;
 $font-size-base: $text-body;
-$font-size-md: 15px;
+$font-size-md: $text-body-lg;
 $font-size-lg: $text-title;
 $font-size-xl: 18px;
 
@@ -135,13 +159,62 @@ $font-weight-medium: 500;
 $font-weight-semibold: 600;
 $font-weight-bold: 700;
 
-// ---------- 9. 图标 ----------
+// ---------- 9. 图标与图标底座 ----------
 $icon-size-sm: 16px;
 $icon-size-base: 18px;
 $icon-size-lg: 20px;
 $icon-size-xl: 24px;
 
-// ---------- 10. 层级 ----------
+// 卡片标题/统计块左侧的彩色图标底座。
+// StatCard 与首页各卡片此前各自写了 40px/36px + 10px 圆角，导致同一个「图标块」
+// 在不同页面差 4px、圆角差 2px。尺寸走这两档，圆角并入 $border-radius-base。
+$icon-tile-size: 40px;
+$icon-tile-size-sm: 36px;
+// 图标底座着色：`background: rgba($color, $icon-tile-alpha)`
+$icon-tile-alpha: 0.12;
+
+// 仅含图标的按钮（卡片头部的收起钮、行内「查看」钮）的视觉尺寸。
+// 视觉保持紧凑；触屏下用 @mixin touch-hit-area 补足可点区。
+$icon-button-size: 28px;
+
+// 控件高度：顶栏搜索框/切换器/下拉等「一行高」的元素统一按这两档，
+// 此前 32 / 34 / 36 三个值混用，同一行里控件高度不齐是粗糙感的直接来源。
+$control-height-sm: 32px;
+$control-height-md: 36px;
+
+// 未读徽标的圆点尺寸（顶栏铃铛等处）
+$badge-dot-size: 7px;
+
+// ---------- 10. 布局骨架 ----------
+// 侧栏、顶栏、内容容器、FAB 这几处尺寸此前散落在 DefaultLayout 的样式里，
+// 改一个要翻三个地方。集中到这里，页面层只引用不复写。
+$layout-sidebar-width: 240px;
+$layout-sidebar-collapsed-width: 64px;
+$layout-header-height: 64px;
+$layout-content-max-width: 1320px;
+// 内容区左右留白：窄屏走 $spacing-lg，宽屏最多到 88px
+$layout-content-pad-x-max: 88px;
+// 内容区底部额外留白，给 FAB 让位（移动端 FAB 更小，留白略收）
+$layout-content-pad-bottom: 88px;
+$layout-content-pad-bottom-mobile: 84px;
+$layout-fab-size: 58px;
+$layout-fab-inset: 28px;
+$layout-fab-size-mobile: 52px;
+$layout-fab-inset-mobile: 20px;
+// 顶栏搜索框：外层栅格位宽 与 实际输入框宽
+$layout-search-slot-width: 560px;
+$layout-search-input-width: 420px;
+// 顶栏空间名/用户名的截断宽度（两处必须一致，否则同一行两个胶囊不等宽）
+$layout-name-max-width: 120px;
+
+// 浮层菜单宽度：用户菜单卡与空间切换下拉各一档
+$popper-menu-width: 224px;
+$popper-menu-min-width: 180px;
+
+// 最小可点区：侧栏导航等行控件按此量级（min-height 44px）
+$touch-target-min: 44px;
+
+// ---------- 11. 层级 ----------
 $z-index-topbar: 50;
 $z-index-sidebar: 100;
 $z-index-mobile-drawer: 200;
@@ -153,7 +226,7 @@ $z-index-modal: 2000;
 $z-index-popover: 2100;
 $z-index-tooltip: 2200;
 
-// ---------- 10. 断点 ----------
+// ---------- 12. 断点 ----------
 // 统一边界：640 / 768 / 1024 / 1280；max-width 查询用边界 -1px
 $bp-sm: 640px;
 $bp-md: 768px;
@@ -166,8 +239,50 @@ $bp-tablet: 1023px;
 $bp-desktop: 1279px;
 $bp-wide: 1439px;
 
-// ---------- 11. 动效 ----------
+// ---------- 13. 动效 ----------
 $transition-fast: 150ms;
 $transition-base: 200ms;
 $transition-slow: 300ms;
 $ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+// ------------------------------------------------------------
+// 动效混入
+// ------------------------------------------------------------
+// 为什么要有这些：页面里原先到处是 `transition: all 0.2s ease`。
+// `all` 会连带过渡 width/height/padding 等布局属性，鼠标扫过列表时
+// 整片内容跟着抽动，是「廉价感」最直接的来源；`ease` 也不是本系统的曲线。
+// 需要动效请从这里取，不要回手写 all。
+// ------------------------------------------------------------
+
+// 交互态通用：颜色 / 描边 / 阴影 / 位移四类安全属性
+@mixin transition-interactive($duration: $transition-fast) {
+  transition: background-color $duration $ease-out, border-color $duration $ease-out,
+    color $duration $ease-out, box-shadow $duration $ease-out, transform $duration $ease-out;
+}
+
+// 可点元素的按压反馈，与 index.scss 中 .el-button 的行为保持一致
+@mixin pressable {
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+// ------------------------------------------------------------
+// 可点区
+// ------------------------------------------------------------
+// 图标按钮的视觉尺寸只有 $icon-button-size(28px)，在触屏上偏小。
+// 用伪元素把可点区向外撑到 $touch-target-min，而不改视觉尺寸——
+// PC 保持紧凑观感，手机不牺牲命中区。
+// ------------------------------------------------------------
+@mixin touch-hit-area {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: $touch-target-min;
+    height: $touch-target-min;
+    transform: translate(-50%, -50%);
+  }
+}

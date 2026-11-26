@@ -1,8 +1,17 @@
 <template>
   <section class="app-card" :class="`app-card--${padding}`">
-    <header v-if="title || description || $slots.header || $slots.actions" class="app-card-header">
+    <header
+      v-if="title || description || icon || $slots.header || $slots.actions"
+      class="app-card-header"
+    >
       <div class="app-card-heading">
-        <h2 v-if="title" class="app-card-title">{{ title }}</h2>
+        <div class="app-card-heading-row">
+          <span v-if="icon" class="app-card-icon" aria-hidden="true">
+            <el-icon><component :is="icon" /></el-icon>
+          </span>
+          <h2 v-if="title" class="app-card-title">{{ title }}</h2>
+          <slot name="tag" />
+        </div>
         <p v-if="description" class="app-card-description">{{ description }}</p>
         <slot name="header" />
       </div>
@@ -23,15 +32,20 @@
 </template>
 
 <script setup lang="ts">
+import type { Component } from 'vue'
+
 withDefaults(
   defineProps<{
     title?: string
     description?: string
+    /** 标题左侧的图标底座；配色由调用方通过 --app-card-icon-* 变量注入（见下） */
+    icon?: Component
     padding?: 'none' | 'sm' | 'md'
   }>(),
   {
     title: '',
     description: '',
+    icon: undefined,
     padding: 'md'
   }
 )
@@ -42,7 +56,10 @@ withDefaults(
 @use '@/styles/breakpoints' as *;
 
 .app-card {
-  background: $card-bg;
+  // 底色由调用方注入（与图标底座同一套约定）：
+  // 在页面里写 `.soft-card { background: ... }` 覆盖组件根元素，
+  // 胜负取决于 scoped 样式的注入顺序，换构建方式就会翻车。
+  background: var(--app-card-bg, #{$card-bg});
   border: 1px solid $border-color;
   border-radius: $border-radius-lg;
   overflow: hidden;
@@ -52,13 +69,37 @@ withDefaults(
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg-soft;
   border-bottom: 1px solid $border-color-light;
 }
 
 .app-card-heading {
   min-width: 0;
+}
+
+.app-card-heading-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md-soft;
+  min-width: 0;
+}
+
+// 图标底座配色由调用方注入，避免组件内置一套与各模块色冲突的默认色。
+// 自定义属性会从带 scoped 属性的父元素继承进子组件根元素，因此无需 :deep()。
+// 完整用例见 views/Dashboard.vue 的 .panel-todo / .panel-recent / .panel-shortcut：
+//   .panel-todo { --app-card-icon-bg: #{rgba($primary-color, $icon-tile-alpha)}; --app-card-icon-color: #{$primary-text}; }
+.app-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: $icon-tile-size-sm;
+  height: $icon-tile-size-sm;
+  border-radius: $border-radius-base;
+  background: var(--app-card-icon-bg, #{$primary-light-bg});
+  color: var(--app-card-icon-color, #{$primary-text});
+  font-size: $icon-size-base;
 }
 
 .app-card-title {
@@ -70,7 +111,7 @@ withDefaults(
 }
 
 .app-card-description {
-  margin: 4px 0 0;
+  margin: $spacing-xs 0 0;
   font-size: $text-caption;
   line-height: $line-height-base;
   color: $text-tertiary;
@@ -79,16 +120,16 @@ withDefaults(
 .app-card-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: $spacing-md-soft;
   flex-shrink: 0;
 }
 
 .app-card-body {
-  padding: 20px;
+  padding: $spacing-lg-soft;
 }
 
 .app-card-footer {
-  padding: 12px 20px;
+  padding: $spacing-md-soft $spacing-lg-soft;
   border-top: 1px solid $border-color-light;
 }
 
@@ -100,7 +141,7 @@ withDefaults(
 
 .app-card--sm {
   .app-card-body {
-    padding: 12px 16px;
+    padding: $spacing-md-soft $spacing-md;
   }
 }
 
@@ -108,7 +149,7 @@ withDefaults(
   .app-card-header {
     flex-direction: column;
     align-items: stretch;
-    padding: 14px 16px;
+    padding: $spacing-md-soft $spacing-md;
   }
 
   .app-card-actions {
@@ -117,11 +158,11 @@ withDefaults(
   }
 
   .app-card-body {
-    padding: 16px;
+    padding: $spacing-md;
   }
 
   .app-card--sm .app-card-body {
-    padding: 12px;
+    padding: $spacing-md-soft;
   }
 }
 </style>

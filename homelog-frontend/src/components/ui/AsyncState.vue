@@ -30,6 +30,10 @@
       <template v-if="$slots['empty-actions']" #actions>
         <slot name="empty-actions" />
       </template>
+      <!-- 插画型空态：由调用方决定图形，转发给 EmptyState 的 #figure -->
+      <template v-if="$slots.figure" #figure>
+        <slot name="figure" />
+      </template>
     </EmptyState>
 
     <slot v-else />
@@ -80,13 +84,13 @@ const widths = ['100%', '82%', '91%', '76%', '88%', '68%']
 .async-skeleton {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 24px 20px;
+  gap: $spacing-md-soft;
+  padding: $spacing-lg $spacing-lg-soft;
 }
 
 .skeleton-row {
-  height: 14px;
-  border-radius: 6px;
+  height: $text-body;
+  border-radius: $border-radius-base;
   background: linear-gradient(
     90deg,
     $border-color-light 25%,

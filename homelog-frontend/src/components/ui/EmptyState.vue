@@ -1,6 +1,10 @@
 <template>
   <div class="empty-state" :class="{ 'empty-state--compact': compact }">
-    <div class="empty-icon" :class="`empty-icon--${tone}`">
+    <!-- 传入 #figure 时用插画取代图标圆底，二者互斥不叠加 -->
+    <div v-if="$slots.figure" class="empty-figure">
+      <slot name="figure" />
+    </div>
+    <div v-else class="empty-icon" :class="`empty-icon--${tone}`">
       <el-icon><component :is="icon || Document" /></el-icon>
     </div>
 
@@ -42,8 +46,12 @@ withDefaults(
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 56px 24px;
+  padding: $spacing-3xl $spacing-lg;
   text-align: center;
+}
+
+.empty-figure {
+  margin-bottom: $spacing-lg-soft;
 }
 
 .empty-icon {
@@ -52,9 +60,9 @@ withDefaults(
   justify-content: center;
   width: 56px;
   height: 56px;
-  margin-bottom: $spacing-md;
-  border-radius: 50%;
-  font-size: 24px;
+  margin-bottom: $spacing-lg-soft;
+  border-radius: $border-radius-pill;
+  font-size: $icon-size-xl;
 
   &--neutral {
     background: $surface-warm;
@@ -93,18 +101,22 @@ withDefaults(
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: $spacing-md-soft;
   margin-top: $spacing-lg;
 }
 
 .empty-state--compact {
-  padding: 28px 16px;
+  padding: $spacing-xl $spacing-md;
 
   .empty-icon {
     width: 40px;
     height: 40px;
-    margin-bottom: 10px;
-    font-size: 18px;
+    margin-bottom: $spacing-md-soft;
+    font-size: $icon-size-lg;
+  }
+
+  .empty-figure {
+    margin-bottom: $spacing-md;
   }
 
   .empty-title {
@@ -112,12 +124,12 @@ withDefaults(
   }
 
   .empty-description {
-    margin-top: 4px;
+    margin-top: $spacing-xs;
     font-size: $font-size-xs;
   }
 
   .empty-actions {
-    margin-top: 14px;
+    margin-top: $spacing-md-soft;
   }
 }
 </style>

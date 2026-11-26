@@ -57,11 +57,13 @@ const segments = computed<Segment[]>(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@use '@/styles/variables' as *;
+
 .highlight {
   background: var(--color-warning-bg);
   color: var(--color-warning-text);
-  padding: 0 2px;
-  border-radius: 2px;
+  padding: 0 $spacing-micro;
+  border-radius: $border-radius-micro;
 }
 </style>

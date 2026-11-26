@@ -20,31 +20,32 @@
       </div>
     </section>
 
-    <div v-loading="loading" class="panel-grid upper-grid">
-      <section class="soft-card todo-card">
-        <header class="card-header">
-          <div class="title-wrap">
-            <div class="mini-icon orange"><el-icon><Checked /></el-icon></div>
-            <div class="title-copy">
-              <h2>今日待办</h2>
-              <small>把今天的小事安排好</small>
-            </div>
-          </div>
+    <div class="panel-grid upper-grid">
+      <AppCard class="soft-card panel-todo" :icon="Checked" title="今日待办" description="把今天的小事安排好">
+        <template #actions>
+          <button type="button" class="text-link" @click="goToModule('todo')">
+            查看全部 <span class="link-arrow" aria-hidden="true">›</span>
+          </button>
+        </template>
 
-          <button type="button" class="text-link" @click="goToModule('todo')">查看全部 <span class="link-arrow" aria-hidden="true">›</span></button>
-        </header>
+        <AsyncState
+          :loading="summaryLoading"
+          :error="summaryError"
+          :empty="todoList.length === 0"
+          empty-title="还没有今日待办"
+          empty-description="把家务、采购、家人约定记在这里，不错过重要小事"
+          :rows="3"
+          min-height="250px"
+          @retry="fetchDashboardData"
+        >
+          <template #figure>
+            <EmptyIllustration variant="todo" :size="170" />
+          </template>
+          <template #empty-actions>
+            <el-button type="primary" @click="goToModule('todo')">添加第一个待办</el-button>
+          </template>
 
-        <div class="card-body">
-          <div v-if="!loading && todoList.length === 0" class="empty-state">
-            <div class="empty-figure">
-              <EmptyIllustration variant="todo" :size="170" />
-            </div>
-            <h3>还没有今日待办</h3>
-            <p>把家务、采购、家人约定记在这里，不错过重要小事</p>
-            <button class="primary-btn" type="button" @click="goToModule('todo')">添加第一个待办</button>
-          </div>
-
-          <div v-else class="simple-list">
+          <div class="simple-list">
             <article
               v-for="item in todoList"
               :key="item.id"
@@ -59,68 +60,63 @@
                 <h3>{{ item.title || getFirstFieldValue(item) }}</h3>
                 <p>{{ getRecordSummary(item) }}</p>
               </div>
-              <span class="simple-arrow">›</span>
+              <span class="simple-arrow" aria-hidden="true">›</span>
             </article>
           </div>
-        </div>
-      </section>
+        </AsyncState>
+      </AppCard>
 
-      <section class="soft-card expiring-card">
-        <header class="card-header">
-          <div class="title-wrap">
-            <div class="mini-icon orange"><el-icon><AlarmClock /></el-icon></div>
-            <div class="title-copy">
-              <h2>即将到期</h2>
-              <small>重要日期，提前放在心上</small>
-            </div>
-          </div>
+      <AppCard class="soft-card panel-expiring" :icon="AlarmClock" title="即将到期" description="重要日期，提前放在心上">
+        <template #actions>
+          <button type="button" class="text-link" @click="goToModule('drug')">
+            查看全部 <span class="link-arrow" aria-hidden="true">›</span>
+          </button>
+        </template>
 
-          <button type="button" class="text-link" @click="goToModule('drug')">查看全部 <span class="link-arrow" aria-hidden="true">›</span></button>
-        </header>
-
-        <div v-if="!loading && expiringList.length === 0" class="empty-state">
-          <div class="empty-figure">
+        <AsyncState
+          :loading="summaryLoading"
+          :error="summaryError"
+          :empty="expiringList.length === 0"
+          empty-title="暂无即将到期项目"
+          empty-description="药品有效期、证件到期会在这里提前提醒你"
+          :rows="3"
+          min-height="250px"
+          @retry="fetchDashboardData"
+        >
+          <template #figure>
             <EmptyIllustration variant="alert" :size="170" />
-          </div>
-          <h3>暂无即将到期项目</h3>
-          <p>药品有效期、证件到期会在这里提前提醒你</p>
-          <button class="primary-btn" type="button" @click="goToModule('drug')">新增提醒</button>
-        </div>
+          </template>
+          <template #empty-actions>
+            <el-button type="primary" @click="goToModule('drug')">新增提醒</el-button>
+          </template>
 
-        <div v-else class="simple-list">
-          <article
-            v-for="item in expiringList"
-            :key="`${item.moduleKey}-${item.id}`"
-            class="simple-item"
-            role="button"
-            tabindex="0"
-            @click="goToDetail(item)"
-            @keyup.enter="goToDetail(item)"
-          >
-            <span class="module-badge" :class="getModuleColorClass(item.moduleKey)">{{ item.moduleName }}</span>
-            <div class="simple-item-body">
-              <h3>{{ item.title || getFirstFieldValue(item) }}</h3>
-              <p>{{ getRecordSummary(item) }}</p>
-            </div>
-            <span class="expire-badge" :class="getExpiringClass(item.remindDate)">
-              {{ getExpiringLabel(item.remindDate) }}
-            </span>
-          </article>
-        </div>
-      </section>
+          <div class="simple-list">
+            <article
+              v-for="item in expiringList"
+              :key="`${item.moduleKey}-${item.id}`"
+              class="simple-item"
+              role="button"
+              tabindex="0"
+              @click="goToDetail(item)"
+              @keyup.enter="goToDetail(item)"
+            >
+              <span class="module-badge" :class="getModuleColorClass(item.moduleKey)">{{ item.moduleName }}</span>
+              <div class="simple-item-body">
+                <h3>{{ item.title || getFirstFieldValue(item) }}</h3>
+                <p>{{ getRecordSummary(item) }}</p>
+              </div>
+              <span class="expire-badge" :class="getExpiringClass(item.remindDate)">
+                {{ getExpiringLabel(item.remindDate) }}
+              </span>
+            </article>
+          </div>
+        </AsyncState>
+      </AppCard>
     </div>
 
-    <div v-loading="loading" class="panel-grid lower-grid">
-      <section class="soft-card recent-card-panel">
-        <header class="card-header recent-header">
-          <div class="title-wrap">
-            <div class="mini-icon purple"><el-icon><Clock /></el-icon></div>
-            <div class="title-copy">
-              <h2>最近记录</h2>
-              <small>家里的点滴，都有迹可循</small>
-            </div>
-          </div>
-
+    <div class="panel-grid lower-grid">
+      <AppCard class="soft-card panel-recent" :icon="Clock" title="最近记录" description="家里的点滴，都有迹可循">
+        <template #actions>
           <el-select
             v-model="recentModuleFilter"
             placeholder="筛选模块"
@@ -131,67 +127,75 @@
             <el-option label="全部模块" value="" />
             <el-option v-for="module in enabledModules" :key="module.id" :label="module.name" :value="module.moduleKey" />
           </el-select>
-        </header>
+        </template>
 
-        <EmptyState v-if="!loading && recentRecords.length === 0" compact title="暂无记录" description="新记录会显示在这里" />
+        <AsyncState
+          :loading="recentLoading"
+          :error="recentError"
+          :empty="recentRecords.length === 0"
+          empty-title="暂无记录"
+          empty-description="新记录会显示在这里"
+          :rows="4"
+          min-height="280px"
+          @retry="fetchRecentRecords"
+        >
+          <div class="record-list">
+            <article
+              v-for="record in visibleRecentRecords"
+              :key="record.id"
+              class="record-item"
+              role="button"
+              tabindex="0"
+              @click="goToDetail(record)"
+              @keyup.enter="goToDetail(record)"
+            >
+              <div class="record-left">
+                <span class="module-badge" :class="getModuleColorClass(record.moduleKey)">{{ record.moduleName }}</span>
+                <div class="record-meta">{{ formatDateTime(record.createdAt) }}</div>
+              </div>
+              <div class="record-body">
+                <h3>{{ record.title || getFirstFieldValue(record) }}</h3>
+                <p>{{ record.summary || getRecordSummary(record) }}</p>
+              </div>
+              <div class="record-actions">
+                <button type="button" aria-label="查看详情" @click.stop="goToDetail(record)">↗</button>
+              </div>
+            </article>
 
-        <div v-else class="record-list">
-          <article
-            v-for="record in visibleRecentRecords"
-            :key="record.id"
-            class="record-item"
-            role="button"
-            tabindex="0"
-            @click="goToDetail(record)"
-            @keyup.enter="goToDetail(record)"
-          >
-            <div class="record-left">
-              <span class="module-badge" :class="getModuleColorClass(record.moduleKey)">{{ record.moduleName }}</span>
-              <div class="record-meta">{{ formatDateTime(record.createdAt) }}</div>
-            </div>
-            <div class="record-body">
-              <h3>{{ record.title || getFirstFieldValue(record) }}</h3>
-              <p>{{ record.summary || getRecordSummary(record) }}</p>
-            </div>
-            <div class="record-actions">
-              <button type="button" aria-label="查看详情">↗</button>
-            </div>
-          </article>
-
-          <button
-            v-if="recentRecords.length > RECENT_LIMIT"
-            type="button"
-            class="record-toggle"
-            @click="recentExpanded = !recentExpanded"
-          >
-            {{ recentExpanded ? '收起' : `展开全部 ${recentRecords.length} 条` }}
-            <el-icon><ArrowUp v-if="recentExpanded" /><ArrowDown v-else /></el-icon>
-          </button>
-        </div>
-      </section>
-
-      <aside class="soft-card shortcut-panel" :class="{ 'is-collapsed': shortcutCollapsed }">
-        <header class="card-header shortcut-header-row">
-          <div class="title-wrap">
-            <div class="mini-icon blue"><el-icon><Grid /></el-icon></div>
-            <div class="title-copy">
-              <h2>快捷入口</h2>
-              <small>常用的家庭空间</small>
-            </div>
+            <button
+              v-if="recentRecords.length > RECENT_LIMIT"
+              type="button"
+              class="record-toggle"
+              @click="recentExpanded = !recentExpanded"
+            >
+              {{ recentExpanded ? '收起' : `展开全部 ${recentRecords.length} 条` }}
+              <el-icon><ArrowUp v-if="recentExpanded" /><ArrowDown v-else /></el-icon>
+            </button>
           </div>
+        </AsyncState>
+      </AppCard>
 
+      <AppCard
+        class="soft-card shortcut-panel panel-shortcut"
+        :class="{ 'is-collapsed': shortcutCollapsed }"
+        :icon="Grid"
+        title="快捷入口"
+        description="常用的家庭空间"
+      >
+        <template #actions>
           <button
             type="button"
             class="collapse-circle"
             :class="{ collapsed: shortcutCollapsed }"
             :aria-expanded="!shortcutCollapsed"
-            aria-label="收起快捷入口"
+            :aria-label="shortcutCollapsed ? '展开快捷入口' : '收起快捷入口'"
             @click="shortcutCollapsed = !shortcutCollapsed"
           >
             <el-icon><ArrowLeft /></el-icon>
           </button>
-        </header>
+        </template>
 
+        <!-- 折叠只隐藏内容，卡片外壳保持同尺寸，避免收起时头部上下跳动 -->
         <div v-show="!shortcutCollapsed" class="shortcut-body">
           <div class="shortcut-grid">
             <button v-for="module in homeModules" :key="module.id" class="shortcut-item" type="button" @click="goToModule(module.moduleKey)">
@@ -199,18 +203,18 @@
                 <el-icon><component :is="getModuleIcon(module.moduleKey)" /></el-icon>
               </span>
               <span class="shortcut-name">{{ module.name }}</span>
-              <span class="shortcut-arrow">›</span>
+              <span class="shortcut-arrow" aria-hidden="true">›</span>
             </button>
 
             <button class="shortcut-item add-shortcut" type="button" @click="showCreateDialog = true">
-              <span class="add-box">＋</span>
+              <span class="add-box" aria-hidden="true">＋</span>
               <span class="shortcut-name">新增记录</span>
             </button>
           </div>
 
           <p class="shortcut-footer">每一份用心，都是家的小小光亮。</p>
         </div>
-      </aside>
+      </AppCard>
     </div>
 
     <el-dialog v-model="showCreateDialog" title="选择要新增的记录类型" width="500px" :before-close="handleCreateDialogClose">
@@ -236,13 +240,14 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useModuleStore } from '@/stores/module'
 import { recordApi, dashboardApi } from '@/api'
-import { Checked, AlarmClock, Clock, Sunny, ArrowLeft, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import { Checked, AlarmClock, Clock, Sunny, Grid, ArrowLeft, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { formatDateTime, dayDiffFromToday } from '@/utils/date'
 import { getModuleIcon, getModuleColorClass } from '@/utils/module'
+import AppCard from '@/components/ui/AppCard.vue'
+import AsyncState from '@/components/ui/AsyncState.vue'
 import EmptyIllustration from '@/components/ui/EmptyIllustration.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -253,10 +258,19 @@ const todoList = ref<any[]>([])
 const expiringList = ref<any[]>([])
 const recentRecords = ref<any[]>([])
 const recentModuleFilter = ref('')
-const loading = ref(false)
+
+// 加载与错误分开两套：整页汇总（待办/到期/最近）与「筛选模块」触发的局部重取。
+// 此前两者共用一个 loading 且失败只 console.error，接口挂了会落到空态，
+// 用户以为「没有数据」而不是「加载失败」。
+const summaryLoading = ref(false)
+const summaryError = ref('')
+const recentLoading = ref(false)
+const recentError = ref('')
 
 // 最近记录初始展示条数，超出则折叠为「展开全部」
 const RECENT_LIMIT = 6
+// 每个模块的取数条数：沿用改造前各接口的 size=3，本次只优化呈现，不动接口参数
+const RECENT_FETCH_SIZE = 3
 const recentExpanded = ref(false)
 const visibleRecentRecords = computed(() =>
   recentExpanded.value ? recentRecords.value : recentRecords.value.slice(0, RECENT_LIMIT)
@@ -306,12 +320,11 @@ onMounted(async () => {
 })
 
 async function fetchDashboardData() {
-  loading.value = true
-  try {
-    todoList.value = []
-    expiringList.value = []
-    recentRecords.value = []
+  summaryLoading.value = true
+  summaryError.value = ''
+  recentError.value = ''
 
+  try {
     // 首页聚合接口：一次请求拿待办、到期、最近记录
     const response = await dashboardApi.summary()
     const summary = response.data || {}
@@ -325,30 +338,59 @@ async function fetchDashboardData() {
     recentExpanded.value = false
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
+    // 三个面板同源：整体失败就三处都给出「加载失败 + 重试」，不要伪装成空数据
+    summaryError.value = '首页数据加载失败，请检查网络后重试'
+    recentError.value = summaryError.value
   } finally {
-    loading.value = false
+    summaryLoading.value = false
   }
 }
 
 async function fetchRecentRecords() {
-  recentRecords.value = []
-  recentExpanded.value = false
-  for (const module of enabledModules.value) {
-    if (recentModuleFilter.value && module.moduleKey !== recentModuleFilter.value) continue
-    try {
-      const response = await recordApi.list({
-        moduleId: module.id,
-        page: 1,
-        size: 3
-      })
-      const records = response.data?.data || []
-      recentRecords.value.push(...records.map((r: any) => ({ ...r, moduleKey: module.moduleKey, moduleName: module.name })))
-    } catch (e) {
-      console.error(e)
+  recentLoading.value = true
+  recentError.value = ''
+
+  const targets = enabledModules.value.filter(
+    (module) => !recentModuleFilter.value || module.moduleKey === recentModuleFilter.value
+  )
+
+  try {
+    // 逐模块串行 await 会把 N 次往返叠成一次长白等，且单个失败被静默吞掉；
+    // 改为并发取数 + 统计失败数，全失败进错误态，部分失败给出明确提示。
+    const settled = await Promise.allSettled(
+      targets.map((module) =>
+        recordApi
+          .list({ moduleId: module.id, page: 1, size: RECENT_FETCH_SIZE })
+          .then((response) =>
+            (response.data?.data || []).map((record: any) => ({
+              ...record,
+              moduleKey: module.moduleKey,
+              moduleName: module.name
+            }))
+          )      )
+    )
+
+    const failed = settled.filter((result) => result.status === 'rejected')
+    if (failed.length === targets.length && targets.length > 0) {
+      recentError.value = '最近记录加载失败，请稍后重试'
+      recentRecords.value = []
+      return
     }
+    if (failed.length > 0) {
+      ElMessage.warning(`${failed.length} 个模块的最近记录加载失败`)
+    }
+
+    recentRecords.value = settled
+      .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+      .sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)))
+      .slice(0, RECENT_LIMIT * 2)
+    recentExpanded.value = false
+  } catch (error) {
+    console.error('Failed to fetch recent records:', error)
+    recentError.value = '最近记录加载失败，请稍后重试'
+  } finally {
+    recentLoading.value = false
   }
-  recentRecords.value.sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)))
-  recentRecords.value = recentRecords.value.slice(0, RECENT_LIMIT * 2)
 }
 
 function goToModule(moduleKey: string) {
@@ -412,7 +454,7 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
-@use '@/styles/decorations' as *;
+@use '@/styles/breakpoints' as *;
 
 .dashboard-page {
   width: 100%;
@@ -421,17 +463,27 @@ onUnmounted(() => {
   color: $text-primary;
 }
 
+// ============================================================
+// 欢迎区
+// ============================================================
 .welcome-block {
-  padding: 10px 0 18px;
+  padding: $spacing-md-soft 0 $spacing-lg-soft;
+}
+
+.welcome-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-lg-soft;
 }
 
 .welcome-topline {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: $spacing-md-soft;
+  margin-bottom: $spacing-md;
   color: $text-tertiary;
-  font-size: 13px;
+  font-size: $text-label;
   letter-spacing: 0.02em;
 }
 
@@ -440,18 +492,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   color: $primary-color;
-  font-size: 15px;
+  font-size: $text-body-lg;
   flex-shrink: 0;
 }
 
-.welcome-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-
 .welcome-copy {
+  min-width: 0;
+
   h1 {
     margin: 0;
     font-size: $text-display;
@@ -462,142 +509,107 @@ onUnmounted(() => {
   }
 
   p {
-    margin: 8px 0 0;
+    margin: $spacing-sm 0 0;
     color: $text-tertiary;
-    font-size: 15px;
+    font-size: $text-body-lg;
   }
 }
 
+// 日期卡与页面同色会「糊」在一起，改用白底卡片形成层次
 .date-card {
   min-width: 162px;
-  background: $surface-warm;
+  background: $card-bg;
   border: 1px solid $border-color;
   border-radius: $border-radius-lg;
-  padding: 14px 18px;
+  padding: $spacing-md-soft $spacing-lg-soft;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: none;
+  box-shadow: $shadow-sm;
 
   .date-label {
-    margin-bottom: 6px;
+    margin-bottom: $spacing-xs;
     color: $text-tertiary;
-    font-size: 12px;
+    font-size: $text-caption;
+    letter-spacing: 0.04em;
   }
 
   strong {
     color: $text-primary;
-    font-size: 26px;
+    font-size: $text-stat;
     line-height: 1.1;
     letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
   }
 
   small {
-    margin-top: 6px;
+    margin-top: $spacing-xs;
     color: $text-tertiary;
-    font-size: 12px;
+    font-size: $text-caption;
+    white-space: nowrap;
   }
 }
 
+// ============================================================
+// 面板栅格
+// ============================================================
 .panel-grid {
   display: grid;
-  gap: 20px;
+  gap: $spacing-lg-soft;
 }
 
 .upper-grid {
-  // 今日待办承载计数胶囊，横向空间需求更大，故比「即将到期」更宽
+  // 今日待办承载条目正文，横向空间需求更大，故比「即将到期」更宽
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-  margin-bottom: 20px;
+  margin-bottom: $spacing-lg-soft;
 }
 
 .lower-grid {
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
 }
 
+// 首页四块面板沿用暖白底，与消息中心/全局搜索的白卡区分「概览」与「明细」。
+// 注意是注入变量而不是直接写 background：直接覆盖组件根元素的 background
+// 要靠 scoped 样式的注入顺序取胜，属于运气而非设计。
 .soft-card {
-  background: $surface-warm;
-  border: 1px solid $border-color;
-  border-radius: 18px;
-  padding: 18px 20px;
-
-  // 收起后标题栏不再保留下边距，避免卡片底部多出一条空隙
-  &.is-collapsed .card-header {
-    margin-bottom: 0;
-  }
+  --app-card-bg: #{$surface-warm};
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+.panel-todo,
+.panel-expiring {
+  --app-card-icon-bg: #{rgba($primary-color, $icon-tile-alpha)};
+  --app-card-icon-color: #{$primary-text};
 }
 
-.title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.panel-recent {
+  --app-card-icon-bg: #{rgba($accent-purple, $icon-tile-alpha)};
+  --app-card-icon-color: #{$accent-purple};
 }
 
-.mini-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-
-  &.orange {
-    background: rgba($primary-color, 0.12);
-    color: $primary-text;
-  }
-
-  &.purple {
-    background: rgba($accent-purple, 0.12);
-    color: $accent-purple;
-  }
-
-  &.blue {
-    background: rgba($module-note, 0.12);
-    color: $module-note;
-  }
+.panel-shortcut {
+  --app-card-icon-bg: #{rgba($module-note, $icon-tile-alpha)};
+  --app-card-icon-color: #{$module-note};
 }
 
-.title-copy {
-  h2 {
-    margin: 0;
-    line-height: 1.2;
-    font-size: 18px;
-    color: $text-primary;
-    font-weight: 700;
-  }
-
-  small {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
-    color: $text-tertiary;
-    white-space: nowrap;
-  }
-}
-
+// 卡片头部右侧的文字型入口
 .text-link {
   border: none;
   background: transparent;
   color: $primary-text;
-  font-size: 12px;
+  font-size: $text-caption;
+  font-family: inherit;
   cursor: pointer;
   padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: $spacing-micro;
   white-space: nowrap;
+  @include transition-interactive;
+  @include pressable;
 
   .link-arrow {
-    font-size: 14px;
+    font-size: $text-body;
     line-height: 1;
   }
 
@@ -611,17 +623,17 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: $icon-button-size;
+  height: $icon-button-size;
   padding: 0;
   flex-shrink: 0;
   border: 1px solid $border-color-light;
-  border-radius: 50%;
+  border-radius: $border-radius-pill;
   background: $card-bg;
   color: $text-placeholder;
-  font-size: 13px;
+  font-size: $text-label;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  @include transition-interactive;
 
   &:hover {
     background: $hover-bg;
@@ -634,74 +646,51 @@ onUnmounted(() => {
   }
 }
 
-.empty-figure {
-  margin-bottom: 18px;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 250px;
-  padding: 10px 18px 4px;
-  text-align: center;
-
-  h3 {
-    margin: 0 0 8px;
-    font-size: 17px;
-    color: $text-primary;
-    font-weight: 700;
-  }
-
-  p {
-    margin: 0 0 16px;
-    max-width: 360px;
-    line-height: 1.7;
-    color: $text-tertiary;
-    font-size: 13px;
+// 折叠后的卡片只保留头部：贴回内容原生高度，
+// 否则 AsyncState 的 min-height 会让收起态卡片底部空出一大片。
+.shortcut-panel.is-collapsed {
+  :deep(.app-card-body) {
+    padding: 0;
   }
 }
 
-.primary-btn {
-  border: none;
-  background: $gradient-primary;
-  color: $card-bg;
-  min-width: 150px;
-  height: 38px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 22px rgba($primary-color, 0.18);
-}
-
+// ============================================================
+// 列表行
+// ============================================================
 .simple-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
 }
 
 .simple-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba($text-primary, 0.05);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.55);
+  gap: $spacing-md-soft;
+  padding: $spacing-sm $spacing-md-soft;
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-lg;
+  background: $card-bg;
   cursor: pointer;
-  transition: all 0.2s ease;
+  @include transition-interactive;
 
   &:hover {
-    background: $card-bg;
     border-color: rgba($primary-color, 0.25);
+    box-shadow: $shadow-sm;
+    transform: translateY(-$shift-on-hover);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.12);
   }
 }
 
 .simple-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: $border-radius-pill;
   background: $primary-color;
   flex-shrink: 0;
 }
@@ -711,10 +700,10 @@ onUnmounted(() => {
   min-width: 0;
 
   h3 {
-    margin: 0 0 3px;
+    margin: 0 0 $spacing-micro;
     color: $text-primary;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: $text-body;
+    font-weight: $font-weight-semibold;
     line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -724,7 +713,7 @@ onUnmounted(() => {
   p {
     margin: 0;
     color: $text-tertiary;
-    font-size: 12px;
+    font-size: $text-caption;
     line-height: 1.5;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -734,18 +723,23 @@ onUnmounted(() => {
 
 .simple-arrow {
   color: rgba($text-primary, 0.45);
-  font-size: 22px;
+  font-size: $icon-size-lg;
   line-height: 1;
+  @include transition-interactive;
+}
+
+.simple-item:hover .simple-arrow {
+  color: $primary-text;
 }
 
 .expire-badge {
   flex-shrink: 0;
-  padding: 4px 8px;
-  border-radius: 999px;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-pill;
   background: rgba($module-drug, 0.12);
   color: $success-text;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: $text-caption;
+  font-weight: $font-weight-semibold;
 
   &.warning {
     background: rgba($warning-color, 0.14);
@@ -758,18 +752,17 @@ onUnmounted(() => {
   }
 }
 
-.recent-header {
-  margin-bottom: 12px;
-}
-
+// ============================================================
+// 最近记录
+// ============================================================
 .filter-select {
   width: 90px;
 
   :deep(.el-input__wrapper) {
-    height: 32px;
-    border-radius: 8px;
-    border: 1px solid rgba($text-primary, 0.05);
-    background: rgba(255, 255, 255, 0.8);
+    height: $icon-tile-size;
+    border-radius: $border-radius-base;
+    border: 1px solid $border-color-light;
+    background: $card-bg;
     box-shadow: none;
   }
 }
@@ -777,53 +770,63 @@ onUnmounted(() => {
 .record-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: $spacing-md-soft;
 }
 
 .record-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 2px;
-  padding: 8px 12px;
-  border: 1px dashed rgba($text-primary, 0.12);
-  border-radius: 10px;
+  gap: $spacing-sm;
+  margin-top: $spacing-micro;
+  padding: $spacing-sm $spacing-md-soft;
+  border: 1px dashed $border-color;
+  border-radius: $border-radius-lg;
   background: transparent;
   color: $text-secondary;
-  font-size: 13px;
+  font-family: inherit;
+  font-size: $text-label;
   cursor: pointer;
-  transition: all 0.2s ease;
+  @include transition-interactive;
+  @include pressable;
 
   &:hover {
     color: $primary-text;
     border-color: rgba($primary-text, 0.4);
-    background: rgba(255, 255, 255, 0.5);
+    background: $card-bg;
   }
 }
 
 .record-item {
   display: grid;
-  grid-template-columns: 1.3fr minmax(0, 2.8fr) 40px;
-  gap: 12px;
+  grid-template-columns: 1.3fr minmax(0, 2.8fr) $icon-tile-size;
+  gap: $spacing-md-soft;
   align-items: center;
-  padding: 12px;
-  border: 1px solid rgba($text-primary, 0.04);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.52);
+  padding: $spacing-md-soft;
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-lg;
+  background: $card-bg;
   cursor: pointer;
-  transition: all 0.2s ease;
+  @include transition-interactive;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 10px 18px rgba($text-primary, 0.04);
+    border-color: rgba($primary-color, 0.25);
+    box-shadow: $shadow-sm;
+    transform: translateY(-$shift-on-hover);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.12);
   }
 }
 
 .record-left {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
+  min-width: 0;
 }
 
 .module-badge {
@@ -831,38 +834,56 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 20px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
+  min-height: $spacing-lg-soft;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-pill;
+  font-size: $text-caption;
+  font-weight: $font-weight-semibold;
 
-  &.note { background: rgba($module-note, 0.12); color: $module-note; }
-  &.drug { background: rgba($module-drug, 0.12); color: $success-text; }
-  &.todo { background: rgba($primary-color, 0.12); color: $module-todo; }
-  &.idoc { background: rgba($module-idoc, 0.12); color: $module-idoc; }
+  &.note {
+    background: rgba($module-note, 0.12);
+    color: $module-note;
+  }
+
+  &.drug {
+    background: rgba($module-drug, 0.12);
+    color: $success-text;
+  }
+
+  &.todo {
+    background: rgba($primary-color, 0.12);
+    color: $module-todo;
+  }
+
+  &.idoc {
+    background: rgba($module-idoc, 0.12);
+    color: $module-idoc;
+  }
 }
 
 .record-meta {
   color: $text-tertiary;
-  font-size: 11px;
+  font-size: $text-caption;
 }
 
 .record-body {
   min-width: 0;
 
   h3 {
-    margin: 0 0 6px;
+    margin: 0 0 $spacing-sm;
     color: $text-primary;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: $text-body-lg;
+    font-weight: $font-weight-semibold;
     line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   p {
     margin: 0;
-    color: rgba($text-primary, 0.66);
-    font-size: 12px;
+    color: $text-tertiary;
+    font-size: $text-caption;
     line-height: 1.65;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -876,125 +897,182 @@ onUnmounted(() => {
   justify-content: center;
 
   button {
-    width: 26px;
-    height: 26px;
+    width: $icon-button-size;
+    height: $icon-button-size;
     border: none;
-    border-radius: 8px;
+    border-radius: $border-radius-base;
     background: rgba($primary-color, 0.08);
     color: $primary-text;
+    font-size: $text-label;
     cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
+    @include transition-interactive;
+    @include pressable;
   }
 }
 
-.record-item:hover .record-actions button {
-  opacity: 1;
+// 「操作按钮悬停才显形」是鼠标专属交互：触屏没有 hover，
+// 因此在 lg 以下必须常驻可见，否则该操作在手机上等于不存在。
+// 原先只有 :hover 一条路径，键盘用户也永远聚焦不到它。
+// 同时这两个图标钮视觉尺寸只有 28px，触屏下补足可点区（不改视觉）。
+@include down(lg) {
+  .record-actions button {
+    opacity: 1;
+    @include touch-hit-area;
+  }
+
+  .collapse-circle {
+    @include touch-hit-area;
+  }
 }
 
-.shortcut-panel {
-  padding-bottom: 12px;
+@include up(lg) {
+  .record-actions button {
+    opacity: 0;
+  }
+
+  // focus-within 让 Tab 走到行内按钮时同样显形
+  .record-item:hover .record-actions button,
+  .record-item:focus-within .record-actions button {
+    opacity: 1;
+  }
+}
+
+// ============================================================
+// 快捷入口
+// ============================================================
+.shortcut-body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md-soft;
 }
 
 .shortcut-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: $spacing-md-soft;
 }
 
 .shortcut-item {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: $icon-tile-size-sm 1fr auto;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   min-height: 72px;
-  padding: 12px 10px 12px 12px;
-  border: 1px solid rgba($text-primary, 0.06);
-  border-radius: 12px;
-  background: $surface-warm;
+  padding: $spacing-md-soft $spacing-sm $spacing-md-soft $spacing-md-soft;
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-lg;
+  background: $card-bg;
   color: $text-primary;
   text-align: left;
-  transition: all 0.2s ease;
+  font-family: inherit;
   cursor: pointer;
+  @include transition-interactive;
 
   &:hover {
     border-color: rgba($primary-color, 0.34);
-    background: $surface-warm-soft;
-    transform: translateY(-2px);
     box-shadow: $shadow-hover;
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.12);
   }
 }
 
 .shortcut-icon {
-  width: 36px;
-  height: 36px;
+  width: $icon-tile-size-sm;
+  height: $icon-tile-size-sm;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  font-size: 18px;
+  border-radius: $border-radius-base;
+  font-size: $icon-size-base;
 
-  &.drug { background: rgba($module-drug, 0.08); color: $success-text; }
-  &.todo { background: rgba($primary-color, 0.1); color: $primary-text; }
-  &.note { background: rgba($module-note, 0.08); color: $module-note; }
-  &.idoc { background: rgba($module-idoc, 0.08); color: $module-idoc; }
+  &.drug {
+    background: rgba($module-drug, 0.08);
+    color: $success-text;
+  }
+
+  &.todo {
+    background: rgba($primary-color, 0.1);
+    color: $primary-text;
+  }
+
+  &.note {
+    background: rgba($module-note, 0.08);
+    color: $module-note;
+  }
+
+  &.idoc {
+    background: rgba($module-idoc, 0.08);
+    color: $module-idoc;
+  }
 }
 
 .shortcut-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: $text-label;
+  font-weight: $font-weight-semibold;
   color: $text-primary;
 }
 
 .shortcut-arrow {
   color: rgba($text-primary, 0.52);
-  font-size: 24px;
+  font-size: $icon-size-xl;
   line-height: 1;
 }
 
 .add-shortcut {
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
 }
 
 .add-box {
-  width: 36px;
-  height: 36px;
+  width: $icon-tile-size-sm;
+  height: $icon-tile-size-sm;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: $border-radius-base;
   background: rgba($primary-color, 0.08);
   color: $primary-text;
-  font-size: 22px;
+  font-size: $icon-size-xl;
   line-height: 1;
 }
 
 .shortcut-footer {
-  margin: 16px 2px 0;
+  margin: 0;
   color: $text-tertiary;
-  font-size: 11px;
+  font-size: $text-caption;
   text-align: center;
   letter-spacing: 0.02em;
 }
 
+// ============================================================
+// 新增记录弹窗
+// ============================================================
 .module-select-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: $spacing-md-soft;
 }
 
 .module-select-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 18px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba($text-primary, 0.06);
-  background: rgba(255, 255, 255, 0.6);
+  gap: $spacing-sm;
+  padding: $spacing-lg-soft $spacing-md;
+  border-radius: $border-radius-lg;
+  border: 1px solid $border-color-light;
+  background: $surface-warm;
   cursor: pointer;
-  transition: all 0.2s ease;
+  @include transition-interactive;
 
   &:hover {
     border-color: rgba($primary-color, 0.34);
@@ -1007,21 +1085,39 @@ onUnmounted(() => {
 }
 
 .module-select-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: $icon-tile-size;
+  height: $icon-tile-size;
+  border-radius: $border-radius-lg;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: $icon-size-lg;
 
-  &.drug { background: rgba($module-drug, 0.08); color: $success-text; }
-  &.todo { background: rgba($primary-color, 0.10); color: $primary-text; }
-  &.note { background: rgba($module-note, 0.08); color: $module-note; }
-  &.idoc { background: rgba($module-idoc, 0.08); color: $module-idoc; }
+  &.drug {
+    background: rgba($module-drug, 0.08);
+    color: $success-text;
+  }
+
+  &.todo {
+    background: rgba($primary-color, 0.1);
+    color: $primary-text;
+  }
+
+  &.note {
+    background: rgba($module-note, 0.08);
+    color: $module-note;
+  }
+
+  &.idoc {
+    background: rgba($module-idoc, 0.08);
+    color: $module-idoc;
+  }
 }
 
-@media (max-width: 1023px) {
+// ============================================================
+// 响应式：lg 以下单列，sm 以下欢迎区堆叠（与改造前一致，不回退）
+// ============================================================
+@include down(lg) {
   .upper-grid,
   .lower-grid {
     grid-template-columns: 1fr;
@@ -1032,7 +1128,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 639px) {
+@include down(sm) {
   .welcome-row {
     flex-direction: column;
     align-items: flex-start;
@@ -1040,11 +1136,6 @@ onUnmounted(() => {
 
   .date-card {
     width: 100%;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .shortcut-grid {

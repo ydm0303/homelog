@@ -29,16 +29,23 @@
   --color-danger: #{$danger-color};
   --color-danger-text: #{$danger-text};
 
+  --radius-micro: #{$border-radius-micro};
   --radius-sm: #{$border-radius-sm};
   --radius-base: #{$border-radius-base};
   --radius-lg: #{$border-radius-lg};
   --radius-xl: #{$border-radius-xl};
+  --radius-pill: #{$border-radius-pill};
 
+  --space-micro: #{$spacing-micro};
   --space-xs: #{$spacing-xs};
   --space-sm: #{$spacing-sm};
+  --space-md-soft: #{$spacing-md-soft};
   --space-md: #{$spacing-md};
+  --space-lg-soft: #{$spacing-lg-soft};
   --space-lg: #{$spacing-lg};
   --space-xl: #{$spacing-xl};
+  --space-2xl: #{$spacing-2xl};
+  --space-3xl: #{$spacing-3xl};
 
   --shadow-sm: #{$shadow-sm};
   --shadow-base: #{$shadow-base};
@@ -47,6 +54,7 @@
   --font-size-xs: #{$font-size-xs};
   --font-size-sm: #{$font-size-sm};
   --font-size-base: #{$font-size-base};
+  --font-size-md: #{$font-size-md};
   --font-size-lg: #{$font-size-lg};
   --font-size-xl: #{$font-size-xl};
 
